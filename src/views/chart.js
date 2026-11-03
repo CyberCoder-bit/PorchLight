@@ -10,6 +10,7 @@
 //     available as a real HTML table, so no one has to rely on the picture
 
 import { html, raw, escapeHtml } from './html.js';
+import { formatLocal } from '../tz.js';
 
 const W = 420; // viewBox width
 const H = 190; // viewBox height (includes the x-axis label band)
@@ -17,7 +18,7 @@ const PAD = { top: 24, right: 12, bottom: 34, left: 34 };
 const BAR_MAX = 24;
 const COLORS = { bar: '#256abf', barLatest: '#0d366b', grid: '#e4e1d8', axis: '#9c978b', text: '#3f3c36' };
 
-const shortDate = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+const shortDate = (d) => formatLocal(d, { month: 'short', day: 'numeric' });
 const weekRange = (w) => `${shortDate(w.start)}–${shortDate(w.end)}`;
 
 // Column with a 4px rounded top and a square bottom, as an SVG path.

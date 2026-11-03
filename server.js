@@ -2,9 +2,11 @@
 //
 // On first run this creates data/db.json with fictional demo data.
 
-import { loadDotEnv, buildConfig } from './src/config.js';
+import path from 'node:path';
+import { loadDotEnv, buildConfig, ROOT_DIR } from './src/config.js';
 import { Store } from './src/store.js';
 import { createApp } from './src/app.js';
+import { createNodeServer } from './src/node-server.js';
 import { resolveSparkMode, createSparkService } from './src/sparks/index.js';
 
 loadDotEnv();
@@ -16,7 +18,7 @@ const { seeded } = store.open();
 const modeInfo = await resolveSparkMode(config);
 const sparks = createSparkService(config, modeInfo);
 
-const server = createApp({ store, sparks });
+const server = createNodeServer({ handle: createApp({ store, sparks }), publicDir: path.join(ROOT_DIR, 'public') });
 
 server.on('error', (err) => {
   if (err.code === 'EADDRINUSE') {

@@ -4,6 +4,7 @@ import { riskStatus, contactTrend, weeklyCounts, calendarDaysBetween, assessSeni
 import { Store } from '../src/store.js';
 import { buildSeedData } from '../src/seed.js';
 
+process.env.TZ = 'America/Indiana/Indianapolis'; // test dates use the app's Carmel clock (src/tz.js)
 const NOW = new Date('2026-11-02T12:00:00');
 const daysAgo = (n, hour = 15) => {
   const d = new Date(NOW);

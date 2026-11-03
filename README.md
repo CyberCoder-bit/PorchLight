@@ -27,9 +27,37 @@ That's the whole setup. There's no `npm install`, database, account, or API key 
 | `npm start` | Run the app at http://localhost:3000 |
 | `npm test` | Run the automated tests (41 tests) |
 | `npm run reset` | Reset the demo data, with dates moved so the story starts today |
-| `npm install` | **Optional.** Only needed for LIVE AI mode (installs the official Anthropic SDK) |
+| `npm install` | **Optional.** Only needed for LIVE AI mode (installs the official Anthropic SDK) or for Cloudflare (installs wrangler) |
+| `npm run dev` | Run the Cloudflare Workers version locally at http://localhost:8787 |
+| `npm run deploy` | Put PorchLight on the internet with Cloudflare Workers (see below) |
 
 **Port 3000 busy?** Run `PORT=3001 npm start` (on Windows PowerShell: `$env:PORT=3001; npm start`).
+
+## Put it on the internet (Cloudflare Workers)
+
+The exact same app also runs on Cloudflare Workers, on the free plan. Pages
+are served by a Worker (`src/worker.js`), and the data lives in a Durable
+Object, a single always-consistent piece of storage, instead of `data/db.json`.
+
+```bash
+npm install            # one time: installs wrangler (and the Anthropic SDK)
+npx wrangler login     # one time: opens a browser so you can sign in to Cloudflare
+npm run deploy         # prints your URL, like https://porchlight.<your-subdomain>.workers.dev
+```
+
+- **Optional LIVE mode:** `npx wrangler secret put ANTHROPIC_API_KEY`, then deploy again.
+- **Run `npm install` and `wrangler` on the same system you'll deploy from.**
+  wrangler includes a native program, so a `node_modules` folder installed in
+  WSL won't work from Windows PowerShell, and vice versa.
+- **Times stay in Carmel time.** Cloudflare's servers run on UTC, so every date
+  and time in PorchLight goes through `src/tz.js`, which always uses Indiana
+  time. A call scheduled for 4:00 PM is 4:00 PM in Carmel, wherever the server is.
+- **Auto-deploy on every push:** in the Cloudflare dashboard, go to Workers &
+  Pages → Create → Import a repository, pick this GitHub repo, and keep the
+  deploy command `npx wrangler deploy`.
+- There's no login yet (see "Prototype limitations"), so anyone with the link
+  can edit or reset the demo data. That's fine for fictional demo data, but
+  don't put real people's information in a public deployment.
 
 ## A 3-minute demo
 
@@ -58,9 +86,9 @@ Use **Reset demo data** (page footer) between run-throughs.
 
 | Layer | Choice |
 |---|---|
-| Server | Node.js built-in `http` module with a ~200-line router (`src/http.js`) |
+| Server | A ~150-line router on Web-standard Request/Response (`src/http.js`), run by Node's built-in `http` module locally (`src/node-server.js`) or by Cloudflare Workers (`src/worker.js`) |
 | Pages | Server-rendered HTML (`src/views/`) with plain CSS and a tiny optional script |
-| Data | One JSON file, `data/db.json`, written atomically |
+| Data | One JSON document: `data/db.json` locally (written atomically), Durable Object storage on Cloudflare |
 | Chart | Inline SVG drawn on the server (no chart library) |
 | AI (optional) | Claude through the official `@anthropic-ai/sdk` |
 | Tests | Node's built-in test runner (`node --test`) |
@@ -182,11 +210,18 @@ The LIVE tests are skipped automatically if `npm install` hasn't been run.
 ## Project structure
 
 ```
-server.js              Entry point (npm start)
+server.js              Local entry point (npm start)
+wrangler.jsonc         Cloudflare Workers settings (npm run deploy)
 src/
   app.js               All routes and form validation
-  http.js              Tiny web framework on Node's http module
-  store.js             JSON file storage
+  http.js              Tiny web framework on Web-standard Request/Response
+  node-server.js       Runs the app on Node's http module and serves /public
+  worker.js            Runs the app on Cloudflare Workers + a Durable Object
+  store-core.js        Data storage, independent of where the data lives
+  store.js             JSON file storage for local runs
+  app-config.js        Settings shared by Node and Cloudflare (AI mode, threshold)
+  config.js            Local settings (.env file, port, data file)
+  tz.js                Carmel, Indiana time zone helpers
   seed.js              Fictional demo data, dated relative to today
   vocab.js             Shared interest list, time slots, contact methods
   matching.js          Matching rules
@@ -201,7 +236,7 @@ docs/                  Architecture diagram and competition write-ups
 ## Prototype limitations
 
 - **No login or roles.** Everyone can see every screen. A real deployment needs accounts for seniors, volunteers, families, and coordinators, with each person seeing only what they should.
-- **Runs on one computer.** It isn't deployed to the internet, and the JSON file is meant for one server at a time.
+- **One shared data document.** Locally it's a JSON file; on Cloudflare it's one Durable Object. Both are simple and consistent, but a large program would move to real database tables (Cloudflare D1 or Postgres).
 - **No volunteer screening.** A real program needs background checks and training before volunteers contact seniors.
 - **Notifications are on-screen only.** Families have to open the dashboard to see a flag.
 
@@ -211,7 +246,7 @@ docs/                  Architecture diagram and competition write-ups
 - **Partnerships with real volunteer organizations** (school service clubs, senior centers, CICOA Aging & In-Home Solutions, faith communities) to recruit, screen, and train companions
 - **Multi-language support,** starting with Spanish, for both the interface and the conversation sparks
 - **Phone-only access** for seniors without internet (an automated "press 1 to request a call" line)
-- **Accounts and privacy controls**, a real database, and a hosted deployment
+- **Accounts and privacy controls** and a real database, so the Cloudflare deployment can hold real (not demo) data
 - Smarter matching that learns from which pairs keep talking, with a human always making the final call
 
 ## About the data

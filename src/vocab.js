@@ -2,6 +2,8 @@
 // from the same fixed lists, which makes matching exact and explainable
 // ("you both chose Gardening") instead of guessing from free text.
 
+import { localParts } from './tz.js';
+
 export const INTERESTS = [
   { id: 'gardening', label: 'Gardening' },
   { id: 'baking', label: 'Cooking & baking' },
@@ -70,8 +72,8 @@ export const slotLabel = (id) => {
 
 // Which slot does a given date/time fall in? (null = outside 9 AM–8 PM)
 export function slotForDate(date) {
-  const day = DAYS[(date.getDay() + 6) % 7]; // JS: Sunday=0, we start on Monday
-  const hour = date.getHours();
+  const { weekday, hour } = localParts(date);
+  const day = DAYS[(weekday + 6) % 7]; // JS: Sunday=0, we start on Monday
   const period = PERIODS.find((p) => hour >= p.start && hour < p.end);
   return period ? `${day.id}-${period.id}` : null;
 }

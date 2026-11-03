@@ -8,13 +8,14 @@
 //   Eugene:  just signed up, no companion yet   -> "Needs a companion" (match him live!)
 
 import { scorePair } from './matching.js';
+import { localParts, fromLocal } from './tz.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+// `daysOffset` days from now, at hour:minute Carmel time.
 function at(now, daysOffset, hour, minute = 0) {
-  const d = new Date(now.getTime() + daysOffset * DAY_MS);
-  d.setHours(hour, minute, 0, 0);
-  return d.toISOString();
+  const p = localParts(now.getTime() + daysOffset * DAY_MS);
+  return fromLocal(p.year, p.month, p.day, hour, minute).toISOString();
 }
 
 export function buildSeedData(now = new Date(), { riskThresholdDays = 7 } = {}) {

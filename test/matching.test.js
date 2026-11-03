@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { scorePair, rankVolunteers, WEIGHTS } from '../src/matching.js';
 import { buildSeedData } from '../src/seed.js';
 
+process.env.TZ = 'America/Indiana/Indianapolis'; // test dates use the app's Carmel clock (src/tz.js)
+
 const senior = {
   id: 's1', name: 'Test Senior', contactMethod: 'phone',
   interests: ['gardening', 'music', 'baseball'],

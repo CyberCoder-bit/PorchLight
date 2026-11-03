@@ -1,9 +1,9 @@
-// All routes. createApp() builds the router so tests can run the whole app
-// against a temporary data file.
+// All routes. createApp() returns a Web-standard handler, (Request) => Response,
+// so the same app runs under Node (node-server.js) and on Cloudflare Workers
+// (worker.js), and tests can run it against a temporary data file.
 
-import path from 'node:path';
-import { Router, createServer, httpError } from './http.js';
-import { ROOT_DIR } from './config.js';
+import { Router, createHandler, httpError } from './http.js';
+import { parseLocalDateTime } from './tz.js';
 import { isInterest, isSlot, isMethod, slotForDate } from './vocab.js';
 import { rankVolunteers } from './matching.js';
 import { assessSenior, dashboardSummary, calendarDaysBetween } from './risk.js';
@@ -124,8 +124,8 @@ function validateContact(body, store, now) {
   if (!/^\d{2}:\d{2}$/.test(form.time)) errors.time = 'Enter a time.';
   let when = null;
   if (!errors.date && !errors.time) {
-    when = new Date(`${form.date}T${form.time}:00`); // local time
-    if (Number.isNaN(when.getTime())) {
+    when = parseLocalDateTime(form.date, form.time); // Carmel time, even on a UTC server
+    if (!when) {
       errors.date = 'Enter a real date.';
     } else if (form.action === 'schedule' && when < new Date(now.getTime() - 5 * 60 * 1000)) {
       errors.date = 'A scheduled call must be in the future. To record a past call, choose “Log one that already happened.”';
@@ -573,5 +573,5 @@ export function createApp({ store, sparks, now = () => new Date() }) {
     res.redirect('/dashboard?msg=reset');
   });
 
-  return createServer({ router, publicDir: path.join(ROOT_DIR, 'public'), renderError });
+  return createHandler({ router, renderError });
 }

@@ -1,6 +1,6 @@
 # PorchLight architecture
 
-PorchLight is one Node.js server that renders HTML pages, stores data in a JSON file, and (optionally) calls the Claude API. These diagrams render automatically on GitHub. You can also paste them into [mermaid.live](https://mermaid.live).
+PorchLight is one small server that renders HTML pages, stores data in one JSON document, and (optionally) calls the Claude API. The same code runs in two places: on a laptop with Node.js (`npm start`, data in `data/db.json`), or on the internet with Cloudflare Workers (`npm run deploy`, data in a Durable Object). These diagrams render automatically on GitHub. You can also paste them into [mermaid.live](https://mermaid.live).
 
 ## 1. Components and data flow
 
@@ -14,7 +14,7 @@ flowchart TB
     COO["Coordinator<br/>matching"]
   end
 
-  subgraph Server["PorchLight server: one Node.js process"]
+  subgraph Server["PorchLight server: Node.js locally, or a Cloudflare Worker + Durable Object"]
     ROUTER["Router and form validation<br/>src/http.js, src/app.js"]
     subgraph Engines["Logic: plain functions, covered by tests"]
       direction LR
@@ -23,10 +23,10 @@ flowchart TB
       SPARK["Conversation Spark<br/>src/sparks/<br/>MOCK templates or LIVE client"]
     end
     VIEWS["HTML pages and SVG chart<br/>src/views/"]
-    STORE["Data store<br/>src/store.js"]
+    STORE["Data store<br/>src/store-core.js"]
   end
 
-  DB[("data/db.json<br/>seniors, volunteers, matches,<br/>calls and visits, sparks, settings")]
+  DB[("data/db.json locally, or Durable Object storage on Cloudflare<br/>seniors, volunteers, matches,<br/>calls and visits, sparks, settings")]
   CLAUDE["Claude API, optional<br/>claude-sonnet-5-5"]
 
   People -->|"HTTP: page views and form posts"| ROUTER
@@ -38,7 +38,7 @@ flowchart TB
   SPARK <-->|"LIVE_MODE only: first name, interests,<br/>days since contact; 3 starters back as JSON"| CLAUDE
 ```
 
-**How to read it:** every click in the browser becomes an HTTP request to the router. The router asks the right engine for an answer (who matches, who is at risk, what to say on the next call), saves changes through the store, and sends back a finished HTML page. The only part that ever leaves the computer is the optional, privacy-limited call to Claude.
+**How to read it:** every click in the browser becomes an HTTP request to the router. The router asks the right engine for an answer (who matches, who is at risk, what to say on the next call), saves changes through the store, and sends back a finished HTML page. The only data that ever leaves the server is the optional, privacy-limited call to Claude.
 
 ## 2. The PorchLight loop
 

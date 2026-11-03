@@ -10,6 +10,7 @@
 // details, phone numbers, or volunteer call notes.
 
 import { interestLabel, methodLabel } from '../vocab.js';
+import { formatLocal } from '../tz.js';
 
 export const SYSTEM_PROMPT = `You write conversation starters for PorchLight, a program in Carmel, Indiana that pairs older adults with volunteer companions (often high school students) for regular phone calls, video calls, and visits. A volunteer reads your starters right before a call.
 
@@ -63,7 +64,7 @@ export function loadSdk() {
 }
 
 export function buildUserMessage(input) {
-  const today = input.now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const today = formatLocal(input.now, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   const lastContact =
     input.daysSince == null
       ? 'No contact yet (this will be their first conversation)'

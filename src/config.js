@@ -1,4 +1,4 @@
-// Configuration: reads environment variables (and an optional .env file).
+// Local (Node) configuration: reads environment variables (and an optional .env file).
 //
 // Everything has a safe default so `npm start` works with zero setup.
 // See README.md -> "MOCK_MODE vs LIVE_MODE" for the AI settings.
@@ -6,6 +6,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { buildAppConfig, toInt } from './app-config.js';
 
 export const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -30,26 +31,14 @@ export function loadDotEnv(file = path.join(ROOT_DIR, '.env')) {
   return true;
 }
 
-function toInt(value, fallback, min, max) {
-  const n = Number.parseInt(value, 10);
-  if (!Number.isFinite(n)) return fallback;
-  return Math.min(max, Math.max(min, n));
-}
-
 // Build the config object from an env-like object (defaults to process.env).
 // Tests pass their own object so they never depend on the developer's machine.
+// The app settings themselves live in app-config.js so the Worker can share them.
 export function buildConfig(env = process.env) {
-  const requested = String(env.SPARK_MODE || 'auto').toLowerCase();
-  const sparkMode = ['auto', 'mock', 'live'].includes(requested) ? requested : 'auto';
   return {
+    ...buildAppConfig(env),
     port: toInt(env.PORT, 3000, 0, 65535),
     host: env.HOST || '127.0.0.1',
     dataFile: env.DATA_FILE ? path.resolve(env.DATA_FILE) : path.join(ROOT_DIR, 'data', 'db.json'),
-    // Default "isolation risk" threshold in days. Families can change it on the dashboard.
-    riskThresholdDays: toInt(env.RISK_THRESHOLD_DAYS, 7, 1, 60),
-    sparkMode, // 'auto' | 'mock' | 'live'
-    anthropicApiKey: env.ANTHROPIC_API_KEY || '',
-    anthropicBaseUrl: env.ANTHROPIC_BASE_URL || undefined, // only used by tests / proxies
-    claudeModel: env.CLAUDE_MODEL || 'claude-sonnet-5-5',
   };
 }

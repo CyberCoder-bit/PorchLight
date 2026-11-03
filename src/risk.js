@@ -17,6 +17,8 @@
 // Only COMPLETED contacts count. A scheduled or missed call isn't contact.
 // "Days since" uses calendar days ("yesterday" = 1), the way people talk.
 
+import { localParts, fromLocal } from './tz.js';
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export const STATUS_INFO = {
@@ -46,10 +48,10 @@ export const STATUS_INFO = {
   },
 };
 
+// Midnight in Carmel on the same calendar day.
 export function startOfDay(date) {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  return d;
+  const p = localParts(date);
+  return fromLocal(p.year, p.month, p.day);
 }
 
 // Whole calendar days from `earlier` to `later` (Math.round absorbs daylight-saving shifts).

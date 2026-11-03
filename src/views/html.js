@@ -5,6 +5,8 @@
 // and is never run as code. This blocks cross-site scripting (XSS).
 // Use raw() only for HTML that our own code built.
 
+import { localParts, formatLocal } from '../tz.js';
+
 class SafeHtml {
   constructor(value) {
     this.value = value;
@@ -40,18 +42,18 @@ export function html(strings, ...values) {
   return new SafeHtml(out);
 }
 
-// ----- date formatting (server's local time zone) -----
+// ----- date formatting (always Carmel, Indiana time; see tz.js) -----
 
 export function formatDate(iso) {
-  return new Date(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  return formatLocal(iso, { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
 export function formatLongDate(iso) {
-  return new Date(iso).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  return formatLocal(iso, { weekday: 'long', month: 'long', day: 'numeric' });
 }
 
 export function formatTime(iso) {
-  return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  return formatLocal(iso, { hour: 'numeric', minute: '2-digit' });
 }
 
 export function formatDateTime(iso) {
@@ -68,15 +70,15 @@ export function plural(n, word, pluralWord = `${word}s`) {
   return `${n} ${n === 1 ? word : pluralWord}`;
 }
 
-// YYYY-MM-DD and HH:MM in local time, for <input type="date"> / <input type="time">
+// YYYY-MM-DD and HH:MM in Carmel time, for <input type="date"> / <input type="time">
+const pad = (n) => String(n).padStart(2, '0');
+
 export function toDateInput(date) {
-  const d = new Date(date);
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const p = localParts(date);
+  return `${p.year}-${pad(p.month)}-${pad(p.day)}`;
 }
 
 export function toTimeInput(date) {
-  const d = new Date(date);
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const p = localParts(date);
+  return `${pad(p.hour)}:${pad(p.minute)}`;
 }

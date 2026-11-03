@@ -12,6 +12,7 @@
 
 import { OPENERS, INTEREST_SPARKS, GENERAL_SPARKS, VOLUNTEER_TIPS } from './templates.js';
 import { interestLabel } from '../vocab.js';
+import { localParts } from '../tz.js';
 
 // FNV-1a: a simple, well-known string hash.
 export function fnv1a(str) {
@@ -38,7 +39,7 @@ export function mulberry32(seed) {
 const MONTH_KEYS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
 
 export function seasonOf(date) {
-  const m = date.getMonth(); // 0 = January
+  const m = localParts(date).month - 1; // 0 = January
   if (m === 11 || m <= 1) return 'winter';
   if (m <= 4) return 'spring';
   if (m <= 7) return 'summer';
@@ -96,7 +97,7 @@ function fill(template, vars) {
 export function generateMockSparks(input, variant = 0) {
   const now = input.now || new Date();
   const season = seasonOf(now);
-  const monthKey = MONTH_KEYS[now.getMonth()];
+  const monthKey = MONTH_KEYS[localParts(now).month - 1];
   const interests = [...(input.interests || [])].sort();
   const seedText = [input.seniorId, interests.join(','), input.lastContactDay || 'never', season, monthKey, variant].join('|');
   const rand = mulberry32(fnv1a(seedText));

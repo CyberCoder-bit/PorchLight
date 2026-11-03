@@ -37,6 +37,7 @@ before(async () => {
 
 after(() => server.close());
 
+process.env.TZ = 'America/Indiana/Indianapolis'; // test dates use the app's Carmel clock (src/tz.js)
 const NOW = new Date('2026-11-02T12:00:00');
 const db = buildSeedData(NOW);
 const hal = db.seniors.find((s) => s.id === 's-harold');

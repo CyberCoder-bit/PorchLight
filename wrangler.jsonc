@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "porchlight",
+  "main": "src/worker.js",
+  "compatibility_date": "2025-11-01",
+  // The Anthropic SDK (LIVE mode) uses a few Node built-ins.
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": { "directory": "./public" },
+  "durable_objects": {
+    "bindings": [{ "name": "PORCHLIGHT", "class_name": "PorchLightData" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["PorchLightData"] }],
+  "observability": { "enabled": true }
+}

@@ -8,8 +8,11 @@ import os from 'node:os';
 import path from 'node:path';
 import { Store } from '../src/store.js';
 import { createApp } from '../src/app.js';
+import { createNodeServer } from '../src/node-server.js';
 import { createSparkService } from '../src/sparks/index.js';
-import { buildConfig } from '../src/config.js';
+import { buildConfig, ROOT_DIR } from '../src/config.js';
+
+process.env.TZ = 'America/Indiana/Indianapolis'; // test dates use the app's Carmel clock (src/tz.js)
 
 let server;
 let base;
@@ -21,7 +24,7 @@ before(async () => {
   store = new Store(path.join(tmpDir, 'db.json'));
   store.open();
   const sparks = createSparkService(buildConfig({}), { effective: 'mock', reason: 'test', warning: null });
-  server = createApp({ store, sparks });
+  server = createNodeServer({ handle: createApp({ store, sparks }), publicDir: path.join(ROOT_DIR, 'public') });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   base = `http://127.0.0.1:${server.address().port}`;
 });
