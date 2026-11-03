@@ -1,0 +1,20 @@
+{
+  "name": "porchlight",
+  "version": "0.1.0",
+  "description": "PorchLight: volunteer companions, AI conversation sparks, and an isolation-risk dashboard for seniors in Carmel, Indiana. Nextech CSforGood 2026 prototype.",
+  "type": "module",
+  "main": "server.js",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test",
+    "reset": "node scripts/reset-data.js"
+  },
+  "engines": {
+    "node": ">=18.17"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.4.0"
+  },
+  "license": "MIT"
+}

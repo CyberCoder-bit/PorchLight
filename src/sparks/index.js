@@ -1,0 +1,84 @@
+// Conversation Spark service: decides between MOCK_MODE and LIVE_MODE and
+// always returns 3 sparks, even if the live API fails.
+//
+//   SPARK_MODE=auto (default)  LIVE if ANTHROPIC_API_KEY is set AND the SDK is installed, else MOCK
+//   SPARK_MODE=mock            always offline templates
+//   SPARK_MODE=live            ask for LIVE. If the key or SDK is missing, warn and use MOCK.
+
+import { generateMockSparks, pickTip, seasonOf } from './mock.js';
+import { generateLiveSparks, loadSdk } from './live.js';
+import { lastCompletedContact, calendarDaysBetween } from '../risk.js';
+
+export async function resolveSparkMode(config) {
+  const sdkInstalled = Boolean(await loadSdk());
+  const hasKey = Boolean(config.anthropicApiKey);
+  if (config.sparkMode === 'mock') {
+    return { effective: 'mock', reason: 'SPARK_MODE=mock', warning: null };
+  }
+  if (hasKey && sdkInstalled) {
+    return { effective: 'live', reason: `ANTHROPIC_API_KEY found; using ${config.claudeModel}`, warning: null };
+  }
+  const missing = !hasKey
+    ? 'no ANTHROPIC_API_KEY is set'
+    : 'the @anthropic-ai/sdk package is not installed (run npm install)';
+  return {
+    effective: 'mock',
+    reason: `Offline templates (${missing})`,
+    warning: config.sparkMode === 'live' ? `SPARK_MODE=live was requested, but ${missing}. Using MOCK mode.` : null,
+  };
+}
+
+// Gather what a spark generator needs from the stored data.
+export function buildSparkInput(senior, contacts, now = new Date()) {
+  const last = lastCompletedContact(contacts);
+  return {
+    seniorId: senior.id,
+    name: senior.preferredName || senior.name.split(' ')[0],
+    interests: senior.interests || [],
+    aboutMe: senior.aboutMe || '',
+    contactMethod: senior.contactMethod,
+    daysSince: last ? calendarDaysBetween(last.completedAt, now) : null,
+    lastContactDay: last ? last.completedAt.slice(0, 10) : null,
+    lastContactType: last ? last.type : null,
+    season: seasonOf(now),
+    now,
+  };
+}
+
+export function createSparkService(config, modeInfo) {
+  return {
+    modeInfo,
+    model: config.claudeModel,
+
+    async generate(input, variant = 0) {
+      if (modeInfo.effective === 'live') {
+        try {
+          const live = await generateLiveSparks(input, {
+            apiKey: config.anthropicApiKey,
+            model: config.claudeModel,
+            baseURL: config.anthropicBaseUrl,
+          });
+          return {
+            mode: 'live',
+            model: live.model,
+            sparks: live.sparks,
+            tip: pickTip(`${input.seniorId}|${variant}`),
+            notice: null,
+          };
+        } catch (err) {
+          console.warn(`[sparks] LIVE mode failed (${err.reason || err.message}); falling back to MOCK.`);
+          const mock = generateMockSparks(input, variant);
+          return {
+            mode: 'mock-fallback',
+            model: null,
+            sparks: mock.sparks,
+            tip: mock.tip,
+            notice: `Live AI was unavailable (${err.reason || 'unknown error'}), so these sparks came from the offline templates.`,
+          };
+        }
+      }
+      const mock = generateMockSparks(input, variant);
+      return { mode: 'mock', model: null, sparks: mock.sparks, tip: mock.tip, notice: null };
+    },
+  };
+}
