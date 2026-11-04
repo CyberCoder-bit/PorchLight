@@ -9,8 +9,10 @@ import { buildAttentionQueue } from './attention.js';
 import { completedContacts } from '../risk.js';
 import { missedCallsWithin } from './words.js';
 import { buildWeek } from './week.js';
+import { buildFamilySummary } from './summary.js';
 import { attentionPage, rematchPage } from '../views/features/attention.js';
 import { myWeekPage } from '../views/features/week.js';
+import { familySummaryPage } from '../views/features/summary.js';
 
 export function registerFeatures(router, ctx) {
   const { store, now, render } = ctx;
@@ -51,5 +53,20 @@ export function registerFeatures(router, ctx) {
       active: 'volunteers',
       body: myWeekPage(buildWeek(store, volunteer, now()), { busyText }),
     });
+  });
+
+  // ----- Weekly family summary -----
+  router.get('/seniors/:id/summary', (req, res) => {
+    const senior = ctx.seniorOr404(req.params.id);
+    const match = store.activeMatchForSenior(senior.id);
+    const summary = buildFamilySummary({
+      senior,
+      assessment: ctx.assess(senior),
+      volunteer: match ? store.volunteer(match.volunteerId) : null,
+      contacts: store.contactsForSenior(senior.id),
+      thresholdDays: store.settings.riskThresholdDays,
+      now: now(),
+    });
+    render(req, res, { title: `Weekly summary: ${senior.name}`, active: 'dashboard', body: familySummaryPage(summary) });
   });
 }

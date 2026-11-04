@@ -320,3 +320,59 @@ test('My week empty states, and 404 for an unknown volunteer', async () => {
 
   assert.equal((await get('/volunteers/nobody/week')).status, 404);
 });
+
+// ---------- Weekly family summary ----------
+
+const textareaText = (html) => {
+  const m = html.match(/<textarea id="summary-text"[^>]*readonly[^>]*>([\s\S]*?)<\/textarea>/);
+  assert.ok(m, 'read-only summary textarea');
+  return m[1];
+};
+
+test('weekly family summary: counts, status in words, missed reasons, and no notes', async () => {
+  const missed = store.contacts.find((c) => c.seniorId === 's-harold' && c.status === 'missed');
+  missed.missedReason = 'volunteer_conflict';
+  missed.missedNote = 'Practice ran late';
+  store.save();
+
+  const html = await page('/seniors/s-harold/summary');
+  assert.match(html, /<title>Weekly summary: Harold Whitaker · PorchLight<\/title>/);
+  assert.match(html, /← Back to Harold Whitaker/);
+  assert.match(html, /Hal has had no completed call or visit in 12 days\./);
+  assert.match(html, /Check-ins in the last 7 days<\/dt><dd>0<\/dd>/);
+  assert.match(html, /Check-ins in the last 4 weeks<\/dt><dd>3 /);
+  assert.match(html, /Missed calls in the last 4 weeks \(1\)/);
+  assert.match(html, /Reason: Volunteer had a conflict\./);
+  assert.match(html, /<label for="summary-text">Message to copy<\/label>/);
+
+  const text = textareaText(html);
+  assert.match(text, /^PorchLight weekly update: Hal \(Harold Whitaker\)\n/);
+  assert.match(text, /\nStatus: Isolation risk, Contact dropping\n/);
+  assert.match(text, /\nCheck-ins in the last 7 days: 0\n/);
+  assert.match(text, /\nCheck-ins in the last 4 weeks: 3\n/);
+  assert.match(text, /\nLast contact: \w+day, \w+ \d+ \(12 days ago\), in-person visit\n/);
+  assert.match(text, /\nNext call or visit: none scheduled yet\n/);
+  assert.match(text, /\n- \w+day, \w+ \d+: in-person visit \(reason: volunteer had a conflict\)\n/);
+
+  // Counts and dates only: no call notes, no missed-call notes, no family contacts.
+  for (const secret of ['Practice ran late', 'Ethan had to cancel', 'store ledger', 'gin rummy', 'Mike Whitaker', 'Phoenix']) {
+    assert.ok(!html.includes(secret), `summary leaks "${secret}"`);
+  }
+});
+
+test('family summary shows the next scheduled call and works for an unmatched senior', async () => {
+  const dorothy = await page('/seniors/s-dorothy/summary');
+  const text = textareaText(dorothy);
+  assert.match(text, /\nCheck-ins in the last 7 days: 2\n/);
+  assert.match(text, /\nCheck-ins in the last 4 weeks: 8\n/);
+  assert.match(text, /\nLast contact: \w+day, \w+ \d+ \(2 days ago\), phone call\n/);
+  assert.match(text, /\nNext call or visit: \w+day, \w+ \d+ at 4:00\sPM \(phone call\)\n/);
+  assert.match(text, /\nMissed calls in the last 4 weeks: 0\n/);
+  assert.ok(!dorothy.includes('choir concert'), 'no notes on the scheduled call');
+
+  const gene = textareaText(await page('/seniors/s-eugene/summary'));
+  assert.match(gene, /\nStatus: Needs a companion\n/);
+  assert.match(gene, /\nCompanion: not matched yet\n/);
+
+  assert.equal((await get('/seniors/nobody/summary')).status, 404);
+});
