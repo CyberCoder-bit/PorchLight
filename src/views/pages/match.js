@@ -1,13 +1,13 @@
 // Matching screens: pick a senior, then review ranked volunteer suggestions.
 
 import { html } from '../html.js';
-import { chips, slotList, methodLabel } from '../components.js';
+import { chips, slotList, methodLabel, backLink, emptyState, banner } from '../components.js';
 import { WEIGHTS } from '../../matching.js';
 
 export function matchIndexPage({ unmatched, matched }) {
   return html`
     <h1>Match a senior with a companion</h1>
-    <p class="lead">PorchLight suggests volunteers who share a senior's interests and free time. You make the final call.</p>
+    <p class="lead">PorchLight suggests volunteers who share a senior's interests and free time. A person always makes the final choice.</p>
 
     <section class="panel" aria-labelledby="unmatched-heading">
       <h2 id="unmatched-heading">Waiting for a companion (${unmatched.length})</h2>
@@ -20,16 +20,18 @@ export function matchIndexPage({ unmatched, matched }) {
               <p><a class="button" href="/match?seniorId=${s.id}">Find a companion for ${s.preferredName || s.name.split(' ')[0]}</a></p>
             </li>`
           )}</ul>`
-        : html`<p>Everyone has a companion right now.</p>`}
+        : emptyState(html`<p><strong>Everyone has a companion right now.</strong> When you <a href="/seniors/new">add a senior</a>, they will show up here.</p>`)}
     </section>
 
     <section class="panel" aria-labelledby="matched-heading">
       <h2 id="matched-heading">Current matches (${matched.length})</h2>
-      <ul class="plain-list">
+      ${matched.length
+        ? html`<ul class="plain-list">
         ${matched.map(
-          ({ senior, volunteer }) => html`<li><a href="/seniors/${senior.id}">${senior.name}</a> with <a href="/volunteers/${volunteer.id}">${volunteer.name}</a> · <a href="/match?seniorId=${senior.id}">review match</a></li>`
+          ({ senior, volunteer }) => html`<li><a href="/seniors/${senior.id}">${senior.name}</a> with <a href="/volunteers/${volunteer.id}">${volunteer.name}</a> · <a href="/match?seniorId=${senior.id}">review match<span class="visually-hidden"> for ${senior.name}</span></a></li>`
         )}
-      </ul>
+      </ul>`
+        : emptyState(html`<p><strong>No matches yet.</strong> Choose a senior above to find their first companion.</p>`)}
     </section>
     ${howMatchingWorks()}`;
 }
@@ -39,9 +41,10 @@ function howMatchingWorks() {
     <section class="panel explain" aria-labelledby="how-heading">
       <h2 id="how-heading">How matching works</h2>
       <ol>
-        <li><strong>Must-haves.</strong> A volunteer is only suggested if they have room for another senior, share at least one weekly time slot, and offer the senior's preferred way to connect.</li>
+        <li><strong>Must-haves.</strong> A volunteer is only suggested if they have room for another senior, are free at least one of the same times each week, and offer the senior's preferred way to connect.</li>
         <li><strong>Points.</strong> +${WEIGHTS.perSharedInterest} for each shared interest. +${WEIGHTS.perSharedSlot} for each shared time slot (up to ${WEIGHTS.maxCountedSlots}). +${WEIGHTS.newVolunteerBonus} if the volunteer has no seniors yet.</li>
         <li><strong>Ranking.</strong> Highest score first. Ties go to the volunteer with fewer seniors.</li>
+        <li><strong>No AI.</strong> Matching uses only these plain rules, so every score can be explained.</li>
       </ol>
     </section>`;
 }
@@ -49,7 +52,7 @@ function howMatchingWorks() {
 export function matchSeniorPage({ senior, currentMatch, currentVolunteer, ranking }) {
   const first = senior.preferredName || senior.name.split(' ')[0];
   return html`
-    <p class="breadcrumb"><a href="/match">← All matches</a></p>
+    ${backLink('/match', 'all matches')}
     <h1>Find a companion for ${senior.name}</h1>
 
     <section class="panel" aria-labelledby="senior-summary-heading">
@@ -65,7 +68,7 @@ export function matchSeniorPage({ senior, currentMatch, currentVolunteer, rankin
       ? html`
         <section class="panel notice-panel" aria-labelledby="current-heading">
           <h2 id="current-heading">${first} is already matched with ${currentVolunteer.name}</h2>
-          <p>To choose someone else, end the current match first. Past calls stay in the history.</p>
+          <p>To choose someone else, end the current match first. Past calls stay in the history. The suggestions below are for comparison only.</p>
           <form method="post" action="/matches/${currentMatch.id}/end" class="inline-form">
             <button type="submit" class="button button-secondary">End match with ${currentVolunteer.name}</button>
           </form>
@@ -82,7 +85,7 @@ export function matchSeniorPage({ senior, currentMatch, currentVolunteer, rankin
                 <h3 class="card-title">${i === 0 ? html`<span class="badge badge-best">Best match</span> ` : ''}${r.volunteer.name}</h3>
                 <p class="score"><span class="score-number">${r.score}</span> points</p>
               </div>
-              <p class="card-meta">${r.volunteer.affiliation || 'Community volunteer'} · currently has ${r.currentLoad} of ${r.volunteer.maxSeniors}</p>
+              <p class="card-meta">${r.volunteer.affiliation || 'Community volunteer'} · companion to ${r.currentLoad} of ${r.volunteer.maxSeniors} senior${r.volunteer.maxSeniors === 1 ? '' : 's'} now</p>
               <table class="breakdown">
                 <caption class="visually-hidden">Why ${r.volunteer.name} scored ${r.score} points</caption>
                 <thead><tr><th scope="col">Reason</th><th scope="col" class="num">Points</th></tr></thead>
@@ -96,17 +99,17 @@ export function matchSeniorPage({ senior, currentMatch, currentVolunteer, rankin
                 : html`<form method="post" action="/matches" class="inline-form">
                     <input type="hidden" name="seniorId" value="${senior.id}">
                     <input type="hidden" name="volunteerId" value="${r.volunteer.id}">
-                    <button type="submit" class="button">Match ${first} with ${r.volunteer.name.split(' ')[0]}</button>
+                    <button type="submit" class="button${i === 0 ? '' : ' button-secondary'}">Match ${first} with ${r.volunteer.name.split(' ')[0]}</button>
                   </form>`}
             </li>`
           )}</ol>`
-        : html`<p class="notice">No volunteer meets all the must-haves right now. Try adding availability, or recruit a volunteer who offers ${methodLabel(senior.contactMethod).toLowerCase()}s.</p>`}
+        : banner({ kind: 'warning', text: `No volunteer meets all the must-haves right now. Try adding more free times to ${first}'s profile, or recruit a volunteer who offers ${methodLabel(senior.contactMethod).toLowerCase()}s.` })}
     </section>
 
     ${ranking.ineligible.length
       ? html`
         <section class="panel" aria-labelledby="ineligible-heading">
-          <h2 id="ineligible-heading">Not suggested (${ranking.ineligible.length})</h2>
+          <h2 id="ineligible-heading">Not suggested, and why (${ranking.ineligible.length})</h2>
           <ul class="plain-list">
             ${ranking.ineligible.map(
               (r) => html`<li><strong>${r.volunteer.name}</strong>: ${r.problems.join('; ')}.${r.sharedInterests.length ? ` (Would share ${r.sharedInterests.length} interest${r.sharedInterests.length === 1 ? '' : 's'}.)` : ''}</li>`

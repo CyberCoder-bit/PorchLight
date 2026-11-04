@@ -13,8 +13,8 @@ import { html, raw, escapeHtml } from './html.js';
 import { formatLocal } from '../tz.js';
 
 const W = 420; // viewBox width
-const H = 190; // viewBox height (includes the x-axis label band)
-const PAD = { top: 24, right: 12, bottom: 34, left: 34 };
+const H = 200; // viewBox height (includes the x-axis label band)
+const PAD = { top: 26, right: 12, bottom: 38, left: 38 };
 const BAR_MAX = 24;
 const COLORS = { bar: '#256abf', barLatest: '#0d366b', grid: '#e4e1d8', axis: '#9c978b', text: '#3f3c36' };
 
@@ -42,14 +42,14 @@ export function weeklyChart(weeks, { idPrefix, name }) {
   for (let v = 0; v <= maxCount; v += step) {
     const gy = y(v);
     svg += `<line x1="${PAD.left}" x2="${W - PAD.right}" y1="${gy}" y2="${gy}" stroke="${v === 0 ? COLORS.axis : COLORS.grid}" stroke-width="1"/>`;
-    svg += `<text x="${PAD.left - 8}" y="${gy + 5}" text-anchor="end" font-size="14" fill="${COLORS.text}">${v}</text>`;
+    svg += `<text x="${PAD.left - 8}" y="${gy + 5}" text-anchor="end" font-size="16" fill="${COLORS.text}">${v}</text>`;
   }
 
   weeks.forEach((w, i) => {
     const cx = PAD.left + slot * i + slot / 2;
     const x = cx - barW / 2;
     const isLatest = i === weeks.length - 1;
-    const tip = `${isLatest ? 'This week' : `Week of ${weekRange(w)}`}: ${w.count} check-in${w.count === 1 ? '' : 's'}`;
+    const tip = `${isLatest ? 'This week' : `Week of ${weekRange(w)}`}: ${w.count} ${w.count === 1 ? 'call or visit' : 'calls and visits'}`;
     svg += `<g><title>${escapeHtml(tip)}</title>`;
     // Invisible full-height hit area so the tooltip is easy to trigger.
     svg += `<rect x="${PAD.left + slot * i}" y="${PAD.top}" width="${slot}" height="${plotH}" fill="transparent"/>`;
@@ -58,20 +58,20 @@ export function weeklyChart(weeks, { idPrefix, name }) {
       svg += `<path d="${columnPath(x, top, barW, PAD.top + plotH - top)}" fill="${isLatest ? COLORS.barLatest : COLORS.bar}"/>`;
     }
     if (isLatest) {
-      svg += `<text x="${cx}" y="${y(w.count) - 7}" text-anchor="middle" font-size="15" font-weight="700" fill="#111">${w.count}</text>`;
+      svg += `<text x="${cx}" y="${y(w.count) - 7}" text-anchor="middle" font-size="17" font-weight="700" fill="#111">${w.count}</text>`;
     }
     svg += '</g>';
   });
 
   // X-axis labels: oldest week, middle, and "This week" (8 dates would crowd).
   const labelAt = (i, text, anchor) =>
-    `<text x="${PAD.left + slot * i + slot / 2}" y="${H - 10}" text-anchor="${anchor}" font-size="14" fill="${COLORS.text}">${escapeHtml(text)}</text>`;
+    `<text x="${PAD.left + slot * i + slot / 2}" y="${H - 10}" text-anchor="${anchor}" font-size="16" fill="${COLORS.text}">${escapeHtml(text)}</text>`;
   svg += labelAt(0, shortDate(weeks[0].start), 'start');
   svg += labelAt(Math.floor(weeks.length / 2), shortDate(weeks[Math.floor(weeks.length / 2)].start), 'middle');
   svg += labelAt(weeks.length - 1, 'This week', 'end');
 
   const counts = weeks.map((w) => w.count);
-  const summary = `Check-ins per week for ${name} over the last ${weeks.length} weeks, oldest to newest: ${counts.join(', ')}. This week: ${counts[counts.length - 1]}.`;
+  const summary = `Calls and visits per week for ${name} over the last ${weeks.length} weeks, oldest to newest: ${counts.join(', ')}. This week: ${counts[counts.length - 1]}.`;
 
   return html`
     <figure class="chart">
@@ -83,8 +83,8 @@ export function weeklyChart(weeks, { idPrefix, name }) {
       <details class="chart-table">
         <summary>Show weekly numbers as a table</summary>
         <table>
-          <caption class="visually-hidden">Weekly check-ins for ${name}</caption>
-          <thead><tr><th scope="col">Week</th><th scope="col">Check-ins</th></tr></thead>
+          <caption class="visually-hidden">Calls and visits each week for ${name}</caption>
+          <thead><tr><th scope="col">Week</th><th scope="col">Calls and visits</th></tr></thead>
           <tbody>
             ${[...weeks].reverse().map(
               (w, i) => html`<tr><th scope="row">${i === 0 ? `This week (${weekRange(w)})` : weekRange(w)}</th><td>${w.count}</td></tr>`
