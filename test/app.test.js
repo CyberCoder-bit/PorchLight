@@ -121,7 +121,15 @@ test('full loop: match Eugene, schedule, complete, sparks, dashboard updates', a
   const scheduled = store.contacts.find((c) => c.seniorId === 's-eugene' && c.status === 'scheduled');
   assert.ok(scheduled.createdAt, 'recorded with a timestamp');
 
-  // Mark it completed
+  // It can't be marked done before its day (a Thursday visit can't be logged on Tuesday)
+  res = await post(`/contacts/${scheduled.id}/complete`, {});
+  assert.equal(res.status, 409);
+  assert.match(await res.text(), /You can mark it done on that day/);
+  assert.equal(store.contacts.find((c) => c.id === scheduled.id).status, 'scheduled');
+
+  // Its time comes (pretend the call was an hour ago), then mark it completed
+  scheduled.scheduledFor = new Date(Date.now() - 3600000).toISOString();
+  store.save();
   res = await post(`/contacts/${scheduled.id}/complete`, {});
   assert.equal(res.status, 303);
   assert.equal(store.contacts.find((c) => c.id === scheduled.id).status, 'completed');
@@ -210,7 +218,15 @@ test('a missed call can record a reason and return to the page it came from', as
   assert.equal(res.status, 400);
   assert.equal(store.contacts.find((c) => c.id === call.id).status, 'scheduled');
 
-  // Valid reason + note, back to a same-site page
+  // A call that hasn't happened yet can't be marked missed
+  res = await post(`/contacts/${call.id}/missed`, { reason: 'no_answer', reasonNote: 'Tried twice' });
+  assert.equal(res.status, 409);
+  assert.match(await res.text(), /hasn(’|&#39;|')t been missed yet/);
+  assert.equal(store.contacts.find((c) => c.id === call.id).status, 'scheduled');
+
+  // Valid reason + note once its time has passed, back to a same-site page
+  call.scheduledFor = new Date(Date.now() - 3600000).toISOString();
+  store.save();
   res = await post(`/contacts/${call.id}/missed`, { reason: 'no_answer', reasonNote: 'Tried twice', back: `/volunteers/${match.volunteerId}` });
   assert.equal(res.status, 303);
   assert.equal(res.headers.get('location'), `/volunteers/${match.volunteerId}?msg=missed`);
@@ -222,6 +238,8 @@ test('a missed call can record a reason and return to the page it came from', as
   // Old form (no reason) still works; off-site back is ignored
   await post('/contacts', { matchId: match.id, action: 'schedule', type: 'phone', date: localDate(3), time: '15:00' });
   call = pending();
+  call.scheduledFor = new Date(Date.now() - 3600000).toISOString(); // its time has passed
+  store.save();
   res = await post(`/contacts/${call.id}/missed`, { back: '//evil.example' });
   assert.equal(res.headers.get('location'), '/contacts?msg=missed');
   assert.equal(store.contacts.find((c) => c.id === call.id).missedReason, null);

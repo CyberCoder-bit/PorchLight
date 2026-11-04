@@ -4,6 +4,7 @@
 // the dashboard always tells the same story whenever the demo is run:
 //   Dorothy: steady calls twice a week         -> "Connected"
 //   Hal:     was twice a week, now 12 days quiet -> "Isolation risk" + "Contact dropping"
+//            (his visit yesterday was never marked; logging it is a demo step)
 //   Rosa:    weekly video calls, last one 5 days ago -> "Check in soon"
 //   Eugene:  just signed up, no companion yet   -> "Needs a companion" (match him live!)
 //
@@ -249,6 +250,23 @@ export function buildSeedData(now = new Date(), { riskThresholdDays = 7 } = {}) 
     durationMinutes: null,
     notes: '',
     createdAt: at(now, -1, 9),
+  });
+
+  // Ethan rescheduled the visit he missed for yesterday afternoon, but nobody
+  // has marked whether it happened. Until someone does, it isn't contact, so
+  // Hal stays "Isolation risk". Ethan's week asks "Did these calls happen?",
+  // and the demo tour logs it with one click.
+  contacts.push({
+    id: `c-seed-${++n}`,
+    seniorId: 's-harold',
+    volunteerId: 'v-ethan',
+    type: 'visit',
+    status: 'scheduled',
+    scheduledFor: at(now, -1, 15, 30),
+    completedAt: null,
+    durationMinutes: null,
+    notes: 'Bring the box score from Friday night.',
+    createdAt: at(now, -4, 18),
   });
 
   return {

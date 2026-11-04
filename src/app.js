@@ -4,12 +4,14 @@
 
 import { Router, createHandler, httpError } from './http.js';
 import { parseLocalDateTime, startOfLocalDay } from './tz.js';
-import { isInterest, isSlot, isMethod, slotForDate, isMissedReason } from './vocab.js';
-import { rankVolunteers } from './matching.js';
-import { assessSenior, dashboardSummary, calendarDaysBetween } from './risk.js';
+import { isInterest, isSlot, isMethod, slotForDate, isMissedReason, nextSlotTime } from './vocab.js';
+import { rankVolunteers, scorePair } from './matching.js';
+import {
+  assessSenior, dashboardSummary, calendarDaysBetween, needsAttention, isUnmarkedPast, canLogNow, canMarkMissedNow,
+} from './risk.js';
 import { buildSparkInput } from './sparks/index.js';
 import { layout, TEXT_SIZES } from './views/layout.js';
-import { toDateInput } from './views/html.js';
+import { toDateInput, toTimeInput, formatDateTime, formatLongDate, formatTime, setDisplayClock } from './views/html.js';
 import { homePage, aboutAiPage, resetConfirmPage, errorPage } from './views/pages/home.js';
 import { seniorsListPage, seniorProfilePage, seniorFormPage } from './views/pages/seniors.js';
 import { volunteersListPage, volunteerProfilePage, volunteerFormPage } from './views/pages/volunteers.js';
@@ -30,7 +32,8 @@ const FLASH = {
   volunteer_added: 'Volunteer added. They can now be matched with a senior.',
   volunteer_saved: 'Profile saved.',
   matched: 'Match confirmed! Next step: schedule the first call.',
-  match_ended: 'Match ended. You can now choose a new companion.',
+  match_ended: 'Match ended. You can now choose a new companion. Calls they had planned were taken off the calendar.',
+  duplicate: 'That call was already saved, so it was not added twice.',
   scheduled: 'Call scheduled.',
   logged: 'Call logged. The dashboard is updated.',
   completed: 'Marked as completed. The dashboard is updated.',
@@ -41,7 +44,8 @@ const FLASH = {
 };
 const WARN = {
   outside_hours: "Heads up: that time is outside the pair's usual shared availability. Double-check it works for both of them.",
-  live_fallback: 'Live AI was unavailable, so these sparks came from the offline templates.',
+  live_fallback: 'Live AI was unavailable, so these sparks came from the built-in ideas.',
+  match_misfit: 'Saved, but the current match no longer fits. The note on this page says why and what to do.',
 };
 
 const toArray = (v) => (v === undefined ? [] : Array.isArray(v) ? v : [v]);
@@ -64,6 +68,13 @@ function flashFrom(req) {
 // Each returns { values, errors }. Errors are keyed by field name so the
 // form can show them next to the right input and in the error summary.
 
+// Characters as people count them: an emoji is 1, not 2 (UTF-16) units.
+const chars = (s) => [...s].length;
+// True if the text has nothing you can see (only spaces or zero-width characters).
+const isInvisible = (s) => !s.replace(/[\s\p{Cf}\p{Z}]/gu, '');
+// Whole numbers typed as plain digits only: "80", not "0x50", "8e1", or "80.0".
+const wholeNumber = (s) => (/^\d{1,4}$/.test(s) ? Number(s) : NaN);
+
 function validateSenior(body) {
   const errors = {};
   const values = {
@@ -77,23 +88,24 @@ function validateSenior(body) {
     contactMethod: str(body.contactMethod),
     caregiver: { name: str(body.caregiverName), relationship: str(body.caregiverRelationship) },
   };
-  if (!values.name) errors.name = 'Enter the senior’s full name.';
-  else if (values.name.length > 80) errors.name = 'Name must be 80 characters or fewer.';
-  if (values.preferredName.length > 40) errors.preferredName = 'Preferred name must be 40 characters or fewer.';
+  if (isInvisible(values.preferredName)) values.preferredName = '';
+  if (isInvisible(values.name)) errors.name = 'Enter the senior’s full name.';
+  else if (chars(values.name) > 80) errors.name = 'Name must be 80 characters or fewer.';
+  if (chars(values.preferredName) > 40) errors.preferredName = 'Preferred name must be 40 characters or fewer.';
   if (values.age) {
-    const n = Number(values.age);
+    const n = wholeNumber(values.age);
     if (!Number.isInteger(n) || n < 50 || n > 120) errors.age = 'Age must be a whole number between 50 and 120, or left blank.';
     else values.age = n;
   } else {
     values.age = null;
   }
-  if (values.neighborhood.length > 80) errors.neighborhood = 'Neighborhood must be 80 characters or fewer.';
+  if (chars(values.neighborhood) > 80) errors.neighborhood = 'Neighborhood must be 80 characters or fewer.';
   if (!values.interests.length) errors.interests = 'Choose at least one interest.';
-  if (values.aboutMe.length > 500) errors.aboutMe = `“About them” must be 500 characters or fewer (now ${values.aboutMe.length}).`;
+  if (chars(values.aboutMe) > 500) errors.aboutMe = `“About them” must be 500 characters or fewer (now ${chars(values.aboutMe)}).`;
   if (!values.availability.length) errors.availability = 'Choose at least one time block.';
   if (!isMethod(values.contactMethod)) errors.contactMethod = 'Choose how they prefer to connect.';
-  if (values.caregiver.name.length > 80) errors.caregiverName = 'Name must be 80 characters or fewer.';
-  if (values.caregiver.relationship.length > 80) errors.caregiverRelationship = 'Relationship must be 80 characters or fewer.';
+  if (chars(values.caregiver.name) > 80) errors.caregiverName = 'Name must be 80 characters or fewer.';
+  if (chars(values.caregiver.relationship) > 80) errors.caregiverRelationship = 'Relationship must be 80 characters or fewer.';
   checkTown(body, values, errors); // [towns] only towns on this deployment's list
   return { values, errors };
 }
@@ -106,11 +118,11 @@ function validateVolunteer(body) {
     interests: toArray(body.interests).filter(isInterest),
     availability: toArray(body.availability).filter(isSlot),
     contactMethods: toArray(body.contactMethods).filter(isMethod),
-    maxSeniors: Number(str(body.maxSeniors) || 1),
+    maxSeniors: wholeNumber(str(body.maxSeniors) || '1'),
   };
-  if (!values.name) errors.name = 'Enter the volunteer’s full name.';
-  else if (values.name.length > 80) errors.name = 'Name must be 80 characters or fewer.';
-  if (values.affiliation.length > 100) errors.affiliation = 'This must be 100 characters or fewer.';
+  if (isInvisible(values.name)) errors.name = 'Enter the volunteer’s full name.';
+  else if (chars(values.name) > 80) errors.name = 'Name must be 80 characters or fewer.';
+  if (chars(values.affiliation) > 100) errors.affiliation = 'This must be 100 characters or fewer.';
   if (!values.interests.length) errors.interests = 'Choose at least one interest.';
   if (!values.availability.length) errors.availability = 'Choose at least one time block.';
   if (!values.contactMethods.length) errors.contactMethods = 'Choose at least one way to connect.';
@@ -140,8 +152,14 @@ function validateContact(body, store, now) {
   let when = null;
   if (!errors.date && !errors.time) {
     when = parseLocalDateTime(form.date, form.time); // Carmel time, even on a UTC server
-    if (!when) {
+    const [hour, minute] = form.time.split(':').map(Number);
+    if (!when && !parseLocalDateTime(form.date, '12:00')) {
       errors.date = 'Enter a real date.';
+    } else if (!when && (hour > 23 || minute > 59)) {
+      errors.time = 'Enter a real time, from 00:00 to 23:59.';
+    } else if (!when) {
+      // The date is real, so the time was skipped when the clocks sprang forward.
+      errors.time = 'That time didn’t exist that day: the clocks jumped from 2:00 AM to 3:00 AM. Choose 3:00 AM or later.';
     } else if (form.action === 'schedule' && when < new Date(now.getTime() - 5 * 60 * 1000)) {
       errors.date = 'A scheduled call must be in the future. To record a past call, choose “Log one that already happened.”';
     } else if (form.action === 'log' && when > new Date(now.getTime() + 5 * 60 * 1000)) {
@@ -152,12 +170,12 @@ function validateContact(body, store, now) {
   }
   let duration = null;
   if (form.durationMinutes) {
-    duration = Number(form.durationMinutes);
+    duration = wholeNumber(form.durationMinutes);
     if (!Number.isInteger(duration) || duration < 1 || duration > 480) {
       errors.durationMinutes = 'Length must be a whole number of minutes from 1 to 480, or left blank.';
     }
   }
-  if (form.notes.length > 500) errors.notes = 'Notes must be 500 characters or fewer.';
+  if (chars(form.notes) > 500) errors.notes = 'Notes must be 500 characters or fewer.';
   return { form, errors, match, when, duration };
 }
 
@@ -167,12 +185,23 @@ function validateContact(body, store, now) {
 
 export function createApp({ store, sparks, now = () => new Date() }) {
   const router = new Router();
+  setDisplayClock(now); // dates show their year based on the app's own "today"
 
+  // The header's AI badge shows what is really happening: "Offline" if LIVE is
+  // set up but the last request fell back (see currentModeInfo in src/sparks).
+  const shownSparks = () => (sparks.currentModeInfo ? { ...sparks, modeInfo: sparks.currentModeInfo() } : sparks);
   const render = (req, res, { title, active, body, status = 200, wide = false, flash }) =>
-    res.html(String(layout({ title, active, body, req, ctx: { sparks }, flash: flash ?? flashFrom(req), wide })), status);
+    res.html(String(layout({ title, active, body, req, ctx: { sparks: shownSparks() }, flash: flash ?? flashFrom(req), wide })), status);
 
   const renderError = (req, res, status, message) =>
-    render(req, res, { title: status === 404 ? 'Not found' : 'Error', body: errorPage({ status, message }), status });
+    render(req, res, {
+      title: status === 404 ? 'Not found' : 'Error',
+      body: errorPage({
+        status,
+        message: status === 413 ? 'That form had more text than PorchLight can save at once.' : message,
+      }),
+      status,
+    });
 
   const seniorOr404 = (id) => {
     const s = store.senior(id);
@@ -192,6 +221,10 @@ export function createApp({ store, sparks, now = () => new Date() }) {
       now: now(),
     });
   const withPeople = (c) => ({ ...c, senior: store.senior(c.seniorId), volunteer: store.volunteer(c.volunteerId) });
+  // What no longer fits between a matched pair (no shared time, or a way of
+  // connecting the volunteer doesn't offer), using the Match page's own rules.
+  // Capacity is left out: the pair already counts toward it.
+  const misfitOf = (senior, volunteer) => (senior && volunteer ? scorePair(senior, volunteer, 0).problems : []);
 
   // ----- home -----
   router.get('/', (req, res) => {
@@ -202,14 +235,17 @@ export function createApp({ store, sparks, now = () => new Date() }) {
       checkInsThisWeek: store.contacts.filter(
         (c) => c.status === 'completed' && calendarDaysBetween(c.completedAt, now()) <= 6
       ).length,
-      flagged: summary.filter((r) => r.status === 'at_risk' || r.status === 'needs_match').length,
+      flagged: summary.filter(needsAttention).length,
     };
-    const attention = summary.filter((r) => r.status === 'at_risk' || r.status === 'needs_match');
+    const attention = summary.filter(needsAttention); // the same list as /attention
     render(req, res, { title: 'Home', active: 'home', body: homePage({ stats, attention }) });
   });
 
   router.get('/about-ai', (req, res) => {
-    render(req, res, { title: 'How the AI works', body: aboutAiPage({ modeInfo: sparks.modeInfo, model: sparks.model }) });
+    render(req, res, {
+      title: 'How the AI works',
+      body: aboutAiPage({ modeInfo: sparks.modeInfo, model: sparks.model, lastFallback: sparks.lastFallback || null }),
+    });
   });
 
   router.get('/healthz', (req, res) => res.json({ ok: true, sparkMode: sparks.modeInfo.effective }));
@@ -252,10 +288,10 @@ export function createApp({ store, sparks, now = () => new Date() }) {
     const contacts = store.contactsForSenior(senior.id);
     const nowDate = now();
     const upcoming = contacts
-      .filter((c) => c.status === 'scheduled' && new Date(c.scheduledFor) >= nowDate)
+      .filter((c) => c.status === 'scheduled' && !isUnmarkedPast(c, nowDate))
       .sort((a, b) => new Date(a.scheduledFor) - new Date(b.scheduledFor));
     const recent = contacts
-      .filter((c) => c.status !== 'scheduled')
+      .filter((c) => c.status === 'completed' || c.status === 'missed')
       .sort((a, b) => new Date(b.completedAt || b.scheduledFor) - new Date(a.completedAt || a.scheduledFor))
       .slice(0, 5);
     render(req, res, {
@@ -271,6 +307,8 @@ export function createApp({ store, sparks, now = () => new Date() }) {
         recent: withoutPrivateNotes(req.viewer, recent), // [roles] family and seniors never see call notes
         sparkSet: store.latestSparkSet(senior.id),
         sparkMode: sparks.modeInfo,
+        misfit: match && !isFamilyOrSenior(req.viewer) ? misfitOf(senior, store.volunteer(match.volunteerId)) : [], // [roles] a coordinator warning
+        hideNotice: req.query.warn === 'live_fallback', // the flash banner already says it
         hideSparks: isFamilyOrSenior(req.viewer), // [roles] sparks are a volunteer tool
       }),
     });
@@ -292,7 +330,10 @@ export function createApp({ store, sparks, now = () => new Date() }) {
     }
     Object.assign(senior, values, { updatedAt: now().toISOString() });
     store.save();
-    res.redirect(`/seniors/${senior.id}?msg=senior_saved`);
+    // Never break a match silently: warn if the edit means the pair no longer fits.
+    const match = store.activeMatchForSenior(senior.id);
+    const misfit = match ? misfitOf(senior, store.volunteer(match.volunteerId)) : [];
+    res.redirect(`/seniors/${senior.id}?msg=senior_saved${misfit.length ? '&warn=match_misfit' : ''}`);
   });
 
   // Conversation Sparks: generate 3 starters, save them, show them on the profile.
@@ -362,7 +403,7 @@ export function createApp({ store, sparks, now = () => new Date() }) {
       .activeMatchesForVolunteer(volunteer.id)
       .map((match) => {
         const senior = store.senior(match.seniorId);
-        return senior ? { senior, match, assessment: assess(senior) } : null;
+        return senior ? { senior, match, assessment: assess(senior), misfit: misfitOf(senior, volunteer) } : null;
       })
       .filter(Boolean);
     render(req, res, { title: volunteer.name, active: 'volunteers', body: volunteerProfilePage({ volunteer, assigned }) });
@@ -376,6 +417,11 @@ export function createApp({ store, sparks, now = () => new Date() }) {
   router.post('/volunteers/:id', (req, res) => {
     const volunteer = volunteerOr404(req.params.id);
     const { values, errors } = validateVolunteer(req.body);
+    const current = store.activeMatchesForVolunteer(volunteer.id).length;
+    if (!errors.maxSeniors && values.maxSeniors < current) {
+      const first = volunteer.name.split(' ')[0];
+      errors.maxSeniors = `${first} is companion to ${current} seniors right now. To lower this below ${current}, end one of ${first}’s matches first.`;
+    }
     if (Object.keys(errors).length) {
       return render(req, res, {
         title: `Fix the form: Edit ${volunteer.name}`, active: 'volunteers', status: 200,
@@ -384,7 +430,11 @@ export function createApp({ store, sparks, now = () => new Date() }) {
     }
     Object.assign(volunteer, values, { updatedAt: now().toISOString() });
     store.save();
-    res.redirect(`/volunteers/${volunteer.id}?msg=volunteer_saved`);
+    // Never break a match silently: warn if any of this volunteer's pairs no longer fits.
+    const misfit = store
+      .activeMatchesForVolunteer(volunteer.id)
+      .some((m) => misfitOf(store.senior(m.seniorId), volunteer).length);
+    res.redirect(`/volunteers/${volunteer.id}?msg=volunteer_saved${misfit ? '&warn=match_misfit' : ''}`);
   });
 
   // ----- matching -----
@@ -436,8 +486,19 @@ export function createApp({ store, sparks, now = () => new Date() }) {
   router.post('/matches/:id/end', (req, res) => {
     const match = store.matches.find((m) => m.id === req.params.id && m.active);
     if (!match) throw httpError(404, 'We could not find that match.');
+    const nowDate = now();
     match.active = false;
-    match.endedAt = now().toISOString();
+    match.endedAt = nowDate.toISOString();
+    // Calls the pair had planned come off the calendar (and the volunteer's
+    // week). They stay in the history as "cancelled", so nothing is deleted.
+    // Past calls nobody marked are left alone: they may have happened.
+    for (const c of store.contacts) {
+      if (c.status === 'scheduled' && c.seniorId === match.seniorId && c.volunteerId === match.volunteerId && new Date(c.scheduledFor) > nowDate) {
+        c.status = 'cancelled';
+        c.cancelReason = 'match_ended';
+        c.cancelledAt = nowDate.toISOString();
+      }
+    }
     store.save();
     res.redirect(`/match?seniorId=${match.seniorId}&msg=match_ended`);
   });
@@ -455,15 +516,16 @@ export function createApp({ store, sparks, now = () => new Date() }) {
     const scheduled = store.contacts
       .filter((c) => c.status === 'scheduled')
       .filter(isMine) // [roles]
-      .map(withPeople)
+      .map((c) => ({ ...withPeople(c), canLog: canLogNow(c, nowDate), canMiss: canMarkMissedNow(c, nowDate) }))
       .filter((c) => c.senior)
       .sort((a, b) => new Date(a.scheduledFor) - new Date(b.scheduledFor));
+    const happenedAt = (c) => new Date(c.completedAt || c.cancelledAt || c.scheduledFor);
     const recent = store.contacts
       .filter((c) => c.status !== 'scheduled')
       .filter(isMine) // [roles]
       .map(withPeople)
       .filter((c) => c.senior)
-      .sort((a, b) => new Date(b.completedAt || b.scheduledFor) - new Date(a.completedAt || a.scheduledFor))
+      .sort((a, b) => happenedAt(b) - happenedAt(a))
       .slice(0, 15);
     render(req, res, {
       title: Object.keys(errors).length ? 'Fix the form: Calls & visits' : 'Calls & visits',
@@ -475,8 +537,9 @@ export function createApp({ store, sparks, now = () => new Date() }) {
         pairs,
         form,
         errors,
-        upcoming: scheduled.filter((c) => new Date(c.scheduledFor) >= nowDate),
-        overdue: scheduled.filter((c) => new Date(c.scheduledFor) < nowDate),
+        // A call stays "coming up" for an hour after it starts (it may be going on now).
+        upcoming: scheduled.filter((c) => !isUnmarkedPast(c, nowDate)),
+        overdue: scheduled.filter((c) => isUnmarkedPast(c, nowDate)),
         recent,
       }),
     });
@@ -488,14 +551,18 @@ export function createApp({ store, sparks, now = () => new Date() }) {
     if (!matchId && req.query.seniorId) matchId = store.activeMatchForSenior(req.query.seniorId)?.id || '';
     const match = store.matches.find((m) => m.id === matchId && m.active);
     const senior = match ? store.senior(match.seniorId) : null;
-    const tomorrow = startOfLocalDay(now(), 1); // a calendar day, even on the 25-hour day in November
+    const volunteer = match ? store.volunteer(match.volunteerId) : null;
+    // Suggest the pair's next shared free time (at least an hour from now).
+    // Otherwise: tomorrow at 4 PM, a calendar day even on the 25-hour day in November.
+    const shared = senior && volunteer ? senior.availability.filter((slot) => volunteer.availability.includes(slot)) : [];
+    const suggested = nextSlotTime(shared, now());
     contactsView(req, res, {
       form: {
         matchId: match ? match.id : '',
         action: 'schedule',
         type: senior ? senior.contactMethod : 'phone',
-        date: toDateInput(tomorrow),
-        time: '16:00',
+        date: toDateInput(suggested || startOfLocalDay(now(), 1)),
+        time: suggested ? toTimeInput(suggested) : '16:00',
       },
     });
   });
@@ -506,6 +573,17 @@ export function createApp({ store, sparks, now = () => new Date() }) {
     if (Object.keys(errors).length) return contactsView(req, res, { form, errors, status: 200 });
 
     const isLog = form.action === 'log';
+    // Pressing Save twice (or a slow connection) must not add the same call twice:
+    // the same pair, type, and time that is already saved is ignored.
+    const duplicate = store.contacts.some(
+      (c) =>
+        c.seniorId === match.seniorId &&
+        c.volunteerId === match.volunteerId &&
+        c.type === form.type &&
+        c.status === (isLog ? 'completed' : 'scheduled') &&
+        new Date(c.scheduledFor).getTime() === when.getTime()
+    );
+    if (duplicate) return res.redirect('/contacts?msg=duplicate');
     store.contacts.push({
       id: store.newId('c'),
       seniorId: match.seniorId,
@@ -532,24 +610,39 @@ export function createApp({ store, sparks, now = () => new Date() }) {
   const markContact = (status) => (req, res) => {
     const contact = store.contacts.find((c) => c.id === req.params.id);
     if (!contact) throw httpError(404, 'We could not find that call.');
+    if (contact.status === 'cancelled') {
+      throw httpError(409, 'That call was cancelled when the match ended, so it can’t be logged or marked missed.');
+    }
     if (contact.status !== 'scheduled') throw httpError(409, 'That call was already marked.');
+    const nowDate = now();
+    const noun = contact.type === 'visit' ? 'visit' : 'call';
+    let reason = null;
+    let reasonNote = null;
     if (status === 'missed') {
       // Optional reason. Old forms without one still work.
-      const reason = str(req.body.reason);
-      const reasonNote = str(req.body.reasonNote);
+      reason = str(req.body.reason);
+      reasonNote = str(req.body.reasonNote);
       if (reason && !isMissedReason(reason)) throw httpError(400, 'Choose a reason from the list.');
-      if (reasonNote.length > 200) throw httpError(400, 'The note about the missed call must be 200 characters or fewer.');
+      if (chars(reasonNote) > 200) throw httpError(400, 'The note about the missed call must be 200 characters or fewer.');
+      // A call that hasn't started yet can't have been missed.
+      if (!canMarkMissedNow(contact, nowDate)) {
+        throw httpError(409, `That ${noun} is set for ${formatDateTime(contact.scheduledFor)}, so it hasn’t been missed yet. You can mark it missed once that time has passed.`);
+      }
+    } else if (!canLogNow(contact, nowDate)) {
+      // Only on its day or later (Carmel calendar): a Thursday visit can't be logged on Tuesday.
+      throw httpError(409, `That ${noun} is set for ${formatLongDate(contact.scheduledFor)} at ${formatTime(contact.scheduledFor)}. You can mark it done on that day, once it has happened.`);
+    }
+    if (status === 'missed') {
       contact.missedReason = reason || null;
       contact.missedNote = reasonNote || null;
     }
     contact.status = status;
     if (status === 'completed') {
-      // If it was marked early, count it as happening now, not in the future.
-      const nowDate = now();
+      // If it was marked early in the day, count it as happening now, not later today.
       const scheduled = new Date(contact.scheduledFor);
       contact.completedAt = (scheduled > nowDate ? nowDate : scheduled).toISOString();
     }
-    contact.markedAt = now().toISOString();
+    contact.markedAt = nowDate.toISOString();
     store.save();
     const back = safeBack(req.body.back);
     res.redirect(back ? `${back}${back.includes('?') ? '&' : '?'}msg=${status}` : `/contacts?msg=${status}`);
@@ -583,7 +676,7 @@ export function createApp({ store, sparks, now = () => new Date() }) {
 
   router.post('/settings', (req, res) => {
     const raw = str(req.body.riskThresholdDays);
-    const n = Number(raw);
+    const n = wholeNumber(raw);
     if (!Number.isInteger(n) || n < 1 || n > 60) {
       return dashboardView(req, res, {
         errors: { riskThresholdDays: 'Enter a whole number of days from 1 to 60.' },

@@ -169,6 +169,25 @@ test('town filter: dashboard, seniors, volunteers, and Needs attention', async (
   assert.match(queueWestfield, /Not on the list yet, but due soon[\s\S]*Rosa Delgado/);
 });
 
+test('per town, the dashboard and Needs attention agree on who needs attention (needsAttention)', async () => {
+  await reset();
+  const flaggedOnDashboard = (body) => {
+    const m = body.match(/Right now(?: in [^,]+)?, (no|\d+) seniors? needs? attention/);
+    assert.ok(m, 'status line found');
+    return m[1] === 'no' ? 0 : Number(m[1]);
+  };
+  const onQueue = (body) => (body.match(/class="card dash-card dash-\w+" id="senior-/g) || []).length;
+  let sum = 0;
+  for (const town of ['Carmel', 'Westfield', 'Fishers']) {
+    const dash = flaggedOnDashboard(await page(`/dashboard?town=${town}`));
+    const queue = onQueue(await page(`/attention?town=${town}`));
+    assert.equal(dash, queue, town);
+    sum += queue;
+  }
+  assert.equal(sum, onQueue(await page('/attention')), 'the towns add up to the whole list');
+  assert.equal(flaggedOnDashboard(await page('/dashboard')), sum);
+});
+
 test('an unknown or other-time-zone town is ignored safely', async () => {
   const all = dashCards(await page('/dashboard'));
   for (const town of ['Atlantis', 'Evansville', '<script>alert(1)</script>', '', '%E0%A4%A', 'Westfield&town=Carmel']) {

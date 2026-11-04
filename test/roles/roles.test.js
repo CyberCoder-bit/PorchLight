@@ -227,12 +227,19 @@ test('volunteer: can act on their own calls only (GET and POST checked on the se
   assert.equal((await post('/volunteers/v-ethan', { name: 'Changed' }, 'volunteer:v-ethan')).status, 403);
   assert.equal(store.volunteer('v-ethan').name, 'Ethan Brooks');
 
-  // Maya can do all of it for her own call.
+  // Maya can download her own call.
   assert.equal((await get(`/contacts/${dorothyCall.id}/calendar.ics`, 'volunteer:v-maya')).status, 200);
-  res = await post(`/contacts/${dorothyCall.id}/complete`, { back: '/volunteers/v-maya/week' }, 'volunteer:v-maya');
+
+  // Ethan's visit with Hal from yesterday is still unmarked. Maya can't log it; Ethan can.
+  const halVisit = store.contacts.find((c) => c.seniorId === 's-harold' && c.status === 'scheduled');
+  assert.equal(halVisit.volunteerId, 'v-ethan');
+  assert.equal((await post(`/contacts/${halVisit.id}/complete`, {}, 'volunteer:v-maya')).status, 403);
+  assert.equal((await post(`/contacts/${halVisit.id}/missed`, {}, 'volunteer:v-maya')).status, 403);
+  assert.equal(store.contacts.find((c) => c.id === halVisit.id).status, 'scheduled', 'nothing changed');
+  res = await post(`/contacts/${halVisit.id}/complete`, { back: '/volunteers/v-ethan/week' }, 'volunteer:v-ethan');
   assert.equal(res.status, 303);
-  assert.equal(res.headers.get('location'), '/volunteers/v-maya/week?msg=completed');
-  assert.equal(store.contacts.find((c) => c.id === dorothyCall.id).status, 'completed');
+  assert.equal(res.headers.get('location'), '/volunteers/v-ethan/week?msg=completed');
+  assert.equal(store.contacts.find((c) => c.id === halVisit.id).status, 'completed');
 
   // Ethan can schedule for his own pair, ask for Hal's sparks, and change text size.
   res = await post('/contacts', { matchId: 'm-harold-ethan', action: 'schedule', type: 'visit', date: '2099-01-01', time: '15:00' }, 'volunteer:v-ethan');

@@ -3,7 +3,7 @@
 import { html, formatDateTime, formatDate, daysAgoText } from '../html.js';
 import {
   statusBadge, trendBadge, chips, slotList, errorSummary, textField, textArea,
-  interestCheckboxes, availabilityFieldset, methodRadios, methodLabel, banner, backLink, emptyState,
+  interestCheckboxes, availabilityFieldset, methodRadios, methodLabel, banner, backLink, emptyState, sparkSourceLabel,
 } from '../components.js';
 import { placeText, townLabel } from '../../towns/index.js'; // [towns]
 import { townSelectField } from '../../towns/views.js'; // [towns]
@@ -38,29 +38,23 @@ export function seniorsListPage({ rows, townFilter = '', townName = null }) { //
           <p><a href="/seniors/new">Add a senior</a></p>`)}`;
 }
 
-function sparkPanel({ senior, sparkSet, sparkMode }) {
+function sparkPanel({ senior, sparkSet, sparkMode, hideNotice = false }) {
   const name = senior.preferredName || senior.name.split(' ')[0];
   const nextVariant = sparkSet ? (sparkSet.variant || 0) + 1 : 0;
-  const sourceText = (set) =>
-    set.mode === 'live'
-      ? `Written by Claude, an AI (${set.model})`
-      : set.mode === 'mock-fallback'
-        ? 'From the built-in ideas (live AI was unavailable)'
-        : 'From the built-in ideas (offline mode)';
   return html`
     <section class="panel spark-panel" id="sparks" aria-labelledby="sparks-heading" tabindex="-1">
       <h2 id="sparks-heading"><span aria-hidden="true">✦</span> Conversation sparks for ${name}</h2>
       <p>Three suggested ways to start the next conversation, based on ${name}'s interests and how long it has been since the last call or visit. They are only suggestions: use your own words.</p>
       ${sparkSet
         ? html`
-          ${sparkSet.notice ? banner({ kind: 'status', text: sparkSet.notice }) : ''}
+          ${sparkSet.notice && !hideNotice ? banner({ kind: 'status', text: sparkSet.notice }) : ''}
           <ol class="sparks">
             ${sparkSet.sparks.map(
               (s) => html`<li><p class="spark-text">${s.text}</p><p class="spark-basis">Based on: ${s.basedOn}</p></li>`
             )}
           </ol>
           ${sparkSet.tip ? html`<p class="tip"><strong>Volunteer tip:</strong> ${sparkSet.tip}</p>` : ''}
-          <p class="muted">Suggestions. ${sourceText(sparkSet)} · ${formatDateTime(sparkSet.createdAt)}</p>`
+          <p class="muted">Suggestions only. ${sparkSourceLabel(sparkSet)} · ${formatDateTime(sparkSet.createdAt)}</p>`
         : emptyState(html`<p><strong>No sparks yet for ${name}.</strong> Press “Get conversation sparks” for three ideas to use on the next call.</p>`)}
       <form method="post" action="/seniors/${senior.id}/sparks" class="inline-form" data-busy-text="${sparkMode.effective === 'live' ? 'Asking Claude…' : 'Working…'}">
         <input type="hidden" name="variant" value="${nextVariant}">
@@ -69,7 +63,11 @@ function sparkPanel({ senior, sparkSet, sparkMode }) {
     </section>`;
 }
 
-export function seniorProfilePage({ senior, assessment, volunteer, match, upcoming, recent, sparkSet, sparkMode, hideSparks = false }) { // [roles] hideSparks
+// `misfit`: what no longer fits between this senior and their companion
+// (e.g. "No overlapping availability"), after an edit to either profile.
+// `hideNotice`: the page already shows the same live-AI notice as a banner.
+// `hideSparks` [roles]: family and senior views leave out the volunteer's sparks.
+export function seniorProfilePage({ senior, assessment, volunteer, match, upcoming, recent, sparkSet, sparkMode, misfit = [], hideNotice = false, hideSparks = false }) {
   const name = senior.preferredName || senior.name.split(' ')[0];
   return html`
     ${backLink('/seniors', 'all seniors')}
@@ -78,6 +76,7 @@ export function seniorProfilePage({ senior, assessment, volunteer, match, upcomi
       <a class="button button-secondary" href="/seniors/${senior.id}/edit">Edit profile</a>
     </div>
     <p class="badges">${statusBadge(assessment.status, assessment.info)} ${trendBadge(assessment.trend)}</p>
+    ${volunteer && misfit.length ? misfitNote({ senior, volunteer, misfit }) : ''}
 
     <section class="panel welcome" aria-labelledby="welcome-heading">
       <h2 id="welcome-heading">Hi ${name}! Here is your PorchLight.</h2>
@@ -91,7 +90,7 @@ export function seniorProfilePage({ senior, assessment, volunteer, match, upcomi
 
     <div class="two-col">
       <div>
-        ${hideSparks ? '' : sparkPanel({ senior, sparkSet, sparkMode })}
+        ${hideSparks ? '' : sparkPanel({ senior, sparkSet, sparkMode, hideNotice })}
 
         <section class="panel" aria-labelledby="contacts-heading">
           <h2 id="contacts-heading">Calls and visits</h2>
@@ -107,7 +106,7 @@ export function seniorProfilePage({ senior, assessment, volunteer, match, upcomi
           <h3>Recent</h3>
           ${recent.length
             ? html`<ul class="plain-list">${recent.map(
-                (c) => html`<li><strong>${formatDate(c.completedAt || c.scheduledFor)}</strong>: ${methodLabel(c.type)}${c.status === 'missed' ? html` <span class="badge badge-missed">Missed</span>` : c.durationMinutes ? ` (${c.durationMinutes} min)` : ''}${c.notes ? html`<br><span class="muted">${c.notes}</span>` : ''}</li>`
+                (c) => html`<li><strong>${formatDate(c.completedAt || c.scheduledFor)}</strong>: ${methodLabel(c.type)}${c.status === 'missed' ? html` <span class="badge badge-missed">Missed</span>` : c.status === 'cancelled' ? ' (cancelled: the match ended)' : c.durationMinutes ? ` (${c.durationMinutes} min)` : ''}${c.notes ? html`<br><span class="muted">${c.notes}</span>` : ''}</li>`
               )}</ul>`
             : emptyState(html`<p><strong>No calls or visits written down yet.</strong> After a call, log it on the <a href="/contacts${match ? `?matchId=${match.id}` : ''}">Calls &amp; Visits page</a>.</p>`)}
         </section>
@@ -135,6 +134,17 @@ export function seniorProfilePage({ senior, assessment, volunteer, match, upcomi
     </div>`;
 }
 
+// A match that no longer fits: say what changed and what to do. Never shown in
+// color alone (the banner has an icon and a word).
+export function misfitNote({ senior, volunteer, misfit }) {
+  const name = senior.preferredName || senior.name.split(' ')[0];
+  return banner({
+    kind: 'warning',
+    text: `${name}'s match with ${volunteer.name} no longer fits: ${misfit.join('; ')}. Update one of the profiles, or find ${name} a new companion.`,
+    next: { href: `/attention/${senior.id}/rematch`, label: `Review ${name}'s match` },
+  });
+}
+
 export function seniorFormPage({ senior = {}, errors = {}, isNew }) {
   const action = isNew ? '/seniors' : `/seniors/${senior.id}`;
   const first = (senior.preferredName || senior.name || '').split(' ')[0];
@@ -150,7 +160,7 @@ export function seniorFormPage({ senior = {}, errors = {}, isNew }) {
       ${textField({ name: 'neighborhood', label: 'Neighborhood', value: senior.neighborhood, error: errors.neighborhood, hint: 'For example "Old Town" or "near the library".' })}
       ${townSelectField(senior, errors.town)}
       ${interestCheckboxes(senior.interests || [], errors.interests)}
-      ${textArea({ name: 'aboutMe', label: 'About them, in their own words', value: senior.aboutMe, error: errors.aboutMe, hint: 'A few sentences about their life and what they enjoy. Used to make the conversation sparks personal. Up to 500 characters.' })}
+      ${textArea({ name: 'aboutMe', label: 'About them, in their own words', value: senior.aboutMe, error: errors.aboutMe, hint: 'A few sentences about their life and what they enjoy. Used to make the conversation sparks personal. Please leave out phone numbers, emails, and addresses: PorchLight removes phone numbers and emails before anything goes to the AI. Up to 500 characters.' })}
       ${availabilityFieldset(senior.availability || [], errors.availability)}
       ${methodRadios(senior.contactMethod, errors.contactMethod)}
       <fieldset class="choice-group">

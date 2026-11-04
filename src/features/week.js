@@ -1,10 +1,15 @@
 // A volunteer's "My week": scheduled calls from now through the 7th calendar
 // day (Carmel time), plus past calls that were never marked.
 //
+// A call stays in "Coming up" for an hour after it starts (it may be going on
+// right now), then moves to "Did these calls happen?". Each call says whether
+// it can be logged yet (on its day or later) and marked missed (once its time
+// has come); see canLogNow() and canMarkMissedNow() in src/risk.js.
+//
 // Sparks shown here are the latest SAVED set for each senior. Loading this
 // page never calls the AI.
 
-import { calendarDaysBetween } from '../risk.js';
+import { calendarDaysBetween, isUnmarkedPast, canLogNow, canMarkMissedNow } from '../risk.js';
 import { localParts, fromLocal, formatLocal } from '../tz.js';
 import { toDateInput } from '../views/html.js';
 
@@ -18,14 +23,19 @@ export function zoneAbbreviation(date) {
 export function buildWeek(store, volunteer, now) {
   const p = localParts(now);
   const lastDay = fromLocal(p.year, p.month, p.day + WEEK_DAYS - 1, 12); // noon avoids DST edges
-  const withSenior = (c) => ({ ...c, senior: store.senior(c.seniorId) });
+  const withSenior = (c) => ({
+    ...c,
+    senior: store.senior(c.seniorId),
+    canLog: canLogNow(c, now),
+    canMiss: canMarkMissedNow(c, now),
+  });
   const scheduled = store.contacts
     .filter((c) => c.volunteerId === volunteer.id && c.status === 'scheduled')
     .map(withSenior)
     .filter((c) => c.senior)
     .sort((a, b) => new Date(a.scheduledFor) - new Date(b.scheduledFor));
 
-  const isPast = (c) => new Date(c.scheduledFor) < now;
+  const isPast = (c) => isUnmarkedPast(c, now);
   const dayOffset = (c) => calendarDaysBetween(now, c.scheduledFor);
   const overdue = scheduled.filter(isPast);
   const thisWeek = scheduled.filter((c) => !isPast(c) && dayOffset(c) <= WEEK_DAYS - 1);
