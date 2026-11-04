@@ -8,7 +8,9 @@
 import { buildAttentionQueue } from './attention.js';
 import { completedContacts } from '../risk.js';
 import { missedCallsWithin } from './words.js';
+import { buildWeek } from './week.js';
 import { attentionPage, rematchPage } from '../views/features/attention.js';
+import { myWeekPage } from '../views/features/week.js';
 
 export function registerFeatures(router, ctx) {
   const { store, now, render } = ctx;
@@ -37,6 +39,17 @@ export function registerFeatures(router, ctx) {
         together: completedContacts(contacts),
         missedWithVolunteer: missedCallsWithin(contacts, now()),
       }),
+    });
+  });
+
+  // ----- My week (volunteer) -----
+  router.get('/volunteers/:id/week', (req, res) => {
+    const volunteer = ctx.volunteerOr404(req.params.id);
+    const busyText = ctx.sparks.modeInfo.effective === 'live' ? 'Asking Claude…' : 'Working…';
+    render(req, res, {
+      title: `My week: ${volunteer.name}`,
+      active: 'volunteers',
+      body: myWeekPage(buildWeek(store, volunteer, now()), { busyText }),
     });
   });
 }

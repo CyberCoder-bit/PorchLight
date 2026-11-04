@@ -63,11 +63,13 @@ const post = (p, data = {}) =>
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: encode(data),
   });
-// YYYY-MM-DD for `offset` days from today, on the Carmel calendar (DST-safe).
-const localDay = (offset) => {
+// The moment `offset` days from today at hour:minute on the Carmel clock (DST-safe).
+const localAt = (offset, hour, minute = 0) => {
   const p = localParts(new Date());
-  return toDateInput(fromLocal(p.year, p.month, p.day + offset, 12));
+  return fromLocal(p.year, p.month, p.day + offset, hour, minute);
 };
+// YYYY-MM-DD for `offset` days from today, on the Carmel calendar.
+const localDay = (offset) => toDateInput(localAt(offset, 12));
 // The ids of the queue cards, in order.
 const queueOrder = (html) => [...html.matchAll(/<li class="card dash-card dash-\w+" id="senior-([\w-]+)"/g)].map((m) => m[1]);
 // One queue card's HTML, from its <li> to the end of its actions.
@@ -212,4 +214,109 @@ test('attention pages escape names and return 404 for unknown seniors', async ()
     assert.match(html, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/, p);
   }
   assert.equal((await get('/attention/nobody/rematch')).status, 404);
+});
+
+// ---------- My week ----------
+
+const addCall = (fields) => {
+  const call = {
+    id: `c-test-${Math.random().toString(36).slice(2, 8)}`,
+    seniorId: 's-dorothy',
+    volunteerId: 'v-maya',
+    type: 'phone',
+    status: 'scheduled',
+    completedAt: null,
+    durationMinutes: null,
+    notes: '',
+    createdAt: new Date().toISOString(),
+    ...fields,
+  };
+  store.contacts.push(call);
+  store.save();
+  return call;
+};
+const dorothyCall = () => store.contacts.find((c) => c.seniorId === 's-dorothy' && c.status === 'scheduled');
+
+test('My week shows the next 7 days in Carmel time, with saved sparks inline and no AI call on load', async () => {
+  addCall({ scheduledFor: localAt(10, 15).toISOString() }); // outside the 7-day window
+  let html = await page('/volunteers/v-maya/week');
+  assert.match(html, /<title>My week: Maya Patel · PorchLight<\/title>/);
+  assert.match(html, /<a href="\/volunteers" aria-current="page">/);
+  assert.match(html, /Times are Carmel, Indiana time \((EST|EDT)\)\./);
+  const call = dorothyCall();
+  assert.match(html, new RegExp(`id="call-${call.id}"`));
+  assert.match(html, /<strong>4:00 PM<\/strong>: Phone call with <a href="\/seniors\/s-dorothy">Dorothy Jensen<\/a>/);
+  assert.match(html, /1 more call is scheduled after this week/);
+  assert.doesNotMatch(html, /Did these calls happen\?/);
+
+  // No saved sparks yet: offer the existing sparks form, and don't make any.
+  assert.match(html, /<form method="post" action="\/seniors\/s-dorothy\/sparks"/);
+  assert.match(html, /Get conversation sparks for Dorothy/);
+  assert.equal(store.sparkSets.length, 0, 'loading My week never generates sparks');
+
+  // Log this call: one click, back to this page.
+  assert.match(html, new RegExp(`<form method="post" action="/contacts/${call.id}/complete" class="inline-form">\\s*<input type="hidden" name="back" value="/volunteers/v-maya/week">`));
+  assert.match(html, /Log this call<span class="visually-hidden"> with Dorothy on/);
+  // Mark missed: labeled reason select and note.
+  assert.match(html, new RegExp(`<label for="reason-${call.id}">Why was it missed\\?</label>`));
+  assert.match(html, /<option value="volunteer_conflict">Volunteer had a conflict<\/option>/);
+  assert.match(html, new RegExp(`<label for="note-${call.id}">Short note \\(optional\\)</label>`));
+  assert.match(html, /name="reasonNote" maxlength="200"/);
+
+  // After sparks are saved, they show inline with their source.
+  const res = await post('/seniors/s-dorothy/sparks', { variant: '0' });
+  assert.equal(res.status, 303);
+  const saved = store.latestSparkSet('s-dorothy');
+  html = await page('/volunteers/v-maya/week');
+  assert.ok(html.includes(escapeHtml(saved.sparks[0].text)));
+  assert.match(html, /Suggestions only\. From the offline templates \(MOCK mode\)/);
+  assert.doesNotMatch(html, /Get conversation sparks for Dorothy/);
+  assert.equal(store.sparkSets.length, 1);
+});
+
+test('My week: log and missed actions redirect back to the week', async () => {
+  const overdue = addCall({ scheduledFor: new Date(Date.now() - 3 * 3600000).toISOString() });
+  let html = await page('/volunteers/v-maya/week');
+  const panel = html.slice(html.indexOf('Did these calls happen?'), html.indexOf('id="week-heading"'));
+  assert.match(panel, new RegExp(`id="call-${overdue.id}"`));
+  assert.doesNotMatch(panel, /\/sparks"/, 'no spark form for past calls');
+
+  let res = await post(`/contacts/${overdue.id}/complete`, { back: '/volunteers/v-maya/week' });
+  assert.equal(res.status, 303);
+  assert.equal(res.headers.get('location'), '/volunteers/v-maya/week?msg=completed');
+  html = await page(res.headers.get('location'));
+  assert.match(html, /Marked as completed\./);
+  assert.doesNotMatch(html, /Did these calls happen\?/);
+  assert.equal(store.contacts.find((c) => c.id === overdue.id).status, 'completed');
+
+  const call = dorothyCall();
+  res = await post(`/contacts/${call.id}/missed`, { reason: 'senior_unavailable', reasonNote: 'At the doctor', back: '/volunteers/v-maya/week' });
+  assert.equal(res.status, 303);
+  assert.equal(res.headers.get('location'), '/volunteers/v-maya/week?msg=missed');
+  assert.match(await page(res.headers.get('location')), /Marked as missed\./);
+  const saved = store.contacts.find((c) => c.id === call.id);
+  assert.equal(saved.missedReason, 'senior_unavailable');
+  assert.equal(saved.missedNote, 'At the doctor');
+
+  // The reason now shows in the coordinator queue, with a family next step.
+  const dorothy = card(await page('/attention'), 's-dorothy');
+  assert.match(dorothy, /Reason: Senior was unavailable\./);
+  assert.match(dorothy, /Suggested next step: Let the family know/);
+
+  // Too-long notes are rejected by the existing handler.
+  const another = addCall({ scheduledFor: new Date(Date.now() + 86400000).toISOString() });
+  res = await post(`/contacts/${another.id}/missed`, { reason: 'other', reasonNote: 'x'.repeat(201), back: '/volunteers/v-maya/week' });
+  assert.equal(res.status, 400);
+});
+
+test('My week empty states, and 404 for an unknown volunteer', async () => {
+  const ethan = await page('/volunteers/v-ethan/week');
+  assert.match(ethan, /Nothing scheduled in the next 7 days\./);
+  assert.match(ethan, /<a class="button" href="\/contacts\?matchId=m-harold-ethan">Schedule a visit with Hal<\/a>/);
+
+  const sam = await page('/volunteers/v-sam/week');
+  assert.match(sam, /Nothing scheduled in the next 7 days\./);
+  assert.match(sam, /<a class="button" href="\/match">/);
+
+  assert.equal((await get('/volunteers/nobody/week')).status, 404);
 });
