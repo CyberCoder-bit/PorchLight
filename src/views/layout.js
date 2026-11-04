@@ -1,8 +1,12 @@
 // Page shell shared by every screen: skip link, header, navigation, AI mode
-// badge, text-size control, flash message, and footer.
+// badge, text-size control, feedback banner, and footer.
 
 import { html } from './html.js';
+import { banner } from './components.js';
+import { COMMUNITY } from '../community.js';
 
+// Main navigation. `key` matches the `active` value a page passes to render(),
+// which marks that link with aria-current="page".
 const NAV = [
   { href: '/', label: 'Home', key: 'home' },
   { href: '/seniors', label: 'Seniors', key: 'seniors' },
@@ -10,7 +14,27 @@ const NAV = [
   { href: '/match', label: 'Match', key: 'match' },
   { href: '/contacts', label: 'Calls & Visits', key: 'contacts' },
   { href: '/dashboard', label: 'Family Dashboard', key: 'dashboard' },
+  { href: '/attention', label: 'Needs attention', key: 'attention' },
+  { href: '/help', label: 'Get help', key: 'help' },
 ];
+
+// "No dead ends": after a success message, offer the obvious next step.
+// Built only from the message key and the current path (no user text).
+function nextStep(req) {
+  const msg = req.query.msg;
+  const seniorId = (req.path.match(/^\/seniors\/([^/]+)$/) || [])[1];
+  if (msg === 'reset' && req.path !== '/tour') return { href: '/tour', label: 'Continue the 2-minute demo tour' };
+  if (msg === 'matched' && seniorId) return { href: `/contacts?seniorId=${encodeURIComponent(seniorId)}`, label: 'Schedule the first call' };
+  if (msg === 'senior_added' && seniorId) return { href: `/match?seniorId=${encodeURIComponent(seniorId)}`, label: 'Find a companion' };
+  if ((msg === 'completed' || msg === 'logged') && req.path !== '/dashboard') return { href: '/dashboard', label: 'See the Family Dashboard' };
+  return null;
+}
+
+function flashBanner(flash, req) {
+  const kind = flash.kind || 'success';
+  const classes = `flash flash-${kind}`;
+  return banner({ kind, text: flash.text, next: kind === 'success' ? nextStep(req) : null, extraClass: classes });
+}
 
 export const TEXT_SIZES = [
   { id: 'normal', label: 'A', name: 'Normal text' },
@@ -48,7 +72,9 @@ export function layout({ title, active, body, req, ctx, flash, wide = false }) {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${title} · PorchLight</title>
-  <meta name="description" content="PorchLight connects isolated seniors in Carmel, Indiana with volunteer companions.">
+  <meta name="description" content="PorchLight helps older adults in Indiana communities stay connected with volunteer companions. Demo data starts in ${COMMUNITY.town}, ${COMMUNITY.county}.">
+  <meta name="theme-color" content="#1d2433">
+  <meta name="color-scheme" content="light">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/styles.css">
   <script src="/app.js" defer></script>
@@ -80,12 +106,17 @@ export function layout({ title, active, body, req, ctx, flash, wide = false }) {
     </nav>
   </header>
   <main id="main" tabindex="-1" class="${wide ? 'wide' : ''}">
-    ${flash ? html`<div class="flash flash-${flash.kind || 'success'}" role="status"><p>${flash.text}</p></div>` : html`<div role="status" class="visually-hidden"></div>`}
+    ${flash ? flashBanner(flash, req) : html`<div role="status" class="visually-hidden"></div>`}
     ${body}
   </main>
   <footer class="site-footer">
-    <p><strong>Prototype</strong> for the Nextech CSforGood 2026 competition. There is no login yet, so every role's screens are visible. All people shown are fictional.</p>
-    <p><a href="/about-ai">How the AI works</a> · <a href="/demo/reset">Reset demo data</a></p>
+    <p class="footer-note">Built for Indiana communities. Demo data is fictional.</p>
+    <p>A prototype for the Nextech CSforGood 2026 competition. There is no sign-in yet, so you can see every screen: senior, volunteer, family, and coordinator.</p>
+    <ul class="footer-links">
+      <li><a href="/tour">2-minute demo tour</a></li>
+      <li><a href="/about-ai">How the AI works</a></li>
+      <li><a href="/demo/reset">Reset demo data</a></li>
+    </ul>
   </footer>
 </body>
 </html>`;

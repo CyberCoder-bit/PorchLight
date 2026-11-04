@@ -38,12 +38,58 @@ export function slotList(ids) {
 
 export { slotLabel, methodLabel };
 
+// ---------- feedback banner ----------
+// One pattern for all four kinds of feedback. Each banner has an icon, a word,
+// and a color, so meaning never depends on color alone.
+//   status  (role="status")  ℹ Note
+//   success (role="status")  ✓ Done
+//   warning (role="status")  ⚠ Heads up
+//   error   (role="alert")   ✕ Problem
+// Forms with errors keep their own focusable error summary (errorSummary below).
+// U+FE0E asks for the plain text symbol, not a color emoji.
+export const BANNER_KINDS = {
+  status: { icon: 'ℹ︎', word: 'Note' },
+  success: { icon: '✓', word: 'Done' },
+  warning: { icon: '⚠︎', word: 'Heads up' },
+  error: { icon: '✕', word: 'Problem' },
+};
+
+export function banner({ kind = 'status', text, body, next, word, role, extraClass = '' }) {
+  const k = BANNER_KINDS[kind] ? kind : 'status';
+  const spec = BANNER_KINDS[k];
+  const label = word ?? spec.word;
+  let message = text;
+  // Don't say "Heads up: Heads up: ..." when the message already starts with the word.
+  if (typeof message === 'string' && message.toLowerCase().startsWith(`${label.toLowerCase()}:`)) {
+    message = message.slice(label.length + 1).trimStart();
+  }
+  return html`
+    <div class="banner banner-${k}${extraClass ? ` ${extraClass}` : ''}" role="${role || (k === 'error' ? 'alert' : 'status')}">
+      <span class="banner-icon" aria-hidden="true">${spec.icon}</span>
+      <div class="banner-body">
+        ${message !== undefined && message !== null ? html`<p><strong class="banner-word">${label}:</strong> ${message}</p>` : ''}
+        ${body || ''}
+        ${next ? html`<p><a href="${next.href}">${next.label} <span aria-hidden="true">→</span></a></p>` : ''}
+      </div>
+    </div>`;
+}
+
+// "How do I get out?" A plain link back to the parent page, shown above the h1.
+export function backLink(href, label) {
+  return html`<p class="back-link"><a href="${href}"><span aria-hidden="true">←</span> Back to ${label}</a></p>`;
+}
+
+// What an empty list says: what it means, and what to do next.
+export function emptyState(content) {
+  return html`<div class="empty-state">${content}</div>`;
+}
+
 export function errorSummary(errors) {
   const entries = Object.entries(errors || {});
   if (!entries.length) return '';
   return html`
     <div class="error-summary" role="alert" tabindex="-1" id="error-summary" aria-labelledby="error-summary-title">
-      <h2 id="error-summary-title">Please fix ${entries.length === 1 ? 'this problem' : `these ${entries.length} problems`}</h2>
+      <h2 id="error-summary-title"><span aria-hidden="true">✕</span> Please fix ${entries.length === 1 ? 'this problem' : `these ${entries.length} problems`}</h2>
       <ul>${entries.map(([field, message]) => html`<li><a href="#field-${field}">${message}</a></li>`)}</ul>
     </div>`;
 }
@@ -117,7 +163,7 @@ export function interestCheckboxes(selected, error) {
   return choiceGroup({
     name: 'interests',
     legend: 'Interests and hobbies',
-    hint: 'Choose all that apply. These drive matching and conversation sparks.',
+    hint: 'Choose all that apply. We use these to find a good match and to suggest things to talk about.',
     error,
     type: 'checkbox',
     choices: INTERESTS,
