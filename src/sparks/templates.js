@@ -4,6 +4,11 @@
 // month-specific ones, so offline output still feels current. Placeholders:
 //   {name}  the senior's preferred name
 //   {gap}   a friendly phrase like "about a week"
+//   {town}  the community's town (src/community.js), e.g. "Carmel"
+//
+// Nothing here names a particular town. Local places and events come from
+// the community profile (COMMUNITIES.<id>.localTouches in src/community.js);
+// a community without its own touches gets INDIANA_TOUCHES below.
 // Volunteers say these out loud, so they're written to be spoken,
 // open-ended, and respectful.
 
@@ -12,7 +17,7 @@ export const OPENERS = {
   first: [
     "Hi {name}! I'm really glad we get to talk. To start, what's one thing you'd like me to know about you?",
     "It's so nice to meet you, {name}. What does a really good day look like for you?",
-    'Hi {name}, thanks for chatting with me! How did you end up living in Carmel?',
+    'Hi {name}, thanks for chatting with me! How did you end up living in {town}?',
   ],
   // 0–3 days since the last contact
   recent: [
@@ -75,7 +80,7 @@ export const INTEREST_SPARKS = {
   history: {
     any: [
       "What's a big news event where you remember exactly where you were? What was that day like?",
-      'How has Carmel changed the most since you first got to know it?',
+      'How has {town} changed the most since you first got to know it?',
       'If you could sit down with anyone from history, who would you pick, and what would you ask them?',
       "What's something about everyday life when you were young that people my age wouldn't believe?",
     ],
@@ -130,7 +135,7 @@ export const INTEREST_SPARKS = {
     any: [
       'What birds have you been seeing outside your window lately?',
       'Do you have a favorite bird? What do you like about it?',
-      "What's your favorite spot in Carmel to be outdoors?",
+      "What's your favorite spot in {town} to be outdoors?",
     ],
     spring: ['Have the spring birds come back yet? Which one do you look forward to most?'],
     fall: ['Have you noticed birds heading south yet? Which ones stick around all winter?'],
@@ -141,7 +146,7 @@ export const INTEREST_SPARKS = {
       "Where's your favorite fishing spot? What makes it special?",
       'Who taught you to fish? Do you remember your first trip?',
     ],
-    summer: ['Have you ever fished Morse or Geist Reservoir? How do they compare to where you grew up?'],
+    // Summer fishing spots come from the community's local touches.
   },
   basketball: {
     any: [
@@ -201,7 +206,7 @@ export const INTEREST_SPARKS = {
     any: [
       "What's a piece of art that stuck with you? What do you remember about seeing it?",
       'What do you like to paint or draw most?',
-      "Have you been to the Carmel Arts & Design District? Which galleries are worth a visit?",
+      // Local galleries come from the community's local touches.
     ],
   },
   technology: {
@@ -222,13 +227,27 @@ export const GENERAL_SPARKS = {
     "What's something you're looking forward to this week?",
     "What's a smell or a sound that takes you right back to being a kid?",
     "Is there something you've always wanted to learn?",
-    'What do you think of the Monon Trail? Have you seen how busy it gets on nice days?',
-    'Have you ever been to a show at the Palladium? What would you love to see there?',
+    // Local places and seasonal events are added from the community profile.
   ],
-  summer: ['Have you been to the Carmel Farmers Market? What would you buy first?'],
-  nov: ['The Christkindlmarkt in Carmel opens for the holidays soon. What holiday traditions did you love growing up?'],
-  dec: ['Have you been to the Christkindlmarkt in Carmel? What holiday traditions did you love growing up?'],
 };
+
+// Statewide touches for a community that has no localTouches of its own.
+// Real, friendly, and non-commercial, and true anywhere in Indiana. Same shape
+// as localTouches in src/community.js: { text, when, interest? }.
+export const INDIANA_TOUCHES = [
+  { text: 'Have you ever been to the Indiana State Fair? What do you remember most about it?', when: 'any' },
+  {
+    text: 'Indiana is known for high school basketball. Did you ever go to a big game when you were younger? What was the gym like?',
+    when: 'any',
+  },
+  { text: 'Do you have a favorite Indiana state park, or a place you loved to go for a day trip?', when: 'any' },
+  { text: "What's your favorite summer food? Some people say nothing beats Indiana sweet corn.", when: 'summer' },
+  { text: 'The Indy 500 is this month! Did you ever go, or did you follow the race at home?', when: 'may' },
+  { text: 'Thanksgiving is this month. What dish did your family always have on the table?', when: 'nov' },
+  { text: 'What holiday traditions did you love growing up? Does {town} do anything special this time of year?', when: 'dec' },
+  { text: 'Is there a lake or river in Indiana you love to fish? What makes it special?', when: 'summer', interest: 'fishing' },
+  { text: "Is there a museum or gallery in Indiana you've enjoyed? What stuck with you?", when: 'any', interest: 'art' },
+];
 
 // One short coaching tip shown with every spark set.
 export const VOLUNTEER_TIPS = [

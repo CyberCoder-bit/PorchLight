@@ -8,6 +8,7 @@
 import { generateMockSparks, pickTip, seasonOf } from './mock.js';
 import { generateLiveSparks, loadSdk } from './live.js';
 import { lastCompletedContact, calendarDaysBetween } from '../risk.js';
+import { localDateKey } from '../tz.js';
 
 export async function resolveSparkMode(config) {
   const sdkInstalled = Boolean(await loadSdk());
@@ -38,7 +39,8 @@ export function buildSparkInput(senior, contacts, now = new Date()) {
     aboutMe: senior.aboutMe || '',
     contactMethod: senior.contactMethod,
     daysSince: last ? calendarDaysBetween(last.completedAt, now) : null,
-    lastContactDay: last ? last.completedAt.slice(0, 10) : null,
+    // The local calendar day (an 8 PM call in Carmel is already the next day in UTC).
+    lastContactDay: last ? localDateKey(last.completedAt) : null,
     lastContactType: last ? last.type : null,
     season: seasonOf(now),
     now,

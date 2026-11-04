@@ -17,7 +17,7 @@
 // Only COMPLETED contacts count. A scheduled or missed call isn't contact.
 // "Days since" uses calendar days ("yesterday" = 1), the way people talk.
 
-import { localParts, fromLocal } from './tz.js';
+import { startOfLocalDay } from './tz.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -48,10 +48,9 @@ export const STATUS_INFO = {
   },
 };
 
-// Midnight in Carmel on the same calendar day.
+// Local midnight (Carmel time for the demo) on the same calendar day.
 export function startOfDay(date) {
-  const p = localParts(date);
-  return fromLocal(p.year, p.month, p.day);
+  return startOfLocalDay(date);
 }
 
 // Whole calendar days from `earlier` to `later` (Math.round absorbs daylight-saving shifts).
@@ -73,11 +72,12 @@ export function lastCompletedContact(contacts) {
 // Week 0 is the most recent 7 calendar days (today and the 6 days before).
 export function weeklyCounts(contacts, now = new Date(), weeks = 8) {
   const done = completedContacts(contacts);
-  const today = startOfDay(now);
   const buckets = [];
   for (let i = weeks - 1; i >= 0; i--) {
-    const end = new Date(today.getTime() - i * 7 * DAY_MS); // last day in this bucket
-    const start = new Date(end.getTime() - 6 * DAY_MS);
+    // Step back on the calendar, not in 24-hour steps: in the week after the
+    // clocks spring forward, "midnight minus 7 x 24 hours" is 11 PM the day before.
+    const end = startOfLocalDay(now, -i * 7); // last day in this bucket
+    const start = startOfLocalDay(now, -i * 7 - 6);
     const count = done.filter((c) => {
       const daysAgo = calendarDaysBetween(c.completedAt, now);
       return daysAgo >= i * 7 && daysAgo <= i * 7 + 6;
