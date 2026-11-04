@@ -9,9 +9,9 @@ flowchart TB
   subgraph People["People, using a web browser"]
     direction LR
     SEN["Senior<br/>profile and next call"]
-    VOL["Volunteer<br/>calls, logs, sparks"]
-    FAM["Family or caregiver<br/>dashboard"]
-    COO["Coordinator<br/>matching"]
+    VOL["Volunteer<br/>My week, logs calls, sparks"]
+    FAM["Family or caregiver<br/>dashboard, weekly summary, get help"]
+    COO["Coordinator<br/>matching, Needs attention"]
   end
 
   subgraph Server["PorchLight server: Node.js locally, or a Cloudflare Worker + Durable Object"]
@@ -26,6 +26,7 @@ flowchart TB
     STORE["Data store<br/>src/store-core.js"]
     COMM["Community profile<br/>src/community.js<br/>town, time zone, local touches, local help"]
     TZ["Clock<br/>src/tz.js<br/>every date in the community's time zone"]
+    ADDON["Add-on pages, each registering its own routes<br/>src/features/: Needs attention, re-match, My week,<br/>family summary, calendar file<br/>src/indiana/: Get help in Indiana<br/>src/views/pages/extra.js: demo tour"]
   end
 
   DB[("data/db.json locally, or Durable Object storage on Cloudflare<br/>seniors, volunteers, matches,<br/>calls and visits, sparks, settings")]
@@ -41,8 +42,10 @@ flowchart TB
   COMM --> TZ
   TZ --> ROUTER
   TZ --> Engines
-  %% VERIFY AFTER MERGE: sparks read local touches from the community profile
   COMM -->|"local touches"| SPARK
+  ROUTER --> ADDON
+  ADDON --> Engines
+  COMM -->|"local help"| ADDON
 ```
 
 **How to read it:** every click in the browser becomes an HTTP request to the router. Everything
@@ -154,6 +157,9 @@ erDiagram
     datetime completedAt
     datetime createdAt
     string notes
+    string missedReason
+    string missedNote
+    datetime markedAt
   }
   SPARK_SET {
     string mode
@@ -162,4 +168,4 @@ erDiagram
   }
 ```
 
-A `CONTACT` has a status of `scheduled`, `completed`, or `missed`. Only `completed` contacts count toward the dashboard.
+A `CONTACT` has a status of `scheduled`, `completed`, or `missed`. Only `completed` contacts count toward the dashboard. A missed contact can record an optional reason (no answer, senior was unavailable, volunteer had a conflict, or other) and a short note. Coordinators see these on the Needs attention list; they are never sent to the AI.
