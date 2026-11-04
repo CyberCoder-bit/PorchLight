@@ -1,7 +1,7 @@
 {
   "name": "porchlight",
   "version": "0.2.0",
-  "description": "PorchLight: volunteer companions, AI conversation sparks, and an isolation-risk dashboard for seniors in Carmel, Indiana. Nextech CSforGood 2026 prototype.",
+  "description": "PorchLight: volunteer companions, AI conversation sparks, and an isolation-risk dashboard for older adults in Indiana communities, starting in Carmel. Nextech CSforGood 2026 prototype.",
   "type": "module",
   "main": "server.js",
   "private": true,
