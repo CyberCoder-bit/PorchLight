@@ -7,7 +7,8 @@
 // PRIVACY: we send only what's needed to write good starters: the senior's
 // preferred first name, interest labels, their "about me" text, days since
 // last contact, and today's date and season. We never send caregiver
-// details, phone numbers, or volunteer call notes.
+// details or volunteer call notes, and phone numbers or emails typed into
+// "about me" are removed first (redactContactDetails below).
 
 import { interestLabel, methodLabel } from '../vocab.js';
 import { formatLocal } from '../tz.js';
@@ -72,8 +73,23 @@ export function loadSdk() {
   return sdkPromise;
 }
 
+// Phone numbers and email addresses that someone typed into "about me" are
+// replaced before the text leaves PorchLight. The rest of the text is kept.
+const EMAIL = /[^\s@<>()[\],;:"]+@[^\s@<>()[\],;:"]+\.[A-Za-z]{2,}/g;
+const PHONE = /(?:\+?1[\s.-]*)?(?:\(\d{3}\)|\b\d{3})[\s.-]*\d{3}[\s.-]*\d{4}\b/g; // 317-555-0142, (317) 555-0142, +1 317 555 0142
+const SHORT_PHONE = /\b\d{3}[\s.-]\d{4}\b/g; // 555-0142
+export const REDACTED = '[contact removed]';
+
+export function redactContactDetails(text) {
+  return String(text || '')
+    .replace(EMAIL, REDACTED)
+    .replace(PHONE, REDACTED)
+    .replace(SHORT_PHONE, REDACTED);
+}
+
 export function buildUserMessage(input) {
   const today = formatLocal(input.now, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const aboutMe = redactContactDetails(input.aboutMe);
   const lastContact =
     input.daysSince == null
       ? 'No contact yet (this will be their first conversation)'
@@ -82,7 +98,7 @@ export function buildUserMessage(input) {
     `Today: ${today} (${input.season})`,
     `Senior's preferred name: ${input.name}`,
     `Interests: ${input.interests.map(interestLabel).join(', ') || 'none listed'}`,
-    `About them: ${input.aboutMe || 'nothing else on file'}`,
+    `About them: ${aboutMe || 'nothing else on file'}`,
     `Last contact with a PorchLight volunteer: ${lastContact}`,
     `Upcoming contact type: ${methodLabel(input.contactMethod)}`,
   ].join('\n');

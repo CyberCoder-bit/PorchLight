@@ -1,20 +1,21 @@
 // Home, "How the AI works", demo reset, and error pages.
 
 import { html, plural } from '../html.js';
-import { statusBadge, banner, backLink, emptyState } from '../components.js';
+import { statusBadge, trendBadge, banner, backLink, emptyState } from '../components.js';
 import { COMMUNITY } from '../../community.js';
+import { attentionBreakdown, attentionReason } from '../../risk.js';
 
-// "1 at isolation risk, 1 waiting for a companion": every flagged number says
-// exactly what it counts.
-function attentionBreakdown(attention) {
-  const atRisk = attention.filter((r) => r.status === 'at_risk').length;
-  const waiting = attention.filter((r) => r.status === 'needs_match').length;
-  const parts = [];
-  if (atRisk) parts.push(`${atRisk} at isolation risk`);
-  if (waiting) parts.push(`${waiting} waiting for a companion`);
-  return parts.join(', ');
+// One short reason per senior on the Needs attention list (the same rule as /attention).
+function attentionRowText(r) {
+  switch (attentionReason(r)) {
+    case 'needs_match': return 'waiting for a companion';
+    case 'at_risk': return `no call or visit in ${plural(r.daysSince, 'day')}`;
+    case 'dropping': return `fewer calls lately (${r.trend.recent} in the last 4 weeks, down from ${r.trend.previous})`;
+    default: return `${plural(r.missedRecently, 'missed call')} in the last 2 weeks`;
+  }
 }
 
+// `attention`: the seniors on the Needs attention list (needsAttention() in src/risk.js).
 export function homePage({ stats, attention }) {
   const { town, county } = COMMUNITY;
   const breakdown = attentionBreakdown(attention);
@@ -70,7 +71,7 @@ export function homePage({ stats, attention }) {
         <p>${breakdown}.</p>
         <ul class="plain-list">
           ${attention.map(
-            (r) => html`<li>${statusBadge(r.status, r.info)} <a href="/seniors/${r.senior.id}">${r.senior.name}</a>: ${r.status === 'needs_match' ? 'waiting for a companion' : `no call or visit in ${plural(r.daysSince, 'day')}`}</li>`
+            (r) => html`<li>${statusBadge(r.status, r.info)} ${trendBadge(r.trend)} <a href="/seniors/${r.senior.id}">${r.senior.name}</a>: ${attentionRowText(r)}</li>`
           )}
         </ul>
         <p class="button-row">
@@ -81,7 +82,7 @@ export function homePage({ stats, attention }) {
       : html`
       <section class="panel" aria-labelledby="attention-heading">
         <h2 id="attention-heading">Needs attention today</h2>
-        ${emptyState(html`<p><strong>Nobody needs attention right now.</strong> Every senior has a companion and a recent call or visit.</p>
+        ${emptyState(html`<p><strong>Nobody needs attention right now.</strong> Every senior has a companion, recent calls or visits, and no missed calls lately.</p>
           <p><a href="/dashboard">See how everyone is doing on the Family Dashboard</a></p>`)}
       </section>`}
 
@@ -110,27 +111,34 @@ export function homePage({ stats, attention }) {
     </ul>`;
 }
 
-export function aboutAiPage({ modeInfo, model }) {
+// `lastFallback`: set when LIVE mode is on but the most recent request fell
+// back to the offline ideas ({ reason }), so this page never says "Live" while
+// sparks are actually coming from the built-in ideas.
+export function aboutAiPage({ modeInfo, model, lastFallback = null }) {
   const live = modeInfo.effective === 'live';
+  const fellBack = live && lastFallback;
   return html`
     ${backLink('/', 'home')}
     <h1>How the AI works</h1>
     <p class="lead">PorchLight uses AI for one small job: suggesting three things a volunteer could talk about on the next call. People make every other decision.</p>
-    <section class="panel ${live ? 'mode-panel-live' : 'mode-panel-mock'}" aria-labelledby="mode-heading">
-      <h2 id="mode-heading">Right now: ${live ? 'Live AI (Claude)' : 'Offline mode (built-in templates)'}</h2>
+    <section class="panel ${live && !fellBack ? 'mode-panel-live' : 'mode-panel-mock'}" aria-labelledby="mode-heading">
+      <h2 id="mode-heading">Right now: ${fellBack ? 'Offline ideas (live AI is set up but was unavailable)' : live ? 'Live AI (Claude)' : 'Offline mode (built-in templates)'}</h2>
+      ${fellBack
+        ? html`<p>The last request to Claude didn't work (${lastFallback.reason}), so PorchLight used the built-in ideas instead. It tries Claude again the next time someone asks for sparks.</p>`
+        : ''}
       <p class="muted">Technical detail: ${modeInfo.reason}.</p>
       ${modeInfo.warning ? banner({ kind: 'warning', text: modeInfo.warning }) : ''}
     </section>
     <section class="panel" aria-labelledby="what-heading">
       <h2 id="what-heading">What "conversation sparks" are</h2>
-      <p>Many volunteers are teenagers. Starting a conversation with someone 60 years older can feel awkward, and awkward calls are calls that stop happening. Sparks give the volunteer three warm, personal openers built from the senior's own interests and the time since their last talk. A long gap gets a "so glad to catch up" opener that never makes the senior feel guilty.</p>
+      <p>Many volunteers are teenagers. Starting a conversation with someone 60 years older can feel awkward, and awkward calls are calls that stop happening. Sparks give the volunteer three warm, personal openers built from the senior's own interests and the time since their last talk. After a long gap, the first spark is a warm reconnect, like "I've missed our chats!", where the volunteer owns the gap, so the senior never feels guilty.</p>
       <p>Sparks are always labeled as suggestions, with where they came from.</p>
       <h3>Offline mode (the default, no internet needed)</h3>
       <p>Sparks come from a hand-written set of ideas for each interest, with seasonal touches and local touches for ${COMMUNITY.town}. The same details always give the same sparks, and "Show different sparks" picks a new set. No internet or API key is needed. (In the code this is called MOCK mode.)</p>
       <h3>Live mode (with a Claude API key)</h3>
-      <p>Sparks are written by Claude (${model}) through Anthropic's official software kit. If Claude can't be reached, PorchLight quietly uses the offline ideas instead, so a volunteer is never left empty-handed. The README explains how to turn this on. (In the code this is called LIVE mode.)</p>
+      <p>Sparks are written by Claude (${model}) through Anthropic's official software kit. If Claude can't be reached, PorchLight uses the offline ideas instead, so a volunteer is never left empty-handed. The page says so with a short note, and those sparks are labeled "live AI was unavailable". The README explains how to turn this on. (In the code this is called LIVE mode.)</p>
       <h3>What the AI never sees</h3>
-      <p>Only the senior's preferred first name, interests, "about me" text, days since the last contact, and today's date are sent to the AI. Family contacts, phone numbers, call notes, and reasons for missed calls are never sent.</p>
+      <p>Only the senior's preferred first name, interests, "about me" text, days since the last contact, and today's date are sent to the AI. Family contacts, call notes, and reasons for missed calls are never sent. If someone types a phone number or email address into "about me", PorchLight removes it before the text is sent.</p>
       <h3>What the AI never decides</h3>
       <p>Matching, the isolation-risk flags, the Needs attention list, and local help are plain rules you can read in the code. AI plays no part in them.</p>
     </section>`;
@@ -148,12 +156,25 @@ export function resetConfirmPage() {
     </form>`;
 }
 
+// What to do next, by kind of error, so an error page is never a dead end.
+const BACK = "your browser's Back button";
+const ERROR_HELP = {
+  400: { title: "That didn't work", help: `Go back to the form (${BACK}), fix the choice, and try again.` },
+  404: { title: 'Page not found', help: 'The link may be old, for example from before the demo data was reset. Start again from one of these pages.' },
+  409: { title: "That didn't work", help: `The page you came from may be out of date. Go back (${BACK}), reload the page to see the latest, and try again.` },
+  413: { title: 'That was too much to save', help: `Go back (${BACK}), shorten the longest text box, and try again.` },
+};
+
 export function errorPage({ status, message }) {
+  const spec = ERROR_HELP[status] || { title: 'Something went wrong', help: 'Please try again in a minute. If it keeps happening, start again from one of these pages.' };
   return html`
-    <h1>${status === 404 ? 'Page not found' : 'Something went wrong'}</h1>
+    <h1>${spec.title}</h1>
     ${banner({ kind: 'error', text: message, role: 'alert' })}
+    <p>${spec.help}</p>
     <p class="button-row">
       <a class="button" href="/">Go to the home page</a>
+      <a class="button button-secondary" href="/attention">Open Needs attention</a>
+      <a class="button button-secondary" href="/contacts">Open Calls &amp; Visits</a>
       <a class="button button-secondary" href="/tour">Open the demo tour</a>
     </p>`;
 }

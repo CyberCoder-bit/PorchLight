@@ -1,7 +1,7 @@
 // Calls & Visits: schedule a future call/visit, log one that happened, and
 // mark scheduled ones as completed or missed.
 
-import { html, formatDateTime, formatDate } from '../html.js';
+import { html, formatDateTime, formatDate, formatLongDate } from '../html.js';
 import { errorSummary, textField, textArea, selectField, methodLabel, emptyState } from '../components.js';
 import { CONTACT_METHODS } from '../../vocab.js';
 
@@ -54,7 +54,7 @@ export function contactsPage({ pairs, form, errors = {}, upcoming, overdue, rece
               ${textField({ name: 'time', label: 'Time', type: 'time', value: form.time, error: errors.time, required: true })}
             </div>
             ${textField({ name: 'durationMinutes', label: 'How many minutes did it last? (only when logging one that happened)', type: 'number', value: form.durationMinutes, error: errors.durationMinutes, attrs: 'inputmode="numeric" min="1" max="480"' })}
-            ${textArea({ name: 'notes', label: 'Notes (optional)', value: form.notes, error: errors.notes, rows: 3, hint: 'Something to remember for next time, like "Ask how the choir concert went." Notes are never sent to the AI.' })}
+            ${textArea({ name: 'notes', label: 'Notes (optional)', value: form.notes, error: errors.notes, rows: 3, hint: 'Something to remember for next time, like "Ask how the choir concert went." Notes show with the call in PorchLight, for example on the senior\'s profile. They are never put in the family summary or sent to the AI.' })}
             <div class="form-actions"><button type="submit" class="button">Save call or visit</button></div>
           </form>`}
       </section>
@@ -83,7 +83,7 @@ export function contactsPage({ pairs, form, errors = {}, upcoming, overdue, rece
                   <td><a href="/seniors/${c.senior.id}">${c.senior.name}</a></td>
                   <td>${c.volunteer ? c.volunteer.name : 'Unknown'}</td>
                   <td>${methodLabel(c.type)}</td>
-                  <td>${c.status === 'missed' ? html`<span class="badge badge-missed">Missed</span>` : html`Done${c.durationMinutes ? ` (${c.durationMinutes} min)` : ''}`}</td>
+                  <td>${outcome(c)}</td>
                   <td class="muted">${formatDateTime(c.createdAt)}</td>
                 </tr>`
               )}
@@ -94,20 +94,35 @@ export function contactsPage({ pairs, form, errors = {}, upcoming, overdue, rece
     </section>`;
 }
 
+// `canLog` / `canMiss` come from canLogNow() / canMarkMissedNow() in src/risk.js:
+// a call can be marked done on its day or later, and missed once its time has come.
 function contactItem(c) {
+  const noun = c.type === 'visit' ? 'visit' : 'call';
   return html`
     <li class="contact-item">
       <p><strong>${formatDateTime(c.scheduledFor)}</strong></p>
       <p>${methodLabel(c.type)}: <a href="/seniors/${c.senior.id}">${c.senior.name}</a> with ${c.volunteer ? c.volunteer.name : 'unknown volunteer'}</p>
       ${c.notes ? html`<p class="muted">${c.notes}</p>` : ''}
+      ${c.canLog ? '' : html`<p class="muted">You can mark this ${noun} done on ${formatLongDate(c.scheduledFor)}, once it has happened.</p>`}
       <div class="actions">
-        <form method="post" action="/contacts/${c.id}/complete" class="inline-form">
+        ${c.canLog
+          ? html`<form method="post" action="/contacts/${c.id}/complete" class="inline-form">
           <button type="submit" class="button button-small">Mark as done<span class="visually-hidden"> for ${c.senior.name} on ${formatDate(c.scheduledFor)}</span></button>
-        </form>
-        <form method="post" action="/contacts/${c.id}/missed" class="inline-form">
+        </form>`
+          : ''}
+        ${c.canMiss
+          ? html`<form method="post" action="/contacts/${c.id}/missed" class="inline-form">
           <button type="submit" class="button button-secondary button-small">Mark as missed<span class="visually-hidden"> for ${c.senior.name} on ${formatDate(c.scheduledFor)}</span></button>
-        </form>
+        </form>`
+          : ''}
         <a class="button button-secondary button-small" href="/contacts/${c.id}/calendar.ics" download>Add to calendar<span class="visually-hidden">: ${c.senior.name} on ${formatDate(c.scheduledFor)}</span></a>
       </div>
     </li>`;
+}
+
+// What happened to a call or visit, in words (never color alone).
+function outcome(c) {
+  if (c.status === 'missed') return html`<span class="badge badge-missed">Missed</span>`;
+  if (c.status === 'cancelled') return 'Cancelled (the match ended)';
+  return html`Done${c.durationMinutes ? ` (${c.durationMinutes} min)` : ''}`;
 }

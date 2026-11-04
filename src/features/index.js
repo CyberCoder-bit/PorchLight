@@ -76,6 +76,7 @@ export function registerFeatures(router, ctx) {
     const contact = store.contacts.find((c) => c.id === req.params.id);
     const senior = contact ? store.senior(contact.seniorId) : null;
     if (!contact || !senior) throw ctx.httpError(404, 'We could not find that call.');
+    if (contact.status === 'cancelled') throw ctx.httpError(409, 'That call was cancelled when the match ended, so there is nothing to add to a calendar.');
     if (contact.status !== 'scheduled') throw ctx.httpError(409, 'That call was already marked, so there is nothing to add to a calendar.');
     const { body, filename } = buildCallIcs({ contact, senior, volunteer: store.volunteer(contact.volunteerId), now: now() });
     sendDownload(res, { body, contentType: 'text/calendar; charset=utf-8', filename });

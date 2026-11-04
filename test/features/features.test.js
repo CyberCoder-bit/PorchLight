@@ -92,8 +92,11 @@ test('queue lists Hal then Eugene for the seed, with reasons and one next step e
   assert.match(hal, /Isolation risk/);
   assert.match(hal, /Contact dropping/);
   assert.match(hal, /No completed call or visit in 12 days; only 3 check-ins in the last 4 weeks, down from 8 the 4 weeks before; 1 missed call in the last 2 weeks\./);
-  assert.match(hal, /Suggested next step: Schedule a visit/);
-  assert.match(hal, /<a class="button" href="\/contacts\?seniorId=s-harold">/);
+  // The seed's visit yesterday was never marked: first find out whether it happened.
+  assert.match(hal, /Suggested next step: Ask Ethan about the last visit/);
+  assert.match(hal, /Ethan had an in-person visit with Hal yesterday at 3:30\sPM, and nobody has marked it yet\./);
+  assert.match(hal, /<a class="button" href="\/volunteers\/v-ethan\/week">Open Ethan&#39;s week<\/a>/);
+  assert.match(hal, /href="\/contacts\?seniorId=s-harold"/, 'scheduling is still offered');
   assert.match(hal, /href="\/attention\/s-harold\/rematch"/);
   assert.equal((hal.match(/Suggested next step/g) || []).length, 1);
 
@@ -106,6 +109,16 @@ test('queue lists Hal then Eugene for the seed, with reasons and one next step e
   assert.doesNotMatch(html, /id="senior-s-dorothy"/);
   assert.doesNotMatch(html, /id="senior-s-rosa"/);
   assert.match(html, /Not on the list yet, but due soon[\s\S]*Rosa Delgado/);
+});
+
+test('once Hal\'s unmarked visit is logged, the next step is to schedule another', async () => {
+  const visit = store.contacts.find((c) => c.seniorId === 's-harold' && c.status === 'scheduled');
+  const res = await post(`/contacts/${visit.id}/complete`, { back: '/volunteers/v-ethan/week' });
+  assert.equal(res.status, 303);
+  const hal = card(await page('/attention'), 's-harold');
+  assert.match(hal, /Contact dropping/, 'still on the list: 4 check-ins in 4 weeks, down from 8');
+  assert.match(hal, /Suggested next step: Schedule a visit/);
+  assert.match(hal, /<a class="button" href="\/contacts\?seniorId=s-harold">/);
 });
 
 test('missed-call reasons show their labels (and notes) in the queue', async () => {
@@ -255,13 +268,19 @@ test('My week shows the next 7 days in Carmel time, with saved sparks inline and
   assert.match(html, /Get conversation sparks for Dorothy/);
   assert.equal(store.sparkSets.length, 0, 'loading My week never generates sparks');
 
-  // Log this call: one click, back to this page.
-  assert.match(html, new RegExp(`<form method="post" action="/contacts/${call.id}/complete" class="inline-form">\\s*<input type="hidden" name="back" value="/volunteers/v-maya/week">`));
+  // Dorothy's call is in 2 days: it can't be logged or marked missed yet, and the page says when it can.
+  assert.doesNotMatch(html, new RegExp(`action="/contacts/${call.id}/(complete|missed)"`));
+  assert.match(html, /You can log this call on \w+day, \w+ \d+, once it has happened\./);
+
+  // A call from earlier today that nobody marked: one click to log it, back to this page.
+  const due = addCall({ scheduledFor: new Date(Date.now() - 2 * 3600000).toISOString() });
+  html = await page('/volunteers/v-maya/week');
+  assert.match(html, new RegExp(`<form method="post" action="/contacts/${due.id}/complete" class="inline-form">\\s*<input type="hidden" name="back" value="/volunteers/v-maya/week">`));
   assert.match(html, /Log this call<span class="visually-hidden"> with Dorothy on/);
   // Mark missed: labeled reason select and note.
-  assert.match(html, new RegExp(`<label for="reason-${call.id}">Why was it missed\\?</label>`));
+  assert.match(html, new RegExp(`<label for="reason-${due.id}">Why was it missed\\?</label>`));
   assert.match(html, /<option value="volunteer_conflict">Volunteer had a conflict<\/option>/);
-  assert.match(html, new RegExp(`<label for="note-${call.id}">Short note \\(optional\\)</label>`));
+  assert.match(html, new RegExp(`<label for="note-${due.id}">Short note \\(optional\\)</label>`));
   assert.match(html, /name="reasonNote" maxlength="200"/);
 
   // After sparks are saved, they show inline with their source.
@@ -270,7 +289,8 @@ test('My week shows the next 7 days in Carmel time, with saved sparks inline and
   const saved = store.latestSparkSet('s-dorothy');
   html = await page('/volunteers/v-maya/week');
   assert.ok(html.includes(escapeHtml(saved.sparks[0].text)));
-  assert.match(html, /Suggestions only\. From the offline templates \(MOCK mode\)/);
+  assert.match(html, /Suggestions only\. From the built-in ideas \(offline mode\)/);
+  assert.doesNotMatch(html, /MOCK mode/, 'no developer jargon on a volunteer\'s screen');
   assert.doesNotMatch(html, /Get conversation sparks for Dorothy/);
   assert.equal(store.sparkSets.length, 1);
 });
@@ -290,7 +310,11 @@ test('My week: log and missed actions redirect back to the week', async () => {
   assert.doesNotMatch(html, /Did these calls happen\?/);
   assert.equal(store.contacts.find((c) => c.id === overdue.id).status, 'completed');
 
-  const call = dorothyCall();
+  // A call that hasn't happened yet can't be marked missed (B-09).
+  res = await post(`/contacts/${dorothyCall().id}/missed`, { reason: 'senior_unavailable', back: '/volunteers/v-maya/week' });
+  assert.equal(res.status, 409);
+
+  const call = addCall({ scheduledFor: new Date(Date.now() - 2 * 3600000).toISOString() });
   res = await post(`/contacts/${call.id}/missed`, { reason: 'senior_unavailable', reasonNote: 'At the doctor', back: '/volunteers/v-maya/week' });
   assert.equal(res.status, 303);
   assert.equal(res.headers.get('location'), '/volunteers/v-maya/week?msg=missed');
