@@ -7,6 +7,9 @@
 //   a) they have room (current seniors < the max they signed up for),
 //   b) they share at least ONE weekly time slot with the senior, and
 //   c) they offer the senior's preferred contact method (phone / video / visit).
+//   d) [towns] for a senior who prefers in-person visits, they live in the same
+//      county. Phone and video calls work statewide. (Town and county come
+//      from src/towns/; people with no town count as the community's town.)
 //   If any rule fails, the volunteer is listed as "not eligible" with the reason.
 //
 // STEP 2: Score the eligible volunteers.
@@ -21,6 +24,7 @@
 // current seniors, then alphabetically by name, so results are stable.
 
 import { interestLabel, methodLabel, slotLabel } from './vocab.js';
+import { countyOfPerson } from './towns/index.js'; // [towns]
 
 export const WEIGHTS = {
   perSharedInterest: 3,
@@ -47,6 +51,12 @@ export function scorePair(senior, volunteer, currentLoad = 0) {
   }
   if (!offersMethod) {
     problems.push(`Does not offer ${methodLabel(senior.contactMethod).toLowerCase()}s`);
+  }
+  // [towns] rule d: in-person visits need the same county (unknown towns are not judged).
+  const seniorCounty = countyOfPerson(senior);
+  const volunteerCounty = countyOfPerson(volunteer);
+  if (offersMethod && senior.contactMethod === 'visit' && seniorCounty && volunteerCounty && seniorCounty !== volunteerCounty) {
+    problems.push(`Lives in ${volunteerCounty} - too far for in-person visits`);
   }
 
   const countedSlots = Math.min(sharedSlots.length, WEIGHTS.maxCountedSlots);

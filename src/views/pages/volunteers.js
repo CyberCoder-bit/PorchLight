@@ -7,21 +7,24 @@ import {
 } from '../components.js';
 import { COMMUNITY } from '../../community.js';
 import { misfitNote } from './seniors.js';
+import { townLabel } from '../../towns/index.js'; // [towns]
+import { townSelectField } from '../../towns/views.js'; // [towns]
 
-export function volunteersListPage({ rows }) {
+export function volunteersListPage({ rows, townFilter = '', townName = null }) { // [towns] townFilter, townName
   return html`
     <div class="page-head">
       <h1>Volunteers</h1>
       <a class="button" href="/volunteers/new">Add a volunteer</a>
     </div>
     <p class="lead">PorchLight companions: students, retirees, and neighbors who call or visit a senior every week.</p>
+    ${townFilter}
     ${rows.length
       ? html`<ul class="card-list">
       ${rows.map(
         ({ volunteer, seniors }) => html`
         <li class="card">
           <h2 class="card-title"><a href="/volunteers/${volunteer.id}">${volunteer.name}</a></h2>
-          <p class="card-meta">${volunteer.affiliation || 'Community volunteer'}</p>
+          <p class="card-meta">${volunteer.affiliation || 'Community volunteer'} · ${townLabel(volunteer)}</p>
           <p>Companion to ${seniors.length} of ${volunteer.maxSeniors} senior${volunteer.maxSeniors === 1 ? '' : 's'}${seniors.length >= volunteer.maxSeniors ? html` <span class="badge badge-full">Full</span>` : ''}</p>
           ${seniors.length
             ? html`<p>${seniors.map((s, i) => html`${i ? ', ' : ''}<a href="/seniors/${s.id}">${s.name}</a>`)}</p>`
@@ -31,7 +34,9 @@ export function volunteersListPage({ rows }) {
         </li>`
       )}
     </ul>`
-      : emptyState(html`<p><strong>No volunteers yet.</strong> Add the first volunteer so seniors can be matched with a companion.</p>
+      : townName // [towns]
+        ? emptyState(html`<p><strong>No volunteers in ${townName}.</strong> <a href="/volunteers">Show all towns</a></p>`)
+        : emptyState(html`<p><strong>No volunteers yet.</strong> Add the first volunteer so seniors can be matched with a companion.</p>
           <p><a href="/volunteers/new">Add a volunteer</a></p>`)}`;
 }
 
@@ -46,7 +51,7 @@ export function volunteerProfilePage({ volunteer, assigned }) {
         <a class="button button-secondary" href="/volunteers/${volunteer.id}/edit">Edit profile</a>
       </div>
     </div>
-    <p class="lead">${volunteer.affiliation || 'Community volunteer'}</p>
+    <p class="lead">${volunteer.affiliation || 'Community volunteer'} · Lives in ${townLabel(volunteer)}</p>
 
     <section class="panel" aria-labelledby="assigned-heading">
       <h2 id="assigned-heading">${first}'s seniors (${assigned.length} of ${volunteer.maxSeniors})</h2>
@@ -91,6 +96,7 @@ export function volunteerFormPage({ volunteer = {}, errors = {}, isNew }) {
     <form method="post" action="${action}" class="stack-form" novalidate>
       ${textField({ name: 'name', label: 'Full name', value: volunteer.name, error: errors.name, required: true, autocomplete: 'off' })}
       ${textField({ name: 'affiliation', label: 'School, group, or organization', value: volunteer.affiliation, error: errors.affiliation, hint: `For example "${COMMUNITY.town} High School junior, Key Club" or "Retired nurse".` })}
+      ${townSelectField(volunteer, errors.town)}
       ${interestCheckboxes(volunteer.interests || [], errors.interests)}
       ${availabilityFieldset(volunteer.availability || [], errors.availability)}
       ${methodCheckboxes(volunteer.contactMethods || [], errors.contactMethods)}
