@@ -67,7 +67,7 @@ function sparkPanel({ senior, sparkSet, sparkMode, hideNotice = false }) {
 // (e.g. "No overlapping availability"), after an edit to either profile.
 // `hideNotice`: the page already shows the same live-AI notice as a banner.
 // `hideSparks` [roles]: family and senior views leave out the volunteer's sparks.
-export function seniorProfilePage({ senior, assessment, volunteer, match, upcoming, recent, sparkSet, sparkMode, misfit = [], hideNotice = false, hideSparks = false }) {
+export function seniorProfilePage({ senior, assessment, volunteer, match, upcoming, recent, sparkSet, sparkMode, misfit = [], hideNotice = false, hideSparks = false, seniorView = false }) {
   const name = senior.preferredName || senior.name.split(' ')[0];
   return html`
     ${backLink('/seniors', 'all seniors')}
@@ -75,7 +75,7 @@ export function seniorProfilePage({ senior, assessment, volunteer, match, upcomi
       <h1>${senior.name}${senior.preferredName && senior.preferredName !== senior.name.split(' ')[0] ? html` <span class="aka">(“${senior.preferredName}”)</span>` : ''}</h1>
       <a class="button button-secondary" href="/seniors/${senior.id}/edit">Edit profile</a>
     </div>
-    <p class="badges">${statusBadge(assessment.status, assessment.info)} ${trendBadge(assessment.trend)}</p>
+    ${seniorView ? '' : html`<p class="badges">${statusBadge(assessment.status, assessment.info)} ${trendBadge(assessment.trend)}</p>`}
     ${volunteer && misfit.length ? misfitNote({ senior, volunteer, misfit }) : ''}
 
     <section class="panel welcome" aria-labelledby="welcome-heading">
@@ -101,7 +101,9 @@ export function seniorProfilePage({ senior, assessment, volunteer, match, upcomi
           ${upcoming.length
             ? html`<ul class="plain-list">${upcoming.map((c) => html`<li>${methodLabel(c.type)}: ${formatDateTime(c.scheduledFor)} <a href="/contacts/${c.id}/calendar.ics" download>Add to calendar<span class="visually-hidden">: ${methodLabel(c.type)} on ${formatDateTime(c.scheduledFor)}</span></a></li>`)}</ul>`
             : emptyState(match
-              ? html`<p><strong>Nothing scheduled.</strong> <a href="/contacts?matchId=${match.id}">Schedule the next call</a> so ${name} has something to look forward to.</p>`
+              ? seniorView
+                ? html`<p><strong>Nothing scheduled yet.</strong> Your companion will set up the next call with you.</p>`
+                : html`<p><strong>Nothing scheduled.</strong> <a href="/contacts?matchId=${match.id}">Schedule the next call</a> so ${name} has something to look forward to.</p>`
               : html`<p><strong>Nothing scheduled.</strong> Calls can be scheduled once ${name} has a companion.</p>`)}
           <h3>Recent</h3>
           ${recent.length

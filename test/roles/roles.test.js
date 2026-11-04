@@ -471,3 +471,12 @@ test('the access table and the link stripper', () => {
     ].join('\n')
   );
 });
+
+test("a senior's own page has no risk labels about them; family still sees them", async () => {
+  await reset();
+  const own = mainOf(await text('/seniors/s-harold', 'senior:s-harold'));
+  assert.doesNotMatch(own, /Isolation risk|Contact dropping/);
+  assert.match(own, /Hi Hal!/);
+  const family = mainOf(await text('/seniors/s-harold', 'family:s-harold'));
+  assert.match(family, /Isolation risk/);
+});

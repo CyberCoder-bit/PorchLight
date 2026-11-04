@@ -102,7 +102,7 @@ function seniorCard(r, volunteersById) {
         <dd>${r.nextScheduled ? formatDateTime(r.nextScheduled.scheduledFor) : html`<strong>Nothing scheduled</strong>`}</dd>
         ${r.missedRecently ? html`<dt>Missed recently</dt><dd>${plural(r.missedRecently, 'missed call', 'missed calls')} in the last 2 weeks</dd>` : ''}
       </dl>
-      <p class="advice">${r.info.advice}</p>
+      <p class="advice">${r.status === 'ok' && r.trend.dropping ? 'Calls are happening, but less often than the month before. Keep them regular.' : r.info.advice}</p>
       ${weeklyChart(r.weekly, { idPrefix: `chart-${senior.id}`, name: first })}
       <p class="actions">
         ${r.status === 'needs_match'

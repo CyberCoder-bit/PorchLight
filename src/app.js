@@ -321,6 +321,7 @@ export function createApp({ store, sparks, now = () => new Date() }) {
         misfit: match && !isFamilyOrSenior(req.viewer) ? misfitOf(senior, store.volunteer(match.volunteerId)) : [], // [roles] a coordinator warning
         hideNotice: req.query.warn === 'live_fallback', // the flash banner already says it
         hideSparks: isFamilyOrSenior(req.viewer), // [roles] sparks are a volunteer tool
+        seniorView: req.viewer?.kind === 'senior', // [roles] the senior's own page: no risk labels about them
       }),
     });
   });
