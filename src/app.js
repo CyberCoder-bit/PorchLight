@@ -10,7 +10,7 @@ import {
   assessSenior, dashboardSummary, calendarDaysBetween, needsAttention, isUnmarkedPast, canLogNow, canMarkMissedNow,
 } from './risk.js';
 import { buildSparkInput } from './sparks/index.js';
-import { layout, TEXT_SIZES } from './views/layout.js';
+import { layout, PREFS } from './views/layout.js';
 import { toDateInput, toTimeInput, formatDateTime, formatLongDate, formatTime, setDisplayClock } from './views/html.js';
 import { homePage, aboutAiPage, resetConfirmPage, errorPage } from './views/pages/home.js';
 import { seniorsListPage, seniorProfilePage, seniorFormPage } from './views/pages/seniors.js';
@@ -52,10 +52,21 @@ const toArray = (v) => (v === undefined ? [] : Array.isArray(v) ? v : [v]);
 const str = (v) => (typeof v === 'string' ? v.trim() : Array.isArray(v) ? String(v[0] ?? '').trim() : '');
 
 // Optional `back` (a path on this site) returns the user to the page they came from.
-// Anything that could leave the site ("//evil.example") is ignored.
+// Only a plain path is allowed: "/" followed by something other than "/" or "\",
+// with no backslash, space, or control character anywhere. Browsers drop tabs and
+// line breaks and read "\" as "/", so "/\evil.example" or "/<TAB>/evil.example"
+// would leave the site. Anything else is ignored (null), and the caller picks a default.
 function safeBack(v) {
   const back = str(v);
-  return back.startsWith('/') && !back.startsWith('//') && !back.startsWith('/\\') ? back : null;
+  if (!/^\/(?:[^/\\]|$)/.test(back)) return null;
+  if (!/^[\u0021-\u007e]+$/.test(back) || back.includes('\\')) return null;
+  try {
+    // Belt and braces: it must resolve to this site.
+    if (new URL(back, 'http://porchlight.invalid').origin !== 'http://porchlight.invalid') return null;
+  } catch {
+    return null;
+  }
+  return back;
 }
 
 function flashFrom(req) {
@@ -690,13 +701,17 @@ export function createApp({ store, sparks, now = () => new Date() }) {
   });
 
   // ----- preferences & demo tools -----
-  router.post('/prefs/text-size', (req, res) => {
-    const size = str(req.body.size);
-    if (TEXT_SIZES.some((s) => s.id === size)) res.setCookie('textsize', size);
-    // Only redirect to a path on this site (prevents "open redirect" tricks).
-    const back = str(req.body.back);
-    res.redirect(back.startsWith('/') && !back.startsWith('//') ? back : '/');
-  });
+  // The Accessibility menu: POST /prefs/text-size (size), /prefs/contrast
+  // (contrast), and /prefs/theme (theme). Each choice is checked against its
+  // allow-list and kept in its own cookie. The redirect goes back to the page
+  // the person was on, but only to a path on this site (safeBack).
+  for (const pref of PREFS) {
+    router.post(`/prefs/${pref.route}`, (req, res) => {
+      const value = str(req.body[pref.field]);
+      if (pref.options.some((o) => o.id === value)) res.setCookie(pref.cookie, value);
+      res.redirect(safeBack(req.body.back) || '/');
+    });
+  }
 
   router.get('/demo/reset', (req, res) => {
     render(req, res, { title: 'Reset demo data', body: resetConfirmPage() });
