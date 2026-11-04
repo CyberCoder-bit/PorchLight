@@ -195,7 +195,7 @@ test('an unknown or other-time-zone town is ignored safely', async () => {
     assert.equal(res.status, 200, town);
     const body = await res.text();
     assert.deepEqual(dashCards(body), all, `${town} shows every town`);
-    assert.doesNotMatch(body, /town-filter-status/);
+    assert.doesNotMatch(body, /town-filter-status"><strong>In /); // never claims to be filtered
     assert.doesNotMatch(body, /<script>alert/);
   }
   // A repeated ?town= uses the last value the URL parser keeps, and is still checked.
@@ -328,4 +328,10 @@ test('matching: Hal\'s match page explains the county rule, and the server enfor
   assert.match(await res.text(), /too far for in-person visits/);
   assert.equal(store.activeMatchForSenior('s-harold'), null);
   await reset();
+});
+
+test('a town this deployment does not serve says so instead of silently showing everyone', async () => {
+  const body = await (await fetch(`${base}/dashboard?town=${encodeURIComponent('Evansville<b>')}`)).text();
+  assert.match(body, /"Evansville&lt;b&gt;" isn(&#39;|')t one of the towns this PorchLight serves/);
+  assert.doesNotMatch(body, /Evansville<b>/);
 });

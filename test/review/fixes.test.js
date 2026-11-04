@@ -259,8 +259,9 @@ test('spark source labels match on the profile and My week, in plain words', asy
 
 test('the missed-call note hint and /about-ai say only what is true', async () => {
   const week = await page('/volunteers/v-ethan/week');
-  assert.match(week, /It shows only on the coordinator(&#39;|')s Needs attention list\. It is never put in the family summary or sent to the AI\./);
-  assert.doesNotMatch(week, /Only coordinators see it/);
+  // Round 2: coordinators also see the note on the senior's page, so the hint says so.
+  assert.match(week, /Only coordinators see it \(on the Needs attention list and the senior(&#39;|')s page\)\. Family members and the senior never see it, and it is never sent to the AI\./);
+  assert.doesNotMatch(week, /Only coordinators see it\./); // the old, untrue round-1 wording
   const about = await page('/about-ai');
   assert.doesNotMatch(about, /quietly/);
   assert.match(about, /The page says so with a short note/);

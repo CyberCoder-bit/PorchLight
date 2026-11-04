@@ -24,6 +24,7 @@ export function homePage({ stats, attention }) {
       <p class="eyebrow">Built for Indiana communities, starting in ${town}, ${county}</p>
       <h1 id="hero-heading">Leave the porch light on for older neighbors.</h1>
       <p class="lead">PorchLight pairs older adults with volunteer companions for weekly calls and visits. It gives volunteers easy things to talk about, and it shows families early when the calls start to fade.</p>
+      <p class="hero-fact">Why it matters: by 2040, about one in five Hoosiers will be 65 or older (<a href="https://www.incontext.indiana.edu/2024/nov-dec/article1.asp">Indiana Business Research Center</a>), and being cut off from other people carries a health risk the U.S. Surgeon General compares to smoking up to 15 cigarettes a day (<a href="https://www.hhs.gov/sites/default/files/surgeon-general-social-connection-advisory.pdf">2023 advisory</a>).</p>
       <p class="button-row">
         <a class="button" href="/tour">Take the 2-minute demo tour <span aria-hidden="true">→</span></a>
         <a class="button button-secondary" href="/dashboard">Open the Family Dashboard</a>
@@ -91,7 +92,7 @@ export function homePage({ stats, attention }) {
       <li class="card role-card">
         <h3 class="card-title">I'm a senior</h3>
         <p>See your companion and your next call in big, clear text.</p>
-        <p><a class="button button-secondary" href="/seniors">Find my page</a></p>
+        <p><a class="button button-secondary" href="/sign-in#as-senior-heading">Find my page</a></p>
       </li>
       <li class="card role-card">
         <h3 class="card-title">I'm a volunteer</h3>

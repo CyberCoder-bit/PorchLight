@@ -208,7 +208,7 @@ export const COMMUNITIES = {
             source: 'https://cicoa.org/',
           },
           { label: 'Main office', number: '317-254-5465', source: AAA_DIRECTORY_URL },
-          { label: 'Toll-free', number: '800-432-2422', source: AAA_DIRECTORY_URL },
+          { label: 'Resource Center, toll-free', number: '800-432-2422', source: AAA_DIRECTORY_URL },
         ],
         textLine: null,
         url: 'https://cicoa.org/',

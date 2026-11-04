@@ -35,7 +35,8 @@ export function townSelectField(person, error) {
 //   town    the chosen town (from townFromQuery) or null for all towns
 //   shown   how many rows are on the page now; total = how many in all towns
 //   noun    ['senior', 'seniors'] or ['volunteer', 'volunteers'], ...
-export function townFilter({ action, town, shown, total, noun = ['senior', 'seniors'], label = 'Show seniors in' }) {
+export function townFilter({ action, town, shown, total, noun = ['senior', 'seniors'], label = 'Show seniors in', asked = '' }) {
+  const notServed = !town && typeof asked === 'string' && asked.trim() ? asked.trim().slice(0, 60) : '';
   const [one, many] = noun;
   return html`
     <form method="get" action="${action}" class="town-filter" aria-label="Filter by town">
@@ -51,6 +52,8 @@ export function townFilter({ action, town, shown, total, noun = ['senior', 'seni
       </div>
       ${town
         ? html`<p class="town-filter-status"><strong>In ${town}: ${plural(shown, one, many)}</strong> (${total} in all towns). <a href="${action}">Show all towns</a></p>`
-        : ''}
+        : notServed
+          ? html`<p class="town-filter-status" role="status"><strong>"${notServed}" isn't one of the towns this PorchLight serves</strong>, so every town is shown.</p>`
+          : ''}
     </form>`;
 }

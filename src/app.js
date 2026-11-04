@@ -280,7 +280,7 @@ export function createApp({ store, sparks, now = () => new Date() }) {
         const m = store.activeMatchForSenior(senior.id);
         return { senior, assessment: assess(senior), volunteer: m ? store.volunteer(m.volunteerId) : null };
       });
-    const filter = townFilter({ action: '/seniors', town, shown: rows.length, total: all.length }); // [towns]
+    const filter = townFilter({ action: '/seniors', town, asked: req.query.town, shown: rows.length, total: all.length }); // [towns]
     render(req, res, { title: 'Seniors', active: 'seniors', body: seniorsListPage({ rows, townFilter: filter, townName: town }) }); // [towns]
   });
 
@@ -396,7 +396,7 @@ export function createApp({ store, sparks, now = () => new Date() }) {
         volunteer,
         seniors: store.activeMatchesForVolunteer(volunteer.id).map((m) => store.senior(m.seniorId)).filter(Boolean),
       }));
-    const filter = townFilter({ action: '/volunteers', town, shown: rows.length, total: store.volunteers.length, noun: ['volunteer', 'volunteers'], label: 'Show volunteers in' }); // [towns]
+    const filter = townFilter({ action: '/volunteers', town, asked: req.query.town, shown: rows.length, total: store.volunteers.length, noun: ['volunteer', 'volunteers'], label: 'Show volunteers in' }); // [towns]
     render(req, res, { title: 'Volunteers', active: 'volunteers', body: volunteersListPage({ rows, townFilter: filter, townName: town }) }); // [towns]
   });
 
@@ -684,7 +684,7 @@ export function createApp({ store, sparks, now = () => new Date() }) {
       flash: Object.keys(errors).length ? false : undefined,
       body: dashboardPage({
         summary, // [towns] [roles]
-        townFilter: seesEverything(req.viewer) ? townFilter({ action: '/dashboard', town, shown: summary.length, total: everyone.length }) : '', // [towns]
+        townFilter: seesEverything(req.viewer) ? townFilter({ action: '/dashboard', town, asked: req.query.town, shown: summary.length, total: everyone.length }) : '', // [towns]
         townName: town, // [towns]
         threshold: store.settings.riskThresholdDays,
         volunteersById: new Map(store.volunteers.map((v) => [v.id, v])),

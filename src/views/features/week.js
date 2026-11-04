@@ -108,7 +108,7 @@ function missedForm(c, back, forWhom) {
             </div>
             <div class="field">
               <label for="note-${c.id}">Short note (optional)</label>
-              <p class="hint" id="hint-note-${c.id}">Up to 200 characters. It shows only on the coordinator's Needs attention list. It is never put in the family summary or sent to the AI.</p>
+              <p class="hint" id="hint-note-${c.id}">Up to 200 characters. Only coordinators see it (on the Needs attention list and the senior's page). Family members and the senior never see it, and it is never sent to the AI.</p>
               <input type="text" id="note-${c.id}" name="reasonNote" maxlength="200" aria-describedby="hint-note-${c.id}">
             </div>
           </div>

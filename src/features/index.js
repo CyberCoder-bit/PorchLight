@@ -27,7 +27,7 @@ export function registerFeatures(router, ctx) {
     const town = townFromQuery(req.query);
     const items = rowsInTown(queue.items, town, (i) => i.senior);
     const filtered = { ...queue, items, comingUp: rowsInTown(queue.comingUp, town, (a) => a.senior), townName: town };
-    filtered.townFilter = townFilter({ action: '/attention', town, shown: items.length, total: queue.items.length, noun: ['senior on the list', 'seniors on the list'] });
+    filtered.townFilter = townFilter({ action: '/attention', town, asked: req.query.town, shown: items.length, total: queue.items.length, noun: ['senior on the list', 'seniors on the list'] });
     render(req, res, { title: 'Needs attention', active: 'attention', body: attentionPage(filtered) });
   });
 
