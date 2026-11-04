@@ -44,12 +44,31 @@ export function html(strings, ...values) {
 
 // ----- date formatting (always Carmel, Indiana time; see tz.js) -----
 
+// "Today" for deciding whether to show the year. createApp() points this at the
+// app's own clock (so tests with a fixed clock see a fixed year).
+let displayNow = () => new Date();
+export function setDisplayClock(now) {
+  displayNow = typeof now === 'function' ? now : () => new Date();
+}
+
+// Show the year when the date is not in the current year on the Indiana
+// calendar: "Wednesday, November 3, 2027", but "Tuesday, November 3" this year.
+// Dates within two months of today skip it ("Monday, December 21" read on
+// January 2 is clear without a year).
+const YEAR_SKIP_MS = 60 * 24 * 60 * 60 * 1000;
+function yearOption(iso) {
+  const now = displayNow();
+  const otherYear = localParts(iso).year !== localParts(now).year;
+  const far = Math.abs(new Date(iso).getTime() - new Date(now).getTime()) > YEAR_SKIP_MS;
+  return otherYear && far ? { year: 'numeric' } : {};
+}
+
 export function formatDate(iso) {
-  return formatLocal(iso, { weekday: 'short', month: 'short', day: 'numeric' });
+  return formatLocal(iso, { weekday: 'short', month: 'short', day: 'numeric', ...yearOption(iso) });
 }
 
 export function formatLongDate(iso) {
-  return formatLocal(iso, { weekday: 'long', month: 'long', day: 'numeric' });
+  return formatLocal(iso, { weekday: 'long', month: 'long', day: 'numeric', ...yearOption(iso) });
 }
 
 export function formatTime(iso) {

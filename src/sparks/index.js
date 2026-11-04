@@ -51,6 +51,21 @@ export function createSparkService(config, modeInfo) {
   return {
     modeInfo,
     model: config.claudeModel,
+    // In LIVE mode: { reason, at } when the most recent request fell back to
+    // MOCK, or null after a LIVE success. Lets the header and /about-ai say
+    // what is really happening instead of "Live" while every call falls back.
+    lastFallback: null,
+
+    // What to show people right now: the startup mode, unless LIVE is set up
+    // but the last request had to use the offline ideas.
+    currentModeInfo() {
+      if (modeInfo.effective !== 'live' || !this.lastFallback) return modeInfo;
+      return {
+        effective: 'mock',
+        reason: `Live AI is set up, but the last request failed (${this.lastFallback.reason}), so the offline ideas were used`,
+        warning: modeInfo.warning,
+      };
+    },
 
     async generate(input, variant = 0) {
       if (modeInfo.effective === 'live') {
@@ -60,6 +75,7 @@ export function createSparkService(config, modeInfo) {
             model: config.claudeModel,
             baseURL: config.anthropicBaseUrl,
           });
+          this.lastFallback = null;
           return {
             mode: 'live',
             model: live.model,
@@ -69,13 +85,14 @@ export function createSparkService(config, modeInfo) {
           };
         } catch (err) {
           console.warn(`[sparks] LIVE mode failed (${err.reason || err.message}); falling back to MOCK.`);
+          this.lastFallback = { reason: err.reason || 'unknown error', at: new Date().toISOString() };
           const mock = generateMockSparks(input, variant);
           return {
             mode: 'mock-fallback',
             model: null,
             sparks: mock.sparks,
             tip: mock.tip,
-            notice: `Live AI was unavailable (${err.reason || 'unknown error'}), so these sparks came from the offline templates.`,
+            notice: `Live AI was unavailable (${err.reason || 'unknown error'}), so these sparks came from the built-in ideas.`,
           };
         }
       }

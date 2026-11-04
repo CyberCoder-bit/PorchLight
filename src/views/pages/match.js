@@ -49,8 +49,12 @@ function howMatchingWorks() {
     </section>`;
 }
 
-export function matchSeniorPage({ senior, currentMatch, currentVolunteer, ranking }) {
+export function matchSeniorPage({ senior, currentMatch, currentVolunteer, ranking: allRanked }) {
   const first = senior.preferredName || senior.name.split(' ')[0];
+  // The current companion is shown in their own panel, so they never appear
+  // in the lists below (where "At capacity" would count this senior against them).
+  const others = (list) => list.filter((r) => !currentVolunteer || r.volunteer.id !== currentVolunteer.id);
+  const ranking = { eligible: others(allRanked.eligible), ineligible: others(allRanked.ineligible) };
   return html`
     ${backLink('/match', 'all matches')}
     <h1>Find a companion for ${senior.name}</h1>

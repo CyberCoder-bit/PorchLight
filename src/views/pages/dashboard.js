@@ -4,17 +4,15 @@
 import { html, formatDate, formatDateTime, daysAgoText, plural } from '../html.js';
 import { statusBadge, trendBadge, methodLabel, errorSummary, emptyState } from '../components.js';
 import { weeklyChart } from '../chart.js';
-import { STATUS_INFO } from '../../risk.js';
+import { STATUS_INFO, needsAttention, attentionBreakdown } from '../../risk.js';
 
 // One sentence that says exactly what every number counts, e.g.
 // "2 seniors need attention: 1 at isolation risk, 1 waiting for a companion."
-function attentionSentence(counts) {
-  const flagged = counts.at_risk + counts.needs_match;
-  if (!flagged) return 'no seniors need attention.';
-  const parts = [];
-  if (counts.at_risk) parts.push(`${counts.at_risk} at isolation risk`);
-  if (counts.needs_match) parts.push(`${counts.needs_match} waiting for a companion`);
-  return `${plural(flagged, 'senior')} ${flagged === 1 ? 'needs' : 'need'} attention: ${parts.join(', ')}.`;
+// Who counts is needsAttention() in src/risk.js, the same rule as Home and /attention.
+function attentionSentence(flagged) {
+  if (!flagged.length) return 'no seniors need attention.';
+  const n = flagged.length;
+  return `${plural(n, 'senior')} ${n === 1 ? 'needs' : 'need'} attention: ${attentionBreakdown(flagged)}.`;
 }
 
 const seniorWord = (n) => (n === 1 ? 'senior' : 'seniors');
@@ -22,6 +20,9 @@ const seniorWord = (n) => (n === 1 ? 'senior' : 'seniors');
 export function dashboardPage({ summary, threshold, volunteersById, errors = {}, thresholdInput }) {
   const counts = Object.fromEntries(Object.keys(STATUS_INFO).map((k) => [k, summary.filter((r) => r.status === k).length]));
   const soonFrom = Math.max(1, threshold - 2);
+  const flagged = summary.filter(needsAttention);
+  // "1 to 3 days", or just "1 day" when the range is a single day.
+  const soonRange = soonFrom >= threshold ? plural(threshold, 'day') : `${soonFrom} to ${plural(threshold, 'day')}`;
 
   return html`
     <h1>Family dashboard</h1>
@@ -34,7 +35,7 @@ export function dashboardPage({ summary, threshold, volunteersById, errors = {},
       <div class="tile tile-due_soon"><p class="tile-value">${counts.due_soon}</p><p class="tile-label"><span aria-hidden="true">${STATUS_INFO.due_soon.icon}</span> ${seniorWord(counts.due_soon)} to check in with soon</p></div>
       <div class="tile tile-ok"><p class="tile-value">${counts.ok}</p><p class="tile-label"><span aria-hidden="true">${STATUS_INFO.ok.icon}</span> ${seniorWord(counts.ok)} connected</p></div>
     </section>
-    <p class="status-line"><strong>Right now, ${attentionSentence(counts)}</strong>${counts.at_risk || counts.needs_match ? html` <a href="/attention">See what to do next</a>` : ''}</p>
+    <p class="status-line"><strong>Right now, ${attentionSentence(flagged)}</strong>${flagged.length ? html` <a href="/attention">See what to do next</a>` : ''}</p>
 
     <h2 class="section-heading">Seniors, most urgent first</h2>
     ${summary.length
@@ -65,7 +66,7 @@ export function dashboardPage({ summary, threshold, volunteersById, errors = {},
       <h2 id="flags-heading">How the flags work</h2>
       <ul>
         <li>${statusBadge('at_risk', STATUS_INFO.at_risk)} No completed call or visit in more than <strong>${plural(threshold, 'day')}</strong>.</li>
-        <li>${statusBadge('due_soon', STATUS_INFO.due_soon)} Getting close: ${soonFrom} to ${plural(threshold, 'day')} since the last call or visit, or a new match still waiting for the first call.</li>
+        <li>${statusBadge('due_soon', STATUS_INFO.due_soon)} Getting close: ${soonRange} since the last call or visit, or a new match still waiting for the first call.</li>
         <li>${statusBadge('needs_match', STATUS_INFO.needs_match)} Not matched with a companion yet.</li>
         <li>${trendBadge({ dropping: true })} Calls and visits in the last 4 weeks fell to half (or less) of the 4 weeks before. This catches a slow fade early.</li>
       </ul>

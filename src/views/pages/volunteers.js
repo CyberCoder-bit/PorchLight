@@ -6,6 +6,7 @@ import {
   interestCheckboxes, availabilityFieldset, methodCheckboxes, methodLabel, selectField, backLink, emptyState,
 } from '../components.js';
 import { COMMUNITY } from '../../community.js';
+import { misfitNote } from './seniors.js';
 
 export function volunteersListPage({ rows }) {
   return html`
@@ -51,10 +52,11 @@ export function volunteerProfilePage({ volunteer, assigned }) {
       <h2 id="assigned-heading">${first}'s seniors (${assigned.length} of ${volunteer.maxSeniors})</h2>
       ${assigned.length
         ? html`<ul class="card-list">${assigned.map(
-            ({ senior, match, assessment }) => html`
+            ({ senior, match, assessment, misfit = [] }) => html`
             <li class="card">
               <h3 class="card-title"><a href="/seniors/${senior.id}">${senior.name}</a></h3>
               <p class="badges">${statusBadge(assessment.status, assessment.info)} ${trendBadge(assessment.trend)}</p>
+              ${misfit.length ? misfitNote({ senior, volunteer, misfit }) : ''}
               <p>${assessment.lastContact ? `Last call or visit: ${daysAgoText(assessment.daysSince)}.` : 'No calls or visits yet.'}
                 ${assessment.nextScheduled ? `Next: ${formatDateTime(assessment.nextScheduled.scheduledFor)}.` : html`<strong>Nothing scheduled.</strong>`}</p>
               <p class="actions">

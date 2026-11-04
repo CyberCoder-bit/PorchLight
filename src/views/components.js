@@ -38,6 +38,14 @@ export function slotList(ids) {
 
 export { slotLabel, methodLabel };
 
+// Where a saved set of conversation sparks came from, in plain words. One
+// label everywhere sparks are shown (the senior's profile and My week).
+export function sparkSourceLabel(set) {
+  if (set.mode === 'live') return `Written by Claude, an AI (${set.model})`;
+  if (set.mode === 'mock-fallback') return 'From the built-in ideas (live AI was unavailable)';
+  return 'From the built-in ideas (offline mode)';
+}
+
 // ---------- feedback banner ----------
 // One pattern for all four kinds of feedback. Each banner has an icon, a word,
 // and a color, so meaning never depends on color alone.

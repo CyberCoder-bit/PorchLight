@@ -16,11 +16,16 @@ export const capitalize = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 const reasonById = new Map(MISSED_REASONS.map((r) => [r.id, r.label]));
 export const missedReasonLabel = (id) => reasonById.get(id) || 'No reason recorded';
 
-// Missed calls whose scheduled day is within the last `days` calendar days
-// (or later, if one was marked missed early), newest first.
+// Missed calls whose scheduled day is within the last `days` calendar days,
+// newest first. A call can only be marked missed once its time has come, so a
+// missed call dated in the future (old data) is never counted as "recent".
 export function missedCallsWithin(contacts, now, days = RECENT_MISSED_DAYS) {
   return contacts
-    .filter((c) => c.status === 'missed' && calendarDaysBetween(c.scheduledFor, now) <= days)
+    .filter((c) => {
+      if (c.status !== 'missed') return false;
+      const daysAgo = calendarDaysBetween(c.scheduledFor, now);
+      return daysAgo >= 0 && daysAgo <= days;
+    })
     .sort((a, b) => new Date(b.scheduledFor) - new Date(a.scheduledFor));
 }
 
@@ -42,6 +47,9 @@ export function statusSentence(a, thresholdDays) {
     text = `${name} has had no completed call or visit in ${a.daysSince} days. That is longer than the ${thresholdDays}-day alert setting.`;
   } else if (a.status === 'due_soon') {
     text = `${name}'s last check-in was ${daysAgoText(a.daysSince)}. A call in the next day or two keeps things on track.`;
+  } else if (a.trend.dropping) {
+    // Recent contact, but fewer calls than before: don't call that "regular".
+    text = `${name}'s last check-in was ${daysAgoText(a.daysSince)}.`;
   } else {
     text = `${name} is hearing from their companion regularly. The last check-in was ${daysAgoText(a.daysSince)}.`;
   }

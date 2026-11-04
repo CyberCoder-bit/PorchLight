@@ -24,7 +24,7 @@ export const TOUR_STEPS = [
   },
   {
     title: 'The Needs attention list',
-    notice: 'A coordinator sees everyone who needs help in one list, each with a plain reason and one suggested next step.',
+    notice: "A coordinator sees everyone who needs help in one list, each with a plain reason and one suggested next step. For Hal, the step is to ask Ethan whether yesterday's visit happened.",
     href: '/attention',
     action: 'Open Needs attention',
   },
@@ -36,7 +36,7 @@ export const TOUR_STEPS = [
   },
   {
     title: "Ethan's week",
-    notice: "A volunteer's calls for the next 7 days, with one click to log a call or mark it missed.",
+    notice: "A volunteer's calls for the next 7 days, with one click to log a call or mark it missed. Hal's visit yesterday was never marked, so it waits under \"Did these calls happen?\". Log it, then look at Hal on the Family Dashboard again.",
     href: '/volunteers/v-ethan/week',
     action: "Open Ethan's week",
   },

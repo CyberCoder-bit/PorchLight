@@ -25,9 +25,10 @@ private names unless they agree).]
 2. **Other problems we considered.** [TEAM: List the 2-4 other ideas you brainstormed and why you
    set them aside.]
 3. **Checking that the problem is real and local.** We looked for Indiana data first, then
-   Hamilton County data. We found that the senior population is growing fast statewide, and fastest in
-   Hamilton and Boone counties. Isolation is a recognized health risk, and many older adults in Central
-   Indiana live alone (section 2). [TEAM: say who on the team did this and when.]
+   Hamilton County data. We found that the senior population is growing fast statewide, and that
+   Hamilton and Boone counties' senior populations are expected to more than double. Isolation is a
+   recognized health risk, and more than a third of older adults (55+) in Central Indiana live alone
+   (section 2). [TEAM: say who on the team did this and when.]
 4. **Checking what already exists.** Hamilton County already has an Area Agency on Aging (CICOA), a
    senior center in Carmel (PrimeLife Enrichment), and a volunteer friendly-visitor program
    (Shepherd's Center of Hamilton County). We didn't want to build something that already exists, so
@@ -70,11 +71,11 @@ older**.
 
 | # | Finding | Exact wording in the source | Source |
 |---|---|---|---|
-| D7 | Older adults are growing more than four times faster than the younger population. | "The older adult population in Central Indiana is increasing at over four times the rate of the younger population." | [S5], p. iii |
-| D8 | More than a third of older adults live alone. | "More than one-third of older adults in Central Indiana live alone." | [S5], p. iii |
-| D9 | Two in five older-adult households are one person living alone. | "Two out of five older adult households in Central Indiana consist of someone living alone." | [S5], p. viii |
-| D10 | One in three older adults report loneliness or isolation. | "One in three older adults in Central Indiana report feelings of loneliness or social isolation." | [S5], p. viii |
-| D11 | Only 14% have used a senior center. | "...while 14 percent report having used a senior center in their community." | [S5], p. viii |
+| D7 | Older adults (55+) are growing more than four times faster than the younger population. | "The older adult population in Central Indiana is increasing at over four times the rate of the younger population." | [S5], p. iii |
+| D8 | More than a third of older adults (55+) live alone. | "More than one-third of older adults in Central Indiana live alone." | [S5], p. iii |
+| D9 | Two in five older-adult (55+) households are one person living alone. | "Two out of five older adult households in Central Indiana consist of someone living alone." | [S5], p. viii |
+| D10 | One in three older adults (55+) report loneliness or isolation. | "One in three older adults in Central Indiana report feelings of loneliness or social isolation." | [S5], p. viii |
+| D11 | Only 14% of older adults (55+) have used a senior center. | "...while 14 percent report having used a senior center in their community." | [S5], p. viii |
 
 ### Hamilton County and Carmel (our first community)
 
@@ -141,7 +142,7 @@ track calls internally or coach volunteers in training. [TEAM: ask about this in
 (questions A4-A6 below). If a program already does one of these, say so in the narrative and explain
 how PorchLight is different or would help them.]
 
-**Also note:** the State of Aging report found that only 14% of older adults in Central Indiana have
+**Also note:** the State of Aging report found that only 14% of older adults (55+) in Central Indiana have
 used a senior center (D11). Many isolated seniors don't come to programs, so programs have to reach
 out to them. That outreach (calls and visits) is the part PorchLight helps keep going.
 
