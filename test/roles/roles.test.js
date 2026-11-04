@@ -268,8 +268,9 @@ test('volunteer: Calls & Visits shows only their own pairs and calls', async () 
 test('family: only their senior, notes hidden, no alert setting', async () => {
   await reset();
   const mike = 'family:s-harold';
-  const allowed = ['/dashboard', '/seniors/s-harold', '/seniors/s-harold/summary', '/help', '/about-ai', '/sign-in'];
-  const blocked = ['/attention', '/seniors', '/seniors/s-rosa', '/seniors/s-rosa/summary', '/seniors/s-harold/edit', '/volunteers', '/volunteers/v-ethan', '/volunteers/v-ethan/week', '/contacts', '/match', '/tour', '/demo/reset'];
+  // The tour stays open to everyone: its step 7 signs in as Mike (B-35).
+  const allowed = ['/dashboard', '/seniors/s-harold', '/seniors/s-harold/summary', '/help', '/about-ai', '/sign-in', '/tour'];
+  const blocked = ['/attention', '/seniors', '/seniors/s-rosa', '/seniors/s-rosa/summary', '/seniors/s-harold/edit', '/volunteers', '/volunteers/v-ethan', '/volunteers/v-ethan/week', '/contacts', '/match', '/demo/reset'];
   for (const [p, status] of Object.entries(await statuses(mike, allowed))) assert.equal(status, 200, `${p} allowed`);
   for (const [p, status] of Object.entries(await statuses(mike, blocked))) assert.equal(status, 403, `${p} blocked`);
   assert.match(await text('/seniors/s-rosa/summary', mike), /You're signed in as Mike Whitaker \(Hal&#39;s family\)/);
@@ -306,8 +307,8 @@ test('family: only their senior, notes hidden, no alert setting', async () => {
 test('senior: their own page only, notes hidden', async () => {
   await reset();
   const hal = 'senior:s-harold';
-  for (const [p, status] of Object.entries(await statuses(hal, ['/seniors/s-harold', '/help', '/about-ai', '/sign-in']))) assert.equal(status, 200, p);
-  for (const [p, status] of Object.entries(await statuses(hal, ['/dashboard', '/seniors/s-harold/summary', '/seniors/s-dorothy', '/attention', '/contacts', '/tour', '/seniors/s-harold/edit']))) {
+  for (const [p, status] of Object.entries(await statuses(hal, ['/seniors/s-harold', '/help', '/about-ai', '/sign-in', '/tour']))) assert.equal(status, 200, p);
+  for (const [p, status] of Object.entries(await statuses(hal, ['/dashboard', '/seniors/s-harold/summary', '/seniors/s-dorothy', '/attention', '/contacts', '/seniors/s-harold/edit']))) {
     assert.equal(status, 403, p);
   }
   assert.equal((await get('/', hal)).headers.get('location'), '/seniors/s-harold');

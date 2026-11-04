@@ -25,6 +25,7 @@ const isMyCall = ({ viewer, params, store }) =>
 // unknown pair is left to the form's own "Choose who this call is for" error.
 const postsToMyPair = ({ viewer, body, store }) => {
   if (body == null) return true;
+  if (Array.isArray(body.matchId)) return false; // a repeated field is never "my pair"
   const matchId = typeof body.matchId === 'string' ? body.matchId.trim() : '';
   const match = store.matches.find((m) => m.id === matchId && m.active);
   return !match || match.volunteerId === viewer.id;
@@ -38,12 +39,12 @@ export const ACCESS_RULES = Object.freeze([
   { method: 'POST', path: '/sign-out', roles: SIGNED_IN },
   { method: 'GET', path: '/help', roles: SIGNED_IN },
   { method: 'GET', path: '/about-ai', roles: SIGNED_IN },
+  { method: 'GET', path: '/tour', roles: SIGNED_IN }, // the judges' tour signs in as family at step 7
   { method: 'GET', path: '/healthz', roles: SIGNED_IN },
   { method: '*', path: '/prefs', roles: SIGNED_IN }, // text size and other display settings
   { method: '*', path: '/prefs/*', roles: SIGNED_IN },
 
   // ----- volunteer: my pages, my seniors, my calls -----
-  { method: 'GET', path: '/tour', roles: ['volunteer'] },
   { method: 'GET', path: '/volunteers/:id', roles: ['volunteer'], own: isSelf },
   { method: 'GET', path: '/volunteers/:id/week', roles: ['volunteer'], own: isSelf },
   { method: 'GET', path: '/seniors/:id', roles: ['volunteer'], own: isMySenior },

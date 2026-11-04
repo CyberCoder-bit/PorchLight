@@ -76,12 +76,16 @@ export function loadSdk() {
 // Phone numbers and email addresses that someone typed into "about me" are
 // replaced before the text leaves PorchLight. The rest of the text is kept.
 const EMAIL = /[^\s@<>()[\],;:"]+@[^\s@<>()[\],;:"]+\.[A-Za-z]{2,}/g;
-const PHONE = /(?:\+?1[\s.-]*)?(?:\(\d{3}\)|\b\d{3})[\s.-]*\d{3}[\s.-]*\d{4}\b/g; // 317-555-0142, (317) 555-0142, +1 317 555 0142
-const SHORT_PHONE = /\b\d{3}[\s.-]\d{4}\b/g; // 555-0142
+// Separators people use between digit groups: spaces, dots, slashes, and every kind of dash.
+const SEP = '[\\s./\\-\\u2010-\\u2015\\u2212\\u00a0]';
+const PHONE = new RegExp(`(?:\\+?1${SEP}*)?(?:\\(\\d{3}\\)|\\b\\d{3})${SEP}*\\d{3}${SEP}*\\d{4}\\b`, 'g'); // 317-555-0142, (317) 555-0142, +1 317 555 0142, 317/555/0142
+const SHORT_PHONE = new RegExp(`\\b\\d{3}${SEP}\\d{4}\\b`, 'g'); // 555-0142
 export const REDACTED = '[contact removed]';
 
 export function redactContactDetails(text) {
+  // NFKC turns fullwidth digits (\uFF13\uFF11\uFF17) into plain ones (317) so they are caught too.
   return String(text || '')
+    .normalize('NFKC')
     .replace(EMAIL, REDACTED)
     .replace(PHONE, REDACTED)
     .replace(SHORT_PHONE, REDACTED);

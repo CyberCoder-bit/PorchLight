@@ -44,6 +44,11 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('click', (event) => {
     if (menu.open && !menu.contains(event.target)) menu.open = false;
   });
+  // Tabbing out of the open menu closes it, so focus never lands on a link
+  // hidden underneath the panel.
+  menu.addEventListener('focusout', (event) => {
+    if (menu.open && event.relatedTarget && !menu.contains(event.relatedTarget)) menu.open = false;
+  });
   menu.querySelectorAll('.pref-option').forEach((button) => {
     button.addEventListener('click', (event) => {
       // detail is 0 when Enter or Space pressed the button, 1+ for a mouse or tap.

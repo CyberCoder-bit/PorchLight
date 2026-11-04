@@ -65,8 +65,9 @@ async function guard(req, res, handler, ctx) {
       code
     );
 
-  if (req.method === 'GET' && req.path === '/') return res.redirect(viewer.home);
-  if (!can(viewer, req.method, req.path, { store, body: req.body })) {
+  const method = req.method === 'HEAD' ? 'GET' : req.method; // HEAD answers like GET
+  if (method === 'GET' && req.path === '/') return res.redirect(viewer.home);
+  if (!can(viewer, method, req.path, { store, body: req.body })) {
     return ctx.render(req, res, { title: 'This page is for coordinators', body: notAllowedPage({ viewer }), status: 403 });
   }
   return handler(req, res);

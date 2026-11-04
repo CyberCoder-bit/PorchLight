@@ -7,6 +7,7 @@ import {
 } from '../components.js';
 import { placeText, townLabel } from '../../towns/index.js'; // [towns]
 import { townSelectField } from '../../towns/views.js'; // [towns]
+import { noPhone } from '../../roles/viewer.js'; // phone numbers are never displayed, even if typed into a name field
 
 export function seniorsListPage({ rows, townFilter = '', townName = null }) { // [towns] townFilter, townName
   return html`
@@ -123,7 +124,7 @@ export function seniorProfilePage({ senior, assessment, volunteer, match, upcomi
             <dt>Town</dt><dd>${townLabel(senior)}</dd>
             <dt>Prefers</dt><dd>${methodLabel(senior.contactMethod)}s</dd>
             <dt>Companion</dt><dd>${volunteer ? html`<a href="/volunteers/${volunteer.id}">${volunteer.name}</a>` : 'Not matched yet'}</dd>
-            <dt>Family contact</dt><dd>${senior.caregiver?.name ? `${senior.caregiver.name}${senior.caregiver.relationship ? ` (${senior.caregiver.relationship})` : ''}` : 'Not given'}</dd>
+            <dt>Family contact</dt><dd>${senior.caregiver?.name ? `${noPhone(senior.caregiver.name)}${senior.caregiver.relationship ? ` (${noPhone(senior.caregiver.relationship)})` : ''}` : 'Not given'}</dd>
             <dt>Last call or visit</dt><dd>${assessment.lastContact ? `${daysAgoText(assessment.daysSince)} (${formatDate(assessment.lastContact.completedAt)})` : 'None yet'}</dd>
           </dl>
           ${senior.aboutMe ? html`<h3>In their own words</h3><p>${senior.aboutMe}</p>` : ''}

@@ -23,7 +23,7 @@ import { registerIndiana } from './indiana/index.js';
 import { registerDesignPages } from './views/pages/extra.js';
 import { checkTown, townFromQuery, rowsInTown } from './towns/index.js'; // [towns]
 import { townFilter } from './towns/views.js'; // [towns]
-import { registerRoles, withoutPrivateNotes, seniorsVisibleTo, callsVisibleTo, seesEverything, isFamilyOrSenior } from './roles/index.js'; // [roles]
+import { registerRoles, withoutPrivateNotes, seniorsVisibleTo, callsVisibleTo, seesEverything, isFamilyOrSenior, viewerFromCookie } from './roles/index.js'; // [roles]
 
 // Short messages shown after a form is submitted (?msg=...).
 const FLASH = {
@@ -80,9 +80,13 @@ function flashFrom(req) {
 // form can show them next to the right input and in the error summary.
 
 // Characters as people count them: an emoji is 1, not 2 (UTF-16) units.
-const chars = (s) => [...s].length;
-// True if the text has nothing you can see (only spaces or zero-width characters).
-const isInvisible = (s) => !s.replace(/[\s\p{Cf}\p{Z}]/gu, '');
+// Characters as people count them: "👍🏽" and "e + accent" are one each (grapheme clusters).
+const GRAPHEMES = new Intl.Segmenter('en', { granularity: 'grapheme' });
+const chars = (s) => { let n = 0; for (const _ of GRAPHEMES.segment(s)) n++; return n; };
+// True if the text has nothing you can see: spaces, zero-width characters, lone accents,
+// or "blank" letters such as the Hangul fillers and the Braille blank.
+const BLANK_LOOKING = /[\s\p{Cf}\p{Z}\p{M}\u115F\u1160\u3164\uFFA0\u2800]/gu;
+const isInvisible = (s) => !s.replace(BLANK_LOOKING, '');
 // Whole numbers typed as plain digits only: "80", not "0x50", "8e1", or "80.0".
 const wholeNumber = (s) => (/^\d{1,4}$/.test(s) ? Number(s) : NaN);
 
@@ -204,7 +208,12 @@ export function createApp({ store, sparks, now = () => new Date() }) {
   const render = (req, res, { title, active, body, status = 200, wide = false, flash }) =>
     res.html(String(layout({ title, active, body, req, ctx: { sparks: shownSparks() }, flash: flash ?? flashFrom(req), wide })), status);
 
-  const renderError = (req, res, status, message) =>
+  const renderError = (req, res, status, message) => {
+    // [roles] Pages that never reached a route (404, 413) still show the signed-in person's own header.
+    if (req.viewer === undefined) req.viewer = req.cookies.viewer ? viewerFromCookie(req.cookies.viewer, store) : null;
+    return renderErrorPage(req, res, status, message);
+  };
+  const renderErrorPage = (req, res, status, message) =>
     render(req, res, {
       title: status === 404 ? 'Not found' : 'Error',
       body: errorPage({

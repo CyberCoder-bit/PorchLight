@@ -962,3 +962,6 @@ fieldset { border: 0; padding: 0; margin: 0 0 var(--space-5); min-width: 0; }
 .town-filter .field { margin-bottom: var(--space-2); }
 .town-filter select { width: auto; max-width: 100%; }
 .town-filter-status { margin: 0; }
+
+/* A long name in "Signed in as ..." wraps instead of widening the page. */
+.viewer-line, .viewer-line p { min-width: 0; overflow-wrap: anywhere; }

@@ -5,6 +5,7 @@ import { html, formatDate, formatDateTime, daysAgoText, plural } from '../html.j
 import { statusBadge, trendBadge, methodLabel, errorSummary, emptyState } from '../components.js';
 import { weeklyChart } from '../chart.js';
 import { STATUS_INFO, needsAttention, attentionBreakdown } from '../../risk.js';
+import { noPhone } from '../../roles/viewer.js'; // phone numbers are never displayed, even if typed into a name field
 
 // One sentence that says exactly what every number counts, e.g.
 // "2 seniors need attention: 1 at isolation risk, 1 waiting for a companion."
@@ -88,7 +89,7 @@ function seniorCard(r, volunteersById) {
         <h3 class="card-title"><a href="/seniors/${senior.id}">${senior.name}</a></h3>
         <p class="badges">${statusBadge(r.status, r.info)} ${trendBadge(r.trend)}</p>
       </div>
-      ${senior.caregiver?.name ? html`<p class="card-meta">Family: ${senior.caregiver.name}${senior.caregiver.relationship ? ` (${senior.caregiver.relationship})` : ''}</p>` : ''}
+      ${senior.caregiver?.name ? html`<p class="card-meta">Family: ${noPhone(senior.caregiver.name)}${senior.caregiver.relationship ? ` (${noPhone(senior.caregiver.relationship)})` : ''}</p>` : ''}
       <dl class="facts compact">
         <dt>Last call or visit</dt>
         <dd>${last
