@@ -1,0 +1,155 @@
+// The coordinator's "Needs attention" queue.
+//
+// Who is on it (the flags come from src/risk.js; nothing is re-derived here):
+//   - "Isolation risk" (at_risk)
+//   - "Contact dropping" (the 4-week trend flag)
+//   - "Needs a companion" (needs_match)
+//   - a missed call in the last 14 days
+//
+// Order: the same as the Family Dashboard (dashboardSummary): Isolation risk,
+// then Needs a companion, then Check in soon, then Connected; within a group,
+// the longest time since the last check-in first.
+//
+// Each senior gets ONE suggested next step, picked by fixed rules (first match
+// wins), so the same data always gives the same advice. No AI is used here.
+//   1. No companion                         -> find a first / new companion
+//   2. 2+ cancellations by the current      -> find a new companion (re-match)
+//      companion in the last 2 weeks
+//   3. Isolation risk, 2x the alert days,   -> get local help
+//      and the senior didn't answer
+//   4. The senior missed the latest call    -> let the family know
+//   5. Nothing scheduled                    -> schedule a call
+//   6. A call is scheduled                  -> remind the volunteer
+
+import { dashboardSummary } from '../risk.js';
+import { methodLabel } from '../vocab.js';
+import { COMMUNITY, localHelpFor } from '../community.js';
+import { daysAgoText, formatDateTime, plural } from '../views/html.js';
+import { firstName, capitalize, missedCallsWithin, trendText } from './words.js';
+
+const SENIOR_SIDE = new Set(['no_answer', 'senior_unavailable']);
+
+export function isOnQueue(a) {
+  return a.status === 'at_risk' || a.status === 'needs_match' || a.trend.dropping || a.missedRecently > 0;
+}
+
+// "No completed call or visit in 12 days; only 3 check-ins in the last 4
+// weeks, down from 8 the 4 weeks before; 1 missed call in the last 2 weeks."
+export function reasonText(a, { missed, hadCompanion }) {
+  const parts = [];
+  if (a.status === 'needs_match') {
+    parts.push(hadCompanion ? 'no companion right now' : 'waiting for a first companion');
+    parts.push(a.lastContact ? `last check-in was ${daysAgoText(a.daysSince)}` : `joined ${daysAgoText(a.daysSince)}`);
+  } else if (!a.lastContact) {
+    parts.push(`matched ${daysAgoText(a.daysSince)}, and no call has happened yet`);
+  } else if (a.status === 'at_risk') {
+    parts.push(`no completed call or visit in ${a.daysSince} days`);
+  } else {
+    parts.push(`last check-in was ${daysAgoText(a.daysSince)}`);
+  }
+  if (a.trend.dropping) parts.push(trendText(a.trend));
+  if (missed.length) parts.push(`${plural(missed.length, 'missed call')} in the last 2 weeks`);
+  return `${capitalize(parts.join('; '))}.`;
+}
+
+// Returns { kind, title, detail, href, linkText }.
+export function suggestNextStep(a, { match, volunteer, missed, hadCompanion, thresholdDays, help }) {
+  const id = a.senior.id;
+  const name = firstName(a.senior);
+  const vName = volunteer ? firstName(volunteer) : 'their companion';
+  const caregiver = a.senior.caregiver?.name;
+
+  if (a.status === 'needs_match' || !match) {
+    return hadCompanion
+      ? {
+          kind: 'new_companion',
+          title: 'Find a new companion',
+          detail: `${name}'s last match has ended. Choose someone new. Past calls stay in the history.`,
+          href: `/match?seniorId=${id}`,
+          linkText: `Find a new companion for ${name}`,
+        }
+      : {
+          kind: 'first_companion',
+          title: 'Find a first companion',
+          detail: `${name} hasn't been matched with a volunteer yet.`,
+          href: `/match?seniorId=${id}`,
+          linkText: `Find a companion for ${name}`,
+        };
+  }
+
+  const conflicts = missed.filter((c) => c.missedReason === 'volunteer_conflict' && c.volunteerId === match.volunteerId).length;
+  if (conflicts >= 2) {
+    return {
+      kind: 'rematch',
+      title: 'Find a new companion',
+      detail: `${vName} has had to cancel ${conflicts} times in the last 2 weeks. A companion with more free time may be a better fit.`,
+      href: `/attention/${id}/rematch`,
+      linkText: `Review ${name}'s match`,
+    };
+  }
+
+  const latest = missed[0];
+  const seniorMissed = latest && SENIOR_SIDE.has(latest.missedReason);
+  if (seniorMissed && a.status === 'at_risk' && a.daysSince >= 2 * thresholdDays && help) {
+    return {
+      kind: 'local_help',
+      title: 'Get local help',
+      detail: `${name} couldn't be reached and has gone ${a.daysSince} days without a check-in. Ask ${help.name}${help.phone ? ` (call ${help.phone})` : ''} about a wellness check. If someone may be in danger, call 911.`,
+      href: '/help',
+      linkText: 'See local help',
+    };
+  }
+  if (seniorMissed) {
+    return {
+      kind: 'family',
+      title: 'Let the family know',
+      detail: `${name} couldn't be reached for the last call. Ask ${caregiver || 'their family'} to check in. The weekly summary has a message ready to copy.`,
+      href: `/seniors/${id}/summary`,
+      linkText: `Open ${name}'s weekly summary`,
+    };
+  }
+
+  if (!a.nextScheduled) {
+    const noun = a.senior.contactMethod === 'visit' ? 'visit' : 'call';
+    return {
+      kind: 'schedule',
+      title: `Schedule a ${noun}`,
+      detail: `Nothing is on the calendar with ${vName}. Set up the next ${methodLabel(a.senior.contactMethod).toLowerCase()}.`,
+      href: `/contacts?seniorId=${id}`,
+      linkText: `Schedule a ${noun} with ${name}`,
+    };
+  }
+  return {
+    kind: 'remind',
+    title: `Remind ${vName}`,
+    detail: `${vName} has a ${methodLabel(a.nextScheduled.type).toLowerCase()} with ${name} on ${formatDateTime(a.nextScheduled.scheduledFor)}. A quick reminder helps it happen.`,
+    href: volunteer ? `/volunteers/${volunteer.id}/week` : `/seniors/${id}`,
+    linkText: volunteer ? `Open ${vName}'s week` : `Open ${name}'s profile`,
+  };
+}
+
+// Everything the /attention page shows, most urgent first.
+export function buildAttentionQueue(store, now) {
+  const thresholdDays = store.settings.riskThresholdDays;
+  const help = localHelpFor(COMMUNITY)[0] || null;
+  const summary = dashboardSummary(store, now);
+  const items = summary.filter(isOnQueue).map((a) => {
+    const match = store.activeMatchForSenior(a.senior.id);
+    const volunteer = match ? store.volunteer(match.volunteerId) : null;
+    const missed = missedCallsWithin(store.contactsForSenior(a.senior.id), now);
+    const hadCompanion = store.matches.some((m) => m.seniorId === a.senior.id && !m.active);
+    const facts = { match, volunteer, missed, hadCompanion, thresholdDays, help };
+    return {
+      assessment: a,
+      senior: a.senior,
+      match,
+      volunteer,
+      missed: missed.map((c) => ({ ...c, volunteer: store.volunteer(c.volunteerId) })),
+      reason: reasonText(a, facts),
+      step: suggestNextStep(a, facts),
+    };
+  });
+  // Seniors who aren't on the queue yet but are getting close.
+  const comingUp = summary.filter((a) => !isOnQueue(a) && a.status === 'due_soon');
+  return { items, comingUp, thresholdDays };
+}
