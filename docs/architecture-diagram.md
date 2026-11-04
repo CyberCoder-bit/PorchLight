@@ -61,8 +61,10 @@ sign-in, the access rules check the request first and answer "This page is for c
 anything that person shouldn't see; signed out, everything is allowed. Then the request goes to the
 router. Everything that changes from one Indiana community to another (its time zone, local touches
 for sparks, and local help) comes from the community profile, and every date goes through the clock
-module, so times are right even on a server that runs on UTC. One deployment serves every town whose
-county shares its time zone, so two deployments cover Indiana's 92 counties. The Accessibility
+module, so times are right even on a server that runs on UTC. Each deployment runs one time zone, so
+the time-zone design covers all 92 of Indiana's counties with two deployments. The town list isn't
+complete yet: it has 66 towns in 52 counties, and adding a town is one line in `src/towns/index.js`.
+The Accessibility
 choices are cookies that the page layout reads, so every page is drawn in the chosen text size,
 contrast, and theme without JavaScript. The router asks the right engine for an answer (who matches, who is at risk, what to say on the next call), saves changes through the store, and sends back a finished HTML page. The only data that ever leaves the server is the optional, privacy-limited call to Claude.
 

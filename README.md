@@ -85,14 +85,15 @@ are the tour's 8 steps, word for word. Each step on the page has a button that o
 
 Measured on November 4, 2026, on the merged `polish` branch:
 
-- **Automated tests:** 188 tests. After `npm install`, all 188 run and pass with `npm test`,
+- **Automated tests:** 208 tests. After `npm install`, all 208 run and pass with `npm test`,
   `TZ=UTC npm test`, `TZ=America/Chicago npm test`, and `TZ=America/Los_Angeles npm test`. Without
-  `npm install`, 179 pass and the 9 LIVE-mode tests are skipped, because they need the Anthropic
+  `npm install`, 199 pass and the 9 LIVE-mode tests are skipped, because they need the Anthropic
   SDK (checked by running a copy of the code outside the project folder). The count will change as
   tests are added; run `npm test` for the current number.
-- **Accessibility:** Google Lighthouse accessibility score of 100 on 7 key pages in the light, dark,
-  and high-contrast themes at 1280px wide, and in dark mode with A++ text at 375px wide. Before that, we measured 100 on the
-  13 core pages at 1280px and at 375px with A++.
+- **Accessibility:** Google Lighthouse accessibility score of 100 in the light, dark, and
+  high-contrast themes, on desktop and at 375px wide with A++ text, after the phone header was
+  compacted. Before
+  that, we measured 100 on the 13 core pages at 1280px and at 375px with A++.
 - **Two runtimes:** Node (`npm start`) and Cloudflare Workers (`npx wrangler dev`) returned identical
   HTML for the demo pages.
 
@@ -111,14 +112,15 @@ retirees, neighbors) for regular phone calls, video calls, and visits. It works 
    when contact starts to drop off, before isolation turns into a crisis.
 
 It's built for Indiana. Seniors and volunteers each have a town, every list can be filtered by town,
-and one deployment serves every town in its time zone. Coordinators, volunteers, family members, and
+and one deployment serves the listed towns in its time zone (66 towns in 52 counties so far; adding
+one is a single line). Coordinators, volunteers, family members, and
 seniors can each use a demo sign-in to see only their own pages. The demo data is set in Carmel and
 nearby Westfield and Indianapolis. PorchLight is a prototype: no real program uses it, and it has no
 partners or pilots yet.
 
 ## Screenshots
 
-All taken from a fresh demo reset on November 4, 2026.
+All taken from a fresh demo reset on November 4, 2026, after the round 2 fixes. On a 375px phone screen the header is compact and the navigation sits behind the Menu button.
 
 | | |
 |---|---|
@@ -138,6 +140,8 @@ All taken from a fresh demo reset on November 4, 2026.
 | Dark mode | High contrast |
 | ![Family dashboard on a 375px phone screen with A++ text](docs/screenshots/dashboard-375-xl.png) | ![Needs attention on a 375px phone screen with A++ text](docs/screenshots/attention-375-xl.png) |
 | Dashboard, 375px wide, A++ | Needs attention, 375px wide, A++ |
+| ![The phone Menu open at 375px with A++ text: the navigation as a list](docs/screenshots/menu-375-xl.png) | |
+| The phone Menu, 375px wide, A++ | |
 
 ## Commands
 
@@ -214,9 +218,12 @@ npm run deploy         # prints your URL, like https://porchlight.<your-subdomai
    `/dashboard?town=Westfield` shows only Rosa, who lives in Westfield.
 10. **Demo sign-in** (`/sign-in`). Sign in as Mike Whitaker, Hal's son. He sees only Hal's dashboard
     card, Hal's page, Hal's weekly summary, and Get help, never call notes. Other pages show "This
-    page is for coordinators." Sign out to see everything again.
-11. **Alert setting.** Signed out, change the dashboard setting from 7 to 4 days, and Rosa flips to
-    **Isolation risk**. Families choose the threshold that fits their loved one.
+    page is for coordinators." Sign out to see everything again. On the home page, **I'm a senior →
+    Find my page** opens the senior part of the sign-in: Hal's own page greets him, names his
+    companion and his next call, and shows no risk labels.
+11. **Alert setting.** Signed out (as the coordinator would be), change the dashboard setting from 7
+    to 4 days, and Rosa flips to **Isolation risk**. The coordinator sets the threshold to fit the
+    program; the family view shows the flags but not the setting.
 12. **Get help in Indiana** (`/help`). The 911 safety line, a "Which one should I call?" guide,
     CICOA Aging & In-Home Solutions (Hamilton County's Area Agency on Aging), Indiana 211, and the
     state's list of Area Agencies on Aging for every other county. Each one shows its official source
@@ -258,8 +265,8 @@ and takes you to the Match page.
 
 ## Statewide: towns, and two time zones
 
-**Towns.** `src/towns/index.js` lists 66 Indiana cities and towns, each with its county (52 of them
-county seats). Seniors and volunteers each have a town. Every list that matters can be filtered by
+**Towns.** `src/towns/index.js` lists 66 Indiana cities and towns in 52 of the 92 counties, each
+with its county (52 of them are county seats). Seniors and volunteers each have a town. Every list that matters can be filtered by
 town (`?town=` on the dashboard, Needs attention, Seniors, and Volunteers), so one coordinator can
 look at one town at a time. Phone and video calls work statewide. **In-person visits need the same
 county**: that's why Linda, who lives in Indianapolis (Marion County), is left out of Hal's visits
@@ -275,11 +282,15 @@ and Warrick in the southwest (source: the State of Indiana's
 checked November 3, 2026).
 
 **So PorchLight uses one deployment per time zone.** Every date in a deployment goes through one
-clock. The Carmel deployment (Eastern) serves every town in the 80 Eastern-time counties; its town
-picker offers only those towns (49 of the 66). A second deployment with a Central-time profile, such
-as the `evansville` sample in `src/community.js` (Vanderburgh County, with SWIRCA & More as its Area
-Agency on Aging), serves the 12 Central-time counties. **Two deployments cover all 92 counties.** A
-town in the other zone is rejected by the form, never saved with the wrong clock.
+clock. The Carmel deployment (Eastern) is for the 80 Eastern-time counties, and a second deployment
+with a Central-time profile, such as the `evansville` sample in `src/community.js` (Vanderburgh
+County, with SWIRCA & More as its Area Agency on Aging), is for the 12 Central-time counties. **The
+time-zone design covers all 92 counties with two deployments. The town list doesn't yet:** it has 66
+towns in 52 counties (all 12 Central-time counties, and 40 of the 80 Eastern ones), so the Carmel
+deployment's town picker offers 49 towns. Adding a town is one line in `src/towns/index.js` (check
+its county on an official page first). A town in the other time zone is rejected by the form, never
+saved with the wrong clock, and a `?town=` this deployment doesn't serve shows a notice and every
+town.
 
 **Daylight-saving days are handled on purpose.** On March 8, 2026, clocks jump from 1:59 AM to 3:00
 AM, so a call typed in for 2:30 AM is rejected with an error about the time. On November 1, 2026,
@@ -454,8 +465,8 @@ Only **completed** calls and visits count. Scheduled and missed ones don't.
 | ↓ **Contact dropping** (extra flag) | Check-ins in the last 4 weeks fell to half or less of the 4 weeks before |
 
 The trend flag catches the slow fade. Hal is flagged even though his volunteer is still "assigned,"
-because what matters is whether calls are actually happening. Families can change the threshold (1
-to 60 days) on the dashboard.
+because what matters is whether calls are actually happening. A coordinator can change the
+threshold (1 to 60 days) on the dashboard; signed in as a family member, the setting is hidden.
 
 A senior **needs attention** if they're at isolation risk, need a companion, have contact dropping,
 or had a missed call in the last 14 days. One function, `needsAttention()`, decides this for Home,
@@ -474,7 +485,10 @@ Seniors are the primary users, so accessibility was a requirement from the start
   - **Text size:** A, A+, or A++ (20px, 22px, or 25px base text);
   - **Contrast:** standard or high;
   - **Theme:** light, dark, or match my device (the default).
-  Choices are saved on the device.
+  Choices are saved on the device, and the menu closes when keyboard focus leaves it.
+- **A phone-sized header.** On narrow screens the navigation moves behind a **Menu** button (also
+  plain HTML, no JavaScript needed) and the AI badge shortens to "AI: Offline", so the page heading
+  is near the top of the screen even at A++.
 - Text contrast meets **WCAG AAA (7:1)** in the light, dark, and high-contrast themes; a test checks
   the colors (`test/accessibility/contrast.test.js`). Status is always shown with an icon **and**
   words, never color alone. Feedback banners pair an icon, a word, and a color
@@ -499,8 +513,8 @@ TZ=America/Chicago npm test       # same results on a Central-time computer
 TZ=America/Los_Angeles npm test   # same results in any other time zone
 ```
 
-At the time of writing there are 188 tests. Without `npm install`, 179 run and pass, and the 9
-LIVE-mode tests are skipped; after `npm install`, all 188 run. They cover:
+At the time of writing there are 208 tests. Without `npm install`, 199 run and pass, and the 9
+LIVE-mode tests are skipped; after `npm install`, all 208 run. They cover:
 - matching rules and ranking (`test/matching.test.js`);
 - risk thresholds, trend detection, and weekly chart buckets (`test/risk.test.js`);
 - MOCK sparks (always 3, deterministic, varied, gap-aware) and localized sparks: Carmel touches come
@@ -580,8 +594,10 @@ docs/                  Competition write-ups, research, diagrams,
 - **The sign-in is a demo, not security.** Anyone can pick anyone, and there are no passwords. The
   sign-in cookie isn't HttpOnly and lasts 8 hours. Signed out, every page is visible and editable.
   A real launch needs real accounts with passwords and server sessions.
-- **One time zone per deployment.** Covering all of Indiana takes two deployments, one for each time
-  zone. A few towns in the list haven't been checked against an official page yet.
+- **One time zone per deployment, and a partial town list.** Covering all of Indiana takes two
+  deployments, one for each time zone. The town list has 66 towns in 52 of the 92 counties so far,
+  so people in the other 40 counties can't be entered until their town is added (one line each). A
+  few towns in the list haven't been checked against an official page yet.
 - **One shared data document.** Locally it's a JSON file; on Cloudflare it's one Durable Object. Both
   are simple and consistent, but a large program would move to real database tables (Cloudflare D1
   or Postgres).
@@ -589,8 +605,11 @@ docs/                  Competition write-ups, research, diagrams,
   contact seniors.
 - **Notifications are on-screen only.** Families have to open the dashboard or the weekly summary to
   see a flag.
-- **Small leftovers**: "Page not found" pages
-  don't know who is signed in, and HEAD requests for static files (like `/styles.css`) return 404.
+- **Small leftovers**: HEAD requests for static
+  files (like `/styles.css`) return 404. HEAD works for pages.
+- **"Same county" is a rough stand-in for distance.** A senior and a volunteer a few miles apart can
+  be in different counties (Carmel and Indianapolis, for example), so in-person matching is stricter
+  than it needs to be.
 
 ## Future work
 
@@ -600,7 +619,8 @@ docs/                  Competition write-ups, research, diagrams,
 - **A real database** (Cloudflare D1 or Postgres), so a deployment can hold real, not demo, data
 - **Spanish** for both the screens and the conversation sparks
 - **A phone line** for seniors without internet (an automated "press 1 to request a call" line)
-- **Per-senior time zones in one deployment,** so a single PorchLight can serve all 92 counties
+- **Per-senior time zones in one deployment,** so a single PorchLight can serve all 92 counties,
+  with the town list completed for every county
 - **Partnerships with real volunteer organizations** (school service clubs, senior centers, Area
   Agencies on Aging, faith communities) to recruit, screen, and train companions
 
