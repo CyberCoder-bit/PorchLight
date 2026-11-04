@@ -12,6 +12,13 @@ Prototype for the Nextech CSforGood 2026 competition (grades 9-12). [TEAM: team 
 
 ## For judges: start here
 
+> **Important: run the `polish` branch.** The finished app is on the `polish` branch. Until the team
+> merges `polish` into `main` and pushes it (step 1 in [docs/TEAM-TODO.md](docs/TEAM-TODO.md)), the
+> repository's `main` branch is an older version from November 2 that has no tour, no Needs attention
+> list, and no Get help page. Clone with `git clone -b polish ...` instead of the plain command below.
+> If `/tour` shows "Page not found," you're on the old version.
+> [TEAM: delete this box after you merge `polish` into `main`, push, and check a fresh clone.]
+
 **What it is.** PorchLight helps a volunteer program keep older adults from slipping into isolation.
 It matches each senior with a volunteer companion, gives the volunteer three conversation starters
 before every call, and shows the family a dashboard that flags when calls and visits stop happening,
@@ -34,23 +41,24 @@ Otherwise delete this line.]
 
 ### The 2-minute demo
 
-Open **http://localhost:3000/tour** (or **Take the 2-minute demo tour** on the home page). The tour
-has these 7 steps, each with a button:
+Open **http://localhost:3000/tour** (or **Take the 2-minute demo tour** on the home page). These
+are the tour's 7 steps, word for word. Each step on the page has a button that opens it.
 
-1. **Reset the demo data.** Start fresh, so every date in the story lines up with today. Everyone in
-   the demo is made up.
-2. **Family Dashboard: Hal is flagged.** Harold ("Hal") shows "Isolation risk" and "Contact
-   dropping": no completed visit in 12 days, and only 3 check-ins in the last 4 weeks, down from 8.
-3. **The Needs attention list.** Each senior who needs help has a plain-English reason and one
-   suggested next step. Hal's is "Schedule a visit."
-4. **Match Gene with a companion.** Sam scores highest for Eugene ("Gene"), with 21 points, and every
-   volunteer who was left out is listed with the reason.
-5. **Ethan's week.** A volunteer's calls for the next 7 days, with one click to log a call or mark it
-   missed.
-6. **Conversation sparks on Hal's profile.** Press "Get conversation sparks" for three suggested
-   things to talk about, labeled with where they came from.
-7. **Get help in Indiana, and bigger text.** Local help and Indiana 211 for this community. Then try
-   **A++**: every page grows with the text.
+1. **Reset the demo data.** What to notice: Start fresh, so every date in the story lines up with
+   today. After the reset, a link brings you back here.
+2. **Family Dashboard: Hal is flagged.** What to notice: Harold ("Hal") shows "Isolation risk" and
+   "Contact dropping", so his family sees the problem before it becomes a crisis.
+3. **The Needs attention list.** What to notice: A coordinator sees everyone who needs help in one
+   list, each with a plain reason and one suggested next step.
+4. **Match Gene with a companion.** What to notice: Sam scores highest for Eugene ("Gene"), and every
+   volunteer who is left out is listed with the reason why.
+5. **Ethan's week.** What to notice: A volunteer's calls for the next 7 days, with one click to log a
+   call or mark it missed.
+6. **Conversation sparks on Hal's profile.** What to notice: Press "Get conversation sparks" for
+   three suggested things to talk about, built from Hal's interests and labeled with where they came
+   from.
+7. **Get help in Indiana, and bigger text.** What to notice: Local help and Indiana 211 for this
+   community. Then try A++ at the top of any page: every page grows with the text.
 
 The [video script](docs/part3_video_script.md) follows the same story further: schedule Hal's visit
 from Needs attention, log it from Ethan's week, and watch Hal's Isolation risk flag clear.
@@ -74,9 +82,11 @@ from Needs attention, log it from Ethan's week, and watch Hal's Isolation risk f
 
 Measured on November 3, 2026, on the merged `polish` branch:
 
-- **Automated tests:** 102 tests, all passing with `npm test`, `TZ=UTC npm test`, and
-  `TZ=America/Los_Angeles npm test`. (The count will change as tests are added. Run `npm test` for
-  the current number.)
+- **Automated tests:** 102 tests in the app's own suite. On a fresh clone without `npm install`,
+  96 pass and the 6 LIVE-mode tests are skipped, because they need the Anthropic SDK. After
+  `npm install`, all 102 run, and all 102 passed with `npm test`, `TZ=UTC npm test`, and
+  `TZ=America/Los_Angeles npm test`. Review tests in `test/review/` cover the bugs found in review; most of those fail until the fixes land. Run `npm test` for the
+  current numbers.
 - **Accessibility:** Google Lighthouse accessibility score of 100 on the 13 core pages, at 1280px wide
   and at 375px wide with A++ text. We re-checked `/attention`,
   `/help`, `/volunteers/v-ethan/week`, and `/seniors/s-harold/summary` at 375px with A++: 100, with
@@ -171,11 +181,12 @@ npm run deploy         # prints your URL, like https://porchlight.<your-subdomai
    any missed calls with their reasons, and one suggested next step chosen by fixed rules: find a
    companion, find a new companion, get local help, let the family know, schedule a call, or remind
    the volunteer. Secondary buttons offer **Schedule a call**, **Find a new companion**, and **Family
-   summary**. For Hal, the next step is **Schedule a visit**. Schedule one for a day when Hal and
-   Ethan are both free (Tuesday, Thursday, Saturday, or Sunday afternoon).
+   summary**. For Hal, the next step is **Schedule a visit**. Schedule one for later today. (Hal and
+   Ethan are both free on Tuesday, Thursday, Saturday, and Sunday afternoons; on other days a yellow
+   "outside usual availability" note appears, which is only a heads-up.)
 3. **My week** (`/volunteers/v-ethan/week`). Ethan sees his calls and visits for the next 7 days in
    Carmel time. Press **Get conversation sparks for Hal**, and you come back to My week with the
-   sparks shown under Hal's visit. Press **Log this visit**: it's recorded as happening now. (Each
+   sparks shown under Hal's visit. Press **Log this visit** to record that it happened. (Each
    call also has **Mark missed** with a reason: no answer, senior was unavailable, volunteer had a
    conflict, or other, plus an optional note. A "Did these calls happen?" section lists past calls
    that nobody marked.)
@@ -378,7 +389,9 @@ Details of the live call:
 
 **Privacy:** the only things sent to the API are the senior's preferred first name, interest labels,
 "about me" text, days since the last contact, the contact type, and today's date and season. Family
-contacts, phone numbers, volunteer call notes, and missed-call reasons are never sent.
+and caregiver names and phone numbers, volunteer call notes, and missed-call reasons are never sent.
+The "about me" text is sent as it was typed, so it shouldn't include phone numbers or other private
+details (B-12).
 
 ## How matching works (`src/matching.js`)
 
@@ -444,7 +457,9 @@ TZ=UTC npm test                   # same results on a UTC server (like Cloudflar
 TZ=America/Los_Angeles npm test   # same results in any other time zone
 ```
 
-At the time of writing there are 102 tests. They cover:
+At the time of writing, the app's own suite has 102 tests. On a fresh clone without `npm install`,
+96 run and pass, and the 6 LIVE-mode tests are skipped; after `npm install`, all 102 run. The suite
+covers:
 - matching rules and ranking (`test/matching.test.js`);
 - risk thresholds, trend detection, and weekly chart buckets (`test/risk.test.js`);
 - MOCK sparks (always 3, deterministic, varied, gap-aware) and localized sparks: Carmel touches come
@@ -468,6 +483,9 @@ At the time of writing there are 102 tests. They cover:
   checking that none is broken (`test/integration/links.test.js`).
 
 The LIVE tests are skipped automatically if `npm install` hasn't been run.
+
+`test/review/` holds the tests added for the bugs found in review. They fail until each bug is fixed, so `npm test` shows failures while
+the fixes are in progress.
 
 ## Project structure
 
@@ -494,7 +512,7 @@ src/
   sparks/              Conversation Spark: index (mode switch), mock, templates, live (Claude)
   views/               HTML pages, layout, components, SVG chart; pages/extra.js is the demo tour
 public/                CSS (including print styles), small optional script, icon
-test/                  Automated tests (features/, indiana/, design/, integration/, and core tests)
+test/                  Automated tests (features/, indiana/, design/, integration/, review/, and core tests)
 docs/                  Competition write-ups, research, diagrams, screenshots
 ```
 
@@ -507,7 +525,7 @@ docs/                  Competition write-ups, research, diagrams, screenshots
 | [docs/part3_video_script.md](docs/part3_video_script.md) | The video script, with timestamps and a shot list |
 | [docs/research.md](docs/research.md) | Market research: data with exact quotes, existing programs, the gap, interview guide |
 | [docs/architecture-diagram.md](docs/architecture-diagram.md) | Diagrams of the components, the loop, sparks, the risk flag, and the data model |
-| [docs/TEAM-TODO.md](docs/TEAM-TODO.md) | What the team still needs to fill in before submitting |
+| [docs/TEAM-TODO.md](docs/TEAM-TODO.md) | What the team still needs to do before submitting, in order |
 
 ## Prototype limitations
 
