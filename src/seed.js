@@ -10,12 +10,13 @@
 import { scorePair } from './matching.js';
 import { localParts, fromLocal } from './tz.js';
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-// `daysOffset` days from now, at hour:minute Carmel time.
+// `daysOffset` calendar days from today, at hour:minute local time.
+// Counting on the calendar (not in 24-hour steps) keeps the story the same
+// when "now" is just after midnight on a daylight-saving day, when
+// now + 24 hours can land on the same calendar day.
 function at(now, daysOffset, hour, minute = 0) {
-  const p = localParts(now.getTime() + daysOffset * DAY_MS);
-  return fromLocal(p.year, p.month, p.day, hour, minute).toISOString();
+  const p = localParts(now);
+  return fromLocal(p.year, p.month, p.day + daysOffset, hour, minute).toISOString();
 }
 
 export function buildSeedData(now = new Date(), { riskThresholdDays = 7 } = {}) {

@@ -9,10 +9,13 @@
 //   3. Use the generator to pick templates from templates.js.
 // Spark 1 always fits the time since the last contact. Sparks 2 and 3 come
 // from two DIFFERENT interests (or general prompts if there aren't enough).
+// Local places and events come from the community profile (src/community.js),
+// so the same code works for any Indiana town.
 
-import { OPENERS, INTEREST_SPARKS, GENERAL_SPARKS, VOLUNTEER_TIPS } from './templates.js';
+import { OPENERS, INTEREST_SPARKS, GENERAL_SPARKS, INDIANA_TOUCHES, VOLUNTEER_TIPS } from './templates.js';
 import { interestLabel } from '../vocab.js';
 import { localParts } from '../tz.js';
+import { COMMUNITY } from '../community.js';
 
 // FNV-1a: a simple, well-known string hash.
 export function fnv1a(str) {
@@ -84,6 +87,21 @@ function fill(template, vars) {
   return template.replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? '');
 }
 
+// The community's own local touches, or statewide Indiana ones if it has none.
+export function touchesFor(community = COMMUNITY) {
+  return community && community.localTouches && community.localTouches.length ? community.localTouches : INDIANA_TOUCHES;
+}
+
+// A template entry ({ any, fall, nov, ... }) with local touches appended to
+// the matching lists. Appending (not mixing) keeps the order, and so the
+// seeded output, stable.
+function withTouches(entry, touches) {
+  if (!touches.length) return entry;
+  const out = { ...entry, any: [...(entry.any || [])] };
+  for (const t of touches) out[t.when] = [...(out[t.when] || []), t.text];
+  return out;
+}
+
 /**
  * @param {object} input
  * @param {string} input.seniorId
@@ -93,15 +111,18 @@ function fill(template, vars) {
  * @param {string|null} input.lastContactDay  YYYY-MM-DD of the last contact (part of the seed)
  * @param {Date} input.now
  * @param {number} variant              0, 1, 2, ... ("Show different sparks")
+ * @param {object} community            profile from src/community.js (town, localTouches)
  */
-export function generateMockSparks(input, variant = 0) {
+export function generateMockSparks(input, variant = 0, community = COMMUNITY) {
   const now = input.now || new Date();
   const season = seasonOf(now);
   const monthKey = MONTH_KEYS[localParts(now).month - 1];
   const interests = [...(input.interests || [])].sort();
   const seedText = [input.seniorId, interests.join(','), input.lastContactDay || 'never', season, monthKey, variant].join('|');
   const rand = mulberry32(fnv1a(seedText));
-  const vars = { name: input.name, gap: input.daysSince != null ? gapPhrase(input.daysSince) : '' };
+  const profile = community || COMMUNITY;
+  const vars = { name: input.name, gap: input.daysSince != null ? gapPhrase(input.daysSince) : '', town: profile.town };
+  const touches = touchesFor(profile);
 
   const sparks = [];
 
@@ -116,7 +137,8 @@ export function generateMockSparks(input, variant = 0) {
   // Sparks 2 and 3: two different interests, in a seeded random order.
   const usable = shuffle(rand, interests.filter((id) => INTEREST_SPARKS[id]));
   for (const id of usable.slice(0, 2)) {
-    const { all, seasonal } = poolFor(INTEREST_SPARKS[id], season, monthKey);
+    const entry = withTouches(INTEREST_SPARKS[id], touches.filter((t) => t.interest === id));
+    const { all, seasonal } = poolFor(entry, season, monthKey);
     const template = pick(rand, all);
     sparks.push({
       text: fill(template, vars),
@@ -125,7 +147,7 @@ export function generateMockSparks(input, variant = 0) {
   }
 
   // Not enough interests? Fill with general prompts, with no repeats.
-  const general = poolFor(GENERAL_SPARKS, season, monthKey);
+  const general = poolFor(withTouches(GENERAL_SPARKS, touches.filter((t) => !t.interest)), season, monthKey);
   const generalChoices = shuffle(rand, [...new Set(general.all)]);
   while (sparks.length < 3) {
     const template = generalChoices.shift();
