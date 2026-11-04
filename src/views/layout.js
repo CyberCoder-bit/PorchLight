@@ -4,6 +4,7 @@
 import { html, raw } from './html.js';
 import { banner } from './components.js';
 import { COMMUNITY } from '../community.js';
+import { navFor, viewerLine } from '../roles/views.js'; // [roles]
 
 // Main navigation. `key` matches the `active` value a page passes to render(),
 // which marks that link with aria-current="page".
@@ -84,10 +85,11 @@ export function htmlClass({ textSize, contrast, theme }) {
 // Where a preference change returns to. It has to be a page that loads with GET.
 // After a form comes back with errors, the address is the form's POST target
 // (/settings, /seniors), which is not a page, so we return to the page that
-// holds that form instead (B-10). Only seniorId and matchId are kept from the
-// query string: they choose what the page shows, while ?msg=... would repeat
-// an old message.
-const KEEP_QUERY = ['seniorId', 'matchId'];
+// holds that form instead (B-10). On a normal page the whole query string is
+// kept (?seniorId=, ?matchId=, ?town= choose what the page shows), except the
+// one-time ?msg= and ?warn= flags, which would repeat an old message.
+// The POST /prefs/* routes still run the result through safeBack().
+const DROP_QUERY = new Set(['msg', 'warn']);
 const POST_RESULT_PAGES = [
   [/^\/seniors$/, () => '/seniors/new'],
   [/^\/seniors\/([^/]+)$/, ([, id]) => `/seniors/${id}/edit`],
@@ -102,7 +104,7 @@ const POST_RESULT_PAGES = [
 
 function withQuery(path, params) {
   const pairs = Object.entries(params).filter(([, v]) => typeof v === 'string' && v !== '');
-  return pairs.length ? `${path}?${pairs.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&')}` : path;
+  return pairs.length ? `${path}?${pairs.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&')}` : path;
 }
 
 export function prefsReturnPath(req) {
@@ -114,8 +116,8 @@ export function prefsReturnPath(req) {
     }
     return '/';
   }
-  const query = req.query || {};
-  return withQuery(req.path, Object.fromEntries(KEEP_QUERY.map((k) => [k, query[k]])));
+  const query = Object.entries(req.query || {}).filter(([k]) => !DROP_QUERY.has(k));
+  return withQuery(req.path, Object.fromEntries(query));
 }
 
 // Could someone have typed into a form on this page? Then the menu warns that
@@ -203,6 +205,8 @@ export function layout({ title, active, body, req, ctx, flash, wide = false }) {
   // color-scheme tells the browser how to draw native controls (date pickers,
   // scrollbars) to match the theme.
   const colorScheme = { light: 'light', dark: 'dark', auto: 'light dark' }[prefs.theme];
+  const nav = navFor(req.viewer, NAV); // [roles] signed-in people see only their own pages; demo mode gets NAV
+  const signedIn = viewerLine(req.viewer); // [roles] "Signed in as ... · Sign out", or the demo-mode line
   return html`<!DOCTYPE html>
 <html lang="en" class="${htmlClass(prefs)}">
 <head>
@@ -234,9 +238,10 @@ export function layout({ title, active, body, req, ctx, flash, wide = false }) {
         ${accessibilityMenu(prefs, prefsReturnPath(req), hasTypedFields(req, body))}
       </div>
     </div>
+    ${signedIn}
     <nav class="site-nav" aria-label="Main">
       <ul>
-        ${NAV.map(
+        ${nav.map(
           (item) => html`<li><a href="${item.href}"${active === item.key ? html` aria-current="page"` : ''}>${item.label}</a></li>`
         )}
       </ul>
@@ -248,7 +253,7 @@ export function layout({ title, active, body, req, ctx, flash, wide = false }) {
   </main>
   <footer class="site-footer">
     <p class="footer-note">Built for Indiana communities. Demo data is fictional.</p>
-    <p>A prototype for the Nextech CSforGood 2026 competition. There is no sign-in yet, so you can see every screen: senior, volunteer, family, and coordinator.</p>
+    <p>A prototype for the Nextech CSforGood 2026 competition. The sign-in is a demo with no passwords. Signed out, you can see every screen: senior, volunteer, family, and coordinator.</p>
     <ul class="footer-links">
       <li><a href="/tour">2-minute demo tour</a></li>
       <li><a href="/about-ai">How the AI works</a></li>

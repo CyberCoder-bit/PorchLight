@@ -5,22 +5,24 @@ import {
   statusBadge, trendBadge, chips, slotList, errorSummary, textField, textArea,
   interestCheckboxes, availabilityFieldset, methodRadios, methodLabel, banner, backLink, emptyState, sparkSourceLabel,
 } from '../components.js';
-import { COMMUNITY } from '../../community.js';
+import { placeText, townLabel } from '../../towns/index.js'; // [towns]
+import { townSelectField } from '../../towns/views.js'; // [towns]
 
-export function seniorsListPage({ rows }) {
+export function seniorsListPage({ rows, townFilter = '', townName = null }) { // [towns] townFilter, townName
   return html`
     <div class="page-head">
       <h1>Seniors</h1>
       <a class="button" href="/seniors/new">Add a senior</a>
     </div>
     <p class="lead">Everyone in PorchLight, with their companion and how recently someone called or visited.</p>
+    ${townFilter}
     ${rows.length
       ? html`<ul class="card-list">
       ${rows.map(
         ({ senior, assessment, volunteer }) => html`
         <li class="card">
           <h2 class="card-title"><a href="/seniors/${senior.id}">${senior.name}</a></h2>
-          <p class="card-meta">${senior.age ? `Age ${senior.age} · ` : ''}${senior.neighborhood || COMMUNITY.town} · prefers ${methodLabel(senior.contactMethod).toLowerCase()}s</p>
+          <p class="card-meta">${senior.age ? `Age ${senior.age} · ` : ''}${placeText(senior)} · prefers ${methodLabel(senior.contactMethod).toLowerCase()}s</p>
           <p class="badges">${statusBadge(assessment.status, assessment.info)} ${trendBadge(assessment.trend)}</p>
     <p><a href="/seniors/${senior.id}/summary">Weekly summary for family</a></p>
           <p>${volunteer
@@ -30,7 +32,9 @@ export function seniorsListPage({ rows }) {
         </li>`
       )}
     </ul>`
-      : emptyState(html`<p><strong>No seniors yet.</strong> Add the first person who would like a companion.</p>
+      : townName // [towns]
+        ? emptyState(html`<p><strong>No seniors in ${townName}.</strong> <a href="/seniors">Show all towns</a></p>`)
+        : emptyState(html`<p><strong>No seniors yet.</strong> Add the first person who would like a companion.</p>
           <p><a href="/seniors/new">Add a senior</a></p>`)}`;
 }
 
@@ -62,7 +66,8 @@ function sparkPanel({ senior, sparkSet, sparkMode, hideNotice = false }) {
 // `misfit`: what no longer fits between this senior and their companion
 // (e.g. "No overlapping availability"), after an edit to either profile.
 // `hideNotice`: the page already shows the same live-AI notice as a banner.
-export function seniorProfilePage({ senior, assessment, volunteer, match, upcoming, recent, sparkSet, sparkMode, misfit = [], hideNotice = false }) {
+// `hideSparks` [roles]: family and senior views leave out the volunteer's sparks.
+export function seniorProfilePage({ senior, assessment, volunteer, match, upcoming, recent, sparkSet, sparkMode, misfit = [], hideNotice = false, hideSparks = false }) {
   const name = senior.preferredName || senior.name.split(' ')[0];
   return html`
     ${backLink('/seniors', 'all seniors')}
@@ -85,7 +90,7 @@ export function seniorProfilePage({ senior, assessment, volunteer, match, upcomi
 
     <div class="two-col">
       <div>
-        ${sparkPanel({ senior, sparkSet, sparkMode, hideNotice })}
+        ${hideSparks ? '' : sparkPanel({ senior, sparkSet, sparkMode, hideNotice })}
 
         <section class="panel" aria-labelledby="contacts-heading">
           <h2 id="contacts-heading">Calls and visits</h2>
@@ -113,6 +118,7 @@ export function seniorProfilePage({ senior, assessment, volunteer, match, upcomi
           <dl class="facts">
             <dt>Age</dt><dd>${senior.age || 'Not given'}</dd>
             <dt>Neighborhood</dt><dd>${senior.neighborhood || 'Not given'}</dd>
+            <dt>Town</dt><dd>${townLabel(senior)}</dd>
             <dt>Prefers</dt><dd>${methodLabel(senior.contactMethod)}s</dd>
             <dt>Companion</dt><dd>${volunteer ? html`<a href="/volunteers/${volunteer.id}">${volunteer.name}</a>` : 'Not matched yet'}</dd>
             <dt>Family contact</dt><dd>${senior.caregiver?.name ? `${senior.caregiver.name}${senior.caregiver.relationship ? ` (${senior.caregiver.relationship})` : ''}` : 'Not given'}</dd>
@@ -152,6 +158,7 @@ export function seniorFormPage({ senior = {}, errors = {}, isNew }) {
       ${textField({ name: 'preferredName', label: 'What they like to be called', value: senior.preferredName, error: errors.preferredName, hint: 'For example "Hal" for Harold. Volunteers and sparks will use this name.' })}
       ${textField({ name: 'age', label: 'Age', value: senior.age, error: errors.age, type: 'number', attrs: 'inputmode="numeric" min="50" max="120"' })}
       ${textField({ name: 'neighborhood', label: 'Neighborhood', value: senior.neighborhood, error: errors.neighborhood, hint: 'For example "Old Town" or "near the library".' })}
+      ${townSelectField(senior, errors.town)}
       ${interestCheckboxes(senior.interests || [], errors.interests)}
       ${textArea({ name: 'aboutMe', label: 'About them, in their own words', value: senior.aboutMe, error: errors.aboutMe, hint: 'A few sentences about their life and what they enjoy. Used to make the conversation sparks personal. Please leave out phone numbers, emails, and addresses: PorchLight removes phone numbers and emails before anything goes to the AI. Up to 500 characters.' })}
       ${availabilityFieldset(senior.availability || [], errors.availability)}

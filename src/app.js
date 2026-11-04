@@ -21,6 +21,9 @@ import { dashboardPage } from './views/pages/dashboard.js';
 import { registerFeatures } from './features/index.js';
 import { registerIndiana } from './indiana/index.js';
 import { registerDesignPages } from './views/pages/extra.js';
+import { checkTown, townFromQuery, rowsInTown } from './towns/index.js'; // [towns]
+import { townFilter } from './towns/views.js'; // [towns]
+import { registerRoles, withoutPrivateNotes, seniorsVisibleTo, callsVisibleTo, seesEverything, isFamilyOrSenior } from './roles/index.js'; // [roles]
 
 // Short messages shown after a form is submitted (?msg=...).
 const FLASH = {
@@ -114,6 +117,7 @@ function validateSenior(body) {
   if (!isMethod(values.contactMethod)) errors.contactMethod = 'Choose how they prefer to connect.';
   if (chars(values.caregiver.name) > 80) errors.caregiverName = 'Name must be 80 characters or fewer.';
   if (chars(values.caregiver.relationship) > 80) errors.caregiverRelationship = 'Relationship must be 80 characters or fewer.';
+  checkTown(body, values, errors); // [towns] only towns on this deployment's list
   return { values, errors };
 }
 
@@ -136,6 +140,7 @@ function validateVolunteer(body) {
   if (!Number.isInteger(values.maxSeniors) || values.maxSeniors < 1 || values.maxSeniors > 5) {
     errors.maxSeniors = 'Choose between 1 and 5 seniors.';
   }
+  checkTown(body, values, errors); // [towns] only towns on this deployment's list
   return { values, errors };
 }
 
@@ -258,13 +263,16 @@ export function createApp({ store, sparks, now = () => new Date() }) {
 
   // ----- seniors -----
   router.get('/seniors', (req, res) => {
-    const rows = [...store.seniors]
+    const town = townFromQuery(req.query); // [towns]
+    const all = [...store.seniors]; // [towns]
+    const rows = rowsInTown(all, town) // [towns]
       .sort((a, b) => a.name.localeCompare(b.name))
       .map((senior) => {
         const m = store.activeMatchForSenior(senior.id);
         return { senior, assessment: assess(senior), volunteer: m ? store.volunteer(m.volunteerId) : null };
       });
-    render(req, res, { title: 'Seniors', active: 'seniors', body: seniorsListPage({ rows }) });
+    const filter = townFilter({ action: '/seniors', town, shown: rows.length, total: all.length }); // [towns]
+    render(req, res, { title: 'Seniors', active: 'seniors', body: seniorsListPage({ rows, townFilter: filter, townName: town }) }); // [towns]
   });
 
   router.get('/seniors/new', (req, res) => {
@@ -307,11 +315,12 @@ export function createApp({ store, sparks, now = () => new Date() }) {
         volunteer: match ? store.volunteer(match.volunteerId) : null,
         match,
         upcoming,
-        recent,
+        recent: withoutPrivateNotes(req.viewer, recent), // [roles] family and seniors never see call notes
         sparkSet: store.latestSparkSet(senior.id),
         sparkMode: sparks.modeInfo,
-        misfit: match ? misfitOf(senior, store.volunteer(match.volunteerId)) : [],
+        misfit: match && !isFamilyOrSenior(req.viewer) ? misfitOf(senior, store.volunteer(match.volunteerId)) : [], // [roles] a coordinator warning
         hideNotice: req.query.warn === 'live_fallback', // the flash banner already says it
+        hideSparks: isFamilyOrSenior(req.viewer), // [roles] sparks are a volunteer tool
       }),
     });
   });
@@ -370,13 +379,15 @@ export function createApp({ store, sparks, now = () => new Date() }) {
 
   // ----- volunteers -----
   router.get('/volunteers', (req, res) => {
-    const rows = [...store.volunteers]
+    const town = townFromQuery(req.query); // [towns]
+    const rows = rowsInTown([...store.volunteers], town) // [towns]
       .sort((a, b) => a.name.localeCompare(b.name))
       .map((volunteer) => ({
         volunteer,
         seniors: store.activeMatchesForVolunteer(volunteer.id).map((m) => store.senior(m.seniorId)).filter(Boolean),
       }));
-    render(req, res, { title: 'Volunteers', active: 'volunteers', body: volunteersListPage({ rows }) });
+    const filter = townFilter({ action: '/volunteers', town, shown: rows.length, total: store.volunteers.length, noun: ['volunteer', 'volunteers'], label: 'Show volunteers in' }); // [towns]
+    render(req, res, { title: 'Volunteers', active: 'volunteers', body: volunteersListPage({ rows, townFilter: filter, townName: town }) }); // [towns]
   });
 
   router.get('/volunteers/new', (req, res) => {
@@ -506,19 +517,23 @@ export function createApp({ store, sparks, now = () => new Date() }) {
   // ----- calls & visits -----
   const contactsView = (req, res, { form, errors = {}, status = 200 }) => {
     const nowDate = now();
+    const isMine = callsVisibleTo(req.viewer); // [roles] a volunteer sees only their own pairs and calls
     const pairs = store.matches
       .filter((m) => m.active)
+      .filter(isMine) // [roles]
       .map((match) => ({ match, senior: store.senior(match.seniorId), volunteer: store.volunteer(match.volunteerId) }))
       .filter((p) => p.senior && p.volunteer)
       .sort((a, b) => a.senior.name.localeCompare(b.senior.name));
     const scheduled = store.contacts
       .filter((c) => c.status === 'scheduled')
+      .filter(isMine) // [roles]
       .map((c) => ({ ...withPeople(c), canLog: canLogNow(c, nowDate), canMiss: canMarkMissedNow(c, nowDate) }))
       .filter((c) => c.senior)
       .sort((a, b) => new Date(a.scheduledFor) - new Date(b.scheduledFor));
     const happenedAt = (c) => new Date(c.completedAt || c.cancelledAt || c.scheduledFor);
     const recent = store.contacts
       .filter((c) => c.status !== 'scheduled')
+      .filter(isMine) // [roles]
       .map(withPeople)
       .filter((c) => c.senior)
       .sort((a, b) => happenedAt(b) - happenedAt(a))
@@ -648,6 +663,9 @@ export function createApp({ store, sparks, now = () => new Date() }) {
 
   // ----- dashboard -----
   const dashboardView = (req, res, { errors = {}, thresholdInput, status = 200 } = {}) => {
+    const town = seesEverything(req.viewer) ? townFromQuery(req.query) : null; // [towns]
+    const everyone = seniorsVisibleTo(req.viewer, dashboardSummary(store, now())); // [roles] family: only their senior
+    const summary = rowsInTown(everyone, town, (r) => r.senior); // [towns]
     render(req, res, {
       title: Object.keys(errors).length ? 'Fix the form: Family dashboard' : 'Family dashboard',
       active: 'dashboard',
@@ -655,7 +673,9 @@ export function createApp({ store, sparks, now = () => new Date() }) {
       wide: true,
       flash: Object.keys(errors).length ? false : undefined,
       body: dashboardPage({
-        summary: dashboardSummary(store, now()),
+        summary, // [towns] [roles]
+        townFilter: seesEverything(req.viewer) ? townFilter({ action: '/dashboard', town, shown: summary.length, total: everyone.length }) : '', // [towns]
+        townName: town, // [towns]
         threshold: store.settings.riskThresholdDays,
         volunteersById: new Map(store.volunteers.map((v) => [v.id, v])),
         errors,
@@ -714,6 +734,7 @@ export function createApp({ store, sparks, now = () => new Date() }) {
   registerFeatures(router, ctx);
   registerIndiana(router, ctx);
   registerDesignPages(router, ctx);
+  registerRoles(router, ctx); // [roles] must be last: adds /sign-in and checks every route on the server
 
   return createHandler({ router, renderError });
 }

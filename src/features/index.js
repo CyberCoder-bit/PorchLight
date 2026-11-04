@@ -14,6 +14,8 @@ import { buildCallIcs, sendDownload } from './calendar.js';
 import { attentionPage, rematchPage } from '../views/features/attention.js';
 import { myWeekPage } from '../views/features/week.js';
 import { familySummaryPage } from '../views/features/summary.js';
+import { townFromQuery, rowsInTown } from '../towns/index.js'; // [towns]
+import { townFilter } from '../towns/views.js'; // [towns]
 
 export function registerFeatures(router, ctx) {
   const { store, now, render } = ctx;
@@ -21,7 +23,12 @@ export function registerFeatures(router, ctx) {
   // ----- Needs attention (coordinator queue) -----
   router.get('/attention', (req, res) => {
     const queue = buildAttentionQueue(store, now());
-    render(req, res, { title: 'Needs attention', active: 'attention', body: attentionPage(queue) });
+    // [towns] ?town=Westfield shows only that town's seniors; unknown towns are ignored.
+    const town = townFromQuery(req.query);
+    const items = rowsInTown(queue.items, town, (i) => i.senior);
+    const filtered = { ...queue, items, comingUp: rowsInTown(queue.comingUp, town, (a) => a.senior), townName: town };
+    filtered.townFilter = townFilter({ action: '/attention', town, shown: items.length, total: queue.items.length, noun: ['senior on the list', 'seniors on the list'] });
+    render(req, res, { title: 'Needs attention', active: 'attention', body: attentionPage(filtered) });
   });
 
   // Confirm page for ending a match. The button posts to the existing
