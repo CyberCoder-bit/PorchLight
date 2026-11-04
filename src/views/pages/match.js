@@ -3,6 +3,7 @@
 import { html } from '../html.js';
 import { chips, slotList, methodLabel, backLink, emptyState, banner } from '../components.js';
 import { WEIGHTS } from '../../matching.js';
+import { townOf } from '../../towns/index.js'; // [towns]
 
 export function matchIndexPage({ unmatched, matched }) {
   return html`
@@ -41,7 +42,7 @@ function howMatchingWorks() {
     <section class="panel explain" aria-labelledby="how-heading">
       <h2 id="how-heading">How matching works</h2>
       <ol>
-        <li><strong>Must-haves.</strong> A volunteer is only suggested if they have room for another senior, are free at least one of the same times each week, and offer the senior's preferred way to connect.</li>
+        <li><strong>Must-haves.</strong> A volunteer is only suggested if they have room for another senior, are free at least one of the same times each week, and offer the senior's preferred way to connect. For in-person visits, they also live in the same county. Phone and video calls work anywhere in Indiana.</li>
         <li><strong>Points.</strong> +${WEIGHTS.perSharedInterest} for each shared interest. +${WEIGHTS.perSharedSlot} for each shared time slot (up to ${WEIGHTS.maxCountedSlots}). +${WEIGHTS.newVolunteerBonus} if the volunteer has no seniors yet.</li>
         <li><strong>Ranking.</strong> Highest score first. Ties go to the volunteer with fewer seniors.</li>
         <li><strong>No AI.</strong> Matching uses only these plain rules, so every score can be explained.</li>
@@ -57,7 +58,7 @@ export function matchSeniorPage({ senior, currentMatch, currentVolunteer, rankin
 
     <section class="panel" aria-labelledby="senior-summary-heading">
       <h2 id="senior-summary-heading">${first} at a glance</h2>
-      <p>Prefers <strong>${methodLabel(senior.contactMethod).toLowerCase()}s</strong>.</p>
+      <p>Prefers <strong>${methodLabel(senior.contactMethod).toLowerCase()}s</strong>. Lives in ${townOf(senior)}.</p>
       <h3>Interests</h3>
       ${chips(senior.interests)}
       <h3>Usually available</h3>
@@ -85,7 +86,7 @@ export function matchSeniorPage({ senior, currentMatch, currentVolunteer, rankin
                 <h3 class="card-title">${i === 0 ? html`<span class="badge badge-best">Best match</span> ` : ''}${r.volunteer.name}</h3>
                 <p class="score"><span class="score-number">${r.score}</span> points</p>
               </div>
-              <p class="card-meta">${r.volunteer.affiliation || 'Community volunteer'} · companion to ${r.currentLoad} of ${r.volunteer.maxSeniors} senior${r.volunteer.maxSeniors === 1 ? '' : 's'} now</p>
+              <p class="card-meta">${r.volunteer.affiliation || 'Community volunteer'} · ${townOf(r.volunteer)} · companion to ${r.currentLoad} of ${r.volunteer.maxSeniors} senior${r.volunteer.maxSeniors === 1 ? '' : 's'} now</p>
               <table class="breakdown">
                 <caption class="visually-hidden">Why ${r.volunteer.name} scored ${r.score} points</caption>
                 <thead><tr><th scope="col">Reason</th><th scope="col" class="num">Points</th></tr></thead>

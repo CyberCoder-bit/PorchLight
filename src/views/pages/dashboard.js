@@ -19,13 +19,14 @@ function attentionSentence(counts) {
 
 const seniorWord = (n) => (n === 1 ? 'senior' : 'seniors');
 
-export function dashboardPage({ summary, threshold, volunteersById, errors = {}, thresholdInput }) {
+export function dashboardPage({ summary, threshold, volunteersById, errors = {}, thresholdInput, townFilter = '', townName = null }) { // [towns] townFilter, townName
   const counts = Object.fromEntries(Object.keys(STATUS_INFO).map((k) => [k, summary.filter((r) => r.status === k).length]));
   const soonFrom = Math.max(1, threshold - 2);
 
   return html`
     <h1>Family dashboard</h1>
     <p class="lead">How often each senior hears from their companion. A flag goes up when calls and visits drop off, before loneliness turns into a crisis.</p>
+    ${townFilter}
     ${errorSummary(errors)}
 
     <section class="summary-tiles" aria-label="Seniors by status">
@@ -34,14 +35,16 @@ export function dashboardPage({ summary, threshold, volunteersById, errors = {},
       <div class="tile tile-due_soon"><p class="tile-value">${counts.due_soon}</p><p class="tile-label"><span aria-hidden="true">${STATUS_INFO.due_soon.icon}</span> ${seniorWord(counts.due_soon)} to check in with soon</p></div>
       <div class="tile tile-ok"><p class="tile-value">${counts.ok}</p><p class="tile-label"><span aria-hidden="true">${STATUS_INFO.ok.icon}</span> ${seniorWord(counts.ok)} connected</p></div>
     </section>
-    <p class="status-line"><strong>Right now, ${attentionSentence(counts)}</strong>${counts.at_risk || counts.needs_match ? html` <a href="/attention">See what to do next</a>` : ''}</p>
+    <p class="status-line"><strong>Right now${townName ? ` in ${townName}` : ''}, ${attentionSentence(counts)}</strong>${counts.at_risk || counts.needs_match ? html` <a href="/attention">See what to do next</a>` : ''}</p>
 
     <h2 class="section-heading">Seniors, most urgent first</h2>
     ${summary.length
       ? html`<ul class="dashboard-grid">
       ${summary.map((r) => seniorCard(r, volunteersById))}
     </ul>`
-      : emptyState(html`<p><strong>No seniors yet.</strong> Add the first senior, then match them with a companion.</p>
+      : townName // [towns]
+        ? emptyState(html`<p><strong>No seniors in ${townName}.</strong> <a href="/dashboard">Show all towns</a></p>`)
+        : emptyState(html`<p><strong>No seniors yet.</strong> Add the first senior, then match them with a companion.</p>
           <p><a class="button" href="/seniors/new">Add a senior</a></p>`)}
 
     <section class="panel threshold-panel" aria-labelledby="threshold-heading">

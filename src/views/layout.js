@@ -4,6 +4,7 @@
 import { html } from './html.js';
 import { banner } from './components.js';
 import { COMMUNITY } from '../community.js';
+import { navFor, viewerLine } from '../roles/views.js'; // [roles]
 
 // Main navigation. `key` matches the `active` value a page passes to render(),
 // which marks that link with aria-current="page".
@@ -66,6 +67,8 @@ function textSizeControl(current, backPath) {
 export function layout({ title, active, body, req, ctx, flash, wide = false }) {
   const textSize = TEXT_SIZES.some((s) => s.id === req.cookies.textsize) ? req.cookies.textsize : 'normal';
   const backPath = req.path + (req.path === '/match' && req.query.seniorId ? `?seniorId=${encodeURIComponent(req.query.seniorId)}` : '');
+  const nav = navFor(req.viewer, NAV); // [roles] signed-in people see only their own pages; demo mode gets NAV
+  const signedIn = viewerLine(req.viewer); // [roles] "Signed in as ... · Sign out", or the demo-mode line
   return html`<!DOCTYPE html>
 <html lang="en" class="text-${textSize}">
 <head>
@@ -97,9 +100,10 @@ export function layout({ title, active, body, req, ctx, flash, wide = false }) {
         ${textSizeControl(textSize, backPath)}
       </div>
     </div>
+    ${signedIn}
     <nav class="site-nav" aria-label="Main">
       <ul>
-        ${NAV.map(
+        ${nav.map(
           (item) => html`<li><a href="${item.href}"${active === item.key ? html` aria-current="page"` : ''}>${item.label}</a></li>`
         )}
       </ul>
@@ -111,7 +115,7 @@ export function layout({ title, active, body, req, ctx, flash, wide = false }) {
   </main>
   <footer class="site-footer">
     <p class="footer-note">Built for Indiana communities. Demo data is fictional.</p>
-    <p>A prototype for the Nextech CSforGood 2026 competition. There is no sign-in yet, so you can see every screen: senior, volunteer, family, and coordinator.</p>
+    <p>A prototype for the Nextech CSforGood 2026 competition. The sign-in is a demo with no passwords. Signed out, you can see every screen: senior, volunteer, family, and coordinator.</p>
     <ul class="footer-links">
       <li><a href="/tour">2-minute demo tour</a></li>
       <li><a href="/about-ai">How the AI works</a></li>

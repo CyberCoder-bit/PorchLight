@@ -6,6 +6,11 @@
 //   Hal:     was twice a week, now 12 days quiet -> "Isolation risk" + "Contact dropping"
 //   Rosa:    weekly video calls, last one 5 days ago -> "Check in soon"
 //   Eugene:  just signed up, no companion yet   -> "Needs a companion" (match him live!)
+//
+// [towns] Towns: Rosa lives in Westfield (also Hamilton County), so the town
+// filter has something to show, and her companion Linda lives in Indianapolis
+// (Marion County): video calls work statewide, but Linda is "too far for
+// in-person visits" on Hal's match page. Everyone else is in Carmel.
 
 import { scorePair } from './matching.js';
 import { localParts, fromLocal } from './tz.js';
@@ -27,6 +32,7 @@ export function buildSeedData(now = new Date(), { riskThresholdDays = 7 } = {}) 
       preferredName: 'Dorothy',
       age: 84,
       neighborhood: 'Old Town Carmel',
+      town: 'Carmel', // [towns]
       interests: ['gardening', 'baking', 'faith', 'music', 'family'],
       aboutMe:
         'Retired first-grade teacher. Sang in her church choir for 40 years. Grows tomatoes and zinnias in raised beds and is proud of her sugar cream pie.',
@@ -41,6 +47,7 @@ export function buildSeedData(now = new Date(), { riskThresholdDays = 7 } = {}) 
       preferredName: 'Hal',
       age: 88,
       neighborhood: 'Near the Monon Trail',
+      town: 'Carmel', // [towns]
       interests: ['basketball', 'history', 'veterans', 'cars', 'games'],
       aboutMe:
         'Army veteran who ran a hardware store on Main Street for 35 years. Lifelong Indiana basketball fan. Widowed in 2024 and misses having someone to talk sports with.',
@@ -54,10 +61,11 @@ export function buildSeedData(now = new Date(), { riskThresholdDays = 7 } = {}) 
       name: 'Rosa Delgado',
       preferredName: 'Rosa',
       age: 79,
-      neighborhood: 'Village of WestClay',
+      neighborhood: 'Near Grand Park', // [towns]
+      town: 'Westfield', // [towns]
       interests: ['crafts', 'travel', 'movies', 'pets', 'baking'],
       aboutMe:
-        'Grew up in San Antonio and moved to Carmel to be near her son. Bilingual (English and Spanish). Knits baby blankets for a hospital NICU, loves classic movies, and has a cat named Chispa.',
+        'Grew up in San Antonio and moved to Westfield to be near her son. Bilingual (English and Spanish). Knits baby blankets for a hospital NICU, loves classic movies, and has a cat named Chispa.',
       availability: ['tue-morning', 'tue-evening', 'thu-morning', 'thu-evening', 'sun-evening'],
       contactMethod: 'video',
       caregiver: { name: 'Daniel Delgado', relationship: 'Son, lives in Westfield' },
@@ -69,6 +77,7 @@ export function buildSeedData(now = new Date(), { riskThresholdDays = 7 } = {}) 
       preferredName: 'Gene',
       age: 81,
       neighborhood: 'East Carmel',
+      town: 'Carmel', // [towns]
       interests: ['fishing', 'baseball', 'cars', 'technology', 'history'],
       aboutMe:
         'Retired machinist and lifelong tinkerer who repairs old radios. Moved here from Kokomo last spring to be closer to his daughter and does not know many people in town yet.',
@@ -84,6 +93,7 @@ export function buildSeedData(now = new Date(), { riskThresholdDays = 7 } = {}) 
       id: 'v-maya',
       name: 'Maya Patel',
       affiliation: 'Carmel High School junior, Key Club',
+      town: 'Carmel', // [towns]
       interests: ['baking', 'music', 'gardening', 'reading'],
       availability: ['mon-afternoon', 'wed-afternoon', 'sat-morning', 'sat-afternoon', 'sun-afternoon'],
       contactMethods: ['phone', 'video'],
@@ -94,6 +104,7 @@ export function buildSeedData(now = new Date(), { riskThresholdDays = 7 } = {}) 
       id: 'v-ethan',
       name: 'Ethan Brooks',
       affiliation: 'Carmel High School senior, JV basketball',
+      town: 'Carmel', // [towns]
       interests: ['basketball', 'cars', 'history', 'games', 'baseball'],
       availability: ['tue-afternoon', 'thu-afternoon', 'sat-afternoon', 'sun-afternoon'],
       contactMethods: ['visit', 'phone'],
@@ -104,6 +115,7 @@ export function buildSeedData(now = new Date(), { riskThresholdDays = 7 } = {}) 
       id: 'v-linda',
       name: 'Linda Okafor',
       affiliation: 'Retired librarian, church outreach team',
+      town: 'Indianapolis', // [towns] video calls with Rosa work statewide
       interests: ['reading', 'crafts', 'travel', 'movies', 'faith'],
       availability: ['tue-morning', 'tue-evening', 'wed-evening', 'thu-morning', 'sun-evening'],
       contactMethods: ['video', 'phone', 'visit'],
@@ -114,6 +126,7 @@ export function buildSeedData(now = new Date(), { riskThresholdDays = 7 } = {}) 
       id: 'v-sam',
       name: 'Sam Rivera',
       affiliation: 'Carmel High School sophomore, robotics team',
+      town: 'Carmel', // [towns]
       interests: ['technology', 'fishing', 'cars', 'baseball', 'movies'],
       availability: ['tue-afternoon', 'thu-afternoon', 'sat-morning', 'sat-afternoon', 'sun-morning'],
       contactMethods: ['phone', 'video'],

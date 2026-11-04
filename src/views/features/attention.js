@@ -5,9 +5,10 @@ import { statusBadge, trendBadge, methodLabel } from '../components.js';
 import { STATUS_INFO } from '../../risk.js';
 import { firstName, missedReasonLabel } from '../../features/words.js';
 
-export function attentionPage({ items, comingUp, thresholdDays }) {
+export function attentionPage({ items, comingUp, thresholdDays, townFilter = '', townName = null }) { // [towns] townFilter, townName
   return html`
     <h1>Needs attention</h1>
+    ${townFilter}
     ${items.length
       ? html`
         <p class="lead">${plural(items.length, 'senior')} ${items.length === 1 ? 'needs' : 'need'} a hand today. Each one has a reason and one suggested next step.</p>
@@ -15,7 +16,7 @@ export function attentionPage({ items, comingUp, thresholdDays }) {
         <ol class="match-list">${items.map((item, i) => queueCard(item, i + 1))}</ol>`
       : html`
         <section class="panel welcome" aria-labelledby="empty-heading">
-          <h2 id="empty-heading"><span aria-hidden="true">✓ </span>Everyone has had a recent check-in.</h2>
+          <h2 id="empty-heading"><span aria-hidden="true">✓ </span>Everyone${townName ? ` in ${townName}` : ''} has had a recent check-in.</h2>
           <p>Nobody is at isolation risk, waiting for a companion, dropping off, or missing calls right now.</p>
           <p><a href="/dashboard">Open the Family Dashboard</a></p>
         </section>`}
