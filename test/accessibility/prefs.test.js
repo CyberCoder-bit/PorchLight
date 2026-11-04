@@ -194,6 +194,44 @@ test('after a form error, the menu returns to a page that loads, and warns about
   assert.doesNotMatch(menuOf(await page('/help')), /a11y-warning/);
 });
 
+test('a change keeps the page\'s own query (town filter, prefilled form) but not one-time messages', async () => {
+  const backOf = (body) => body.match(/<form class="text-size"[\s\S]*?name="back" value="([^"]*)"/)[1].replace(/&amp;/g, '&');
+  assert.equal(backOf(await page('/seniors?town=Carmel')), '/seniors?town=Carmel');
+  assert.equal(backOf(await page('/volunteers?town=Fishers&msg=volunteer_saved')), '/volunteers?town=Fishers');
+  assert.equal(backOf(await page('/contacts?seniorId=s-harold&warn=outside_hours')), '/contacts?seniorId=s-harold');
+  // Odd characters in the query are encoded, so the path still passes safeBack().
+  const odd = backOf(await page('/seniors?town=New%20Carmel%20%22x%22&a%20b=c'));
+  assert.equal(odd, '/seniors?town=New%20Carmel%20%22x%22&a%20b=c');
+  const res = await post('/prefs/theme', { theme: 'dark', back: odd });
+  assert.equal(res.headers.get('location'), odd);
+});
+
+test('the menu works while signed in (demo sign-in roles)', async () => {
+  const viewer = `viewer=${encodeURIComponent('family:s-harold')}`;
+  const res = await fetch(base + '/prefs/text-size', {
+    method: 'POST',
+    redirect: 'manual',
+    headers: { 'content-type': 'application/x-www-form-urlencoded', cookie: viewer },
+    body: new URLSearchParams({ size: 'xlarge', back: '/seniors/s-harold/summary' }).toString(),
+  });
+  assert.equal(res.status, 303);
+  assert.equal(res.headers.get('location'), '/seniors/s-harold/summary');
+  assert.match(res.headers.get('set-cookie'), /textsize=xlarge/);
+  for (const route of ['/prefs/contrast', '/prefs/theme']) {
+    const r = await fetch(base + route, {
+      method: 'POST',
+      redirect: 'manual',
+      headers: { 'content-type': 'application/x-www-form-urlencoded', cookie: viewer },
+      body: new URLSearchParams({ contrast: 'high', theme: 'dark', back: '/dashboard' }).toString(),
+    });
+    assert.equal(r.status, 303, route);
+    assert.equal(r.headers.get('location'), '/dashboard', route);
+  }
+  const body = await page('/seniors/s-harold/summary', `${viewer}; textsize=xlarge; theme=dark; contrast=high`);
+  assert.equal(htmlClass(body), 'text-xlarge theme-dark contrast-high');
+  assert.match(menuOf(body), /name="back" value="\/seniors\/s-harold\/summary"/);
+});
+
 test('HEAD works like GET with no body, and a broken %-escape is a 404 (B-17, B-18)', async () => {
   const res = await fetch(base + '/dashboard', { method: 'HEAD' });
   assert.equal(res.status, 200);
