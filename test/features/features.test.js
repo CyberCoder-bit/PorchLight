@@ -376,3 +376,70 @@ test('family summary shows the next scheduled call and works for an unmatched se
 
   assert.equal((await get('/seniors/nobody/summary')).status, 404);
 });
+
+// ---------- Add to calendar (.ics) ----------
+
+// The next Month 15 that is still ahead on the Carmel calendar, as YYYY-MM-DD.
+const nextFifteenth = (month) => {
+  const p = localParts(new Date());
+  const year = p.month < month || (p.month === month && p.day < 15) ? p.year : p.year + 1;
+  return `${year}-${String(month).padStart(2, '0')}-15`;
+};
+const scheduleDorothy = async (date, time = '16:00') => {
+  const res = await post('/contacts', { matchId: 'm-dorothy-maya', action: 'schedule', type: 'phone', date, time, notes: 'Secret note, do not share' });
+  assert.equal(res.status, 303);
+  return store.contacts.filter((c) => c.seniorId === 's-dorothy' && c.status === 'scheduled').at(-1);
+};
+
+test('calendar file: a 4:00 PM Carmel call is 21:00Z in January and 20:00Z in July', async () => {
+  for (const [month, utcHour] of [[1, '21'], [7, '20']]) {
+    const date = nextFifteenth(month);
+    const call = await scheduleDorothy(date);
+    const res = await get(`/contacts/${call.id}/calendar.ics`);
+    assert.equal(res.status, 200);
+    assert.equal(res.headers.get('content-type'), 'text/calendar; charset=utf-8');
+    assert.equal(res.headers.get('content-disposition'), `attachment; filename="porchlight-call-dorothy-${date}.ics"`);
+    const body = await res.text();
+    const ymd = date.replaceAll('-', '');
+    assert.match(body, new RegExp(`\\r\\nDTSTART:${ymd}T${utcHour}0000Z\\r\\n`), date);
+    assert.match(body, new RegExp(`\\r\\nDTEND:${ymd}T${utcHour}3000Z\\r\\n`), date);
+    assert.match(body, /\r\nSUMMARY:PorchLight call with Dorothy\r\n/);
+    assert.match(body, new RegExp(`\\r\\nUID:${call.id}@porchlight\\r\\n`));
+    assert.match(body, /\r\nDTSTAMP:\d{8}T\d{6}Z\r\n/);
+    assert.doesNotMatch(body, /[^\r]\n/, 'CRLF line endings');
+    for (const secret of ['Secret note', 'Karen', 'Chicago']) assert.ok(!body.includes(secret), secret);
+  }
+});
+
+test('calendar file: 404 for an unknown call, 409 for one already marked', async () => {
+  assert.equal((await get('/contacts/nobody/calendar.ics')).status, 404);
+  const done = store.contacts.find((c) => c.status === 'completed');
+  assert.equal((await get(`/contacts/${done.id}/calendar.ics`)).status, 409);
+});
+
+// ---------- Escaping across every feature page ----------
+
+test('a senior named <script> is escaped on every feature page', async () => {
+  const name = '<script>alert(1)</script>';
+  let res = await post('/seniors', { name, interests: 'gardening', availability: 'sat-morning', contactMethod: 'phone' });
+  assert.equal(res.status, 303);
+  const id = res.headers.get('location').split('/')[2].split('?')[0];
+  res = await post('/matches', { seniorId: id, volunteerId: 'v-maya' });
+  assert.equal(res.status, 303);
+  const match = store.activeMatchForSenior(id);
+  res = await post('/contacts', { matchId: match.id, action: 'schedule', type: 'phone', date: localDay(1), time: '10:00' });
+  assert.equal(res.status, 303);
+  const call = store.contacts.find((c) => c.seniorId === id && c.status === 'scheduled');
+  // Make sure the senior is on the queue (a missed call) and has saved sparks.
+  addCall({ seniorId: id, status: 'missed', missedReason: 'other', missedNote: '<img src=x onerror=alert(2)>', scheduledFor: localAt(-1, 10).toISOString() });
+  await post(`/seniors/${id}/sparks`, { variant: '0' });
+
+  for (const p of ['/attention', `/attention/${id}/rematch`, '/volunteers/v-maya/week', `/seniors/${id}/summary`]) {
+    const html = await page(p);
+    assert.doesNotMatch(html, /<script>alert/, p);
+    assert.doesNotMatch(html, /<img src=x/, p);
+    assert.match(html, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/, p);
+  }
+  const ics = await (await get(`/contacts/${call.id}/calendar.ics`)).text();
+  assert.match(ics, /\r\nSUMMARY:PorchLight call with <script>alert\(1\)<\/script>\r\n/, 'plain text in .ics (not HTML)');
+});

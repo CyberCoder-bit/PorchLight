@@ -10,6 +10,7 @@ import { completedContacts } from '../risk.js';
 import { missedCallsWithin } from './words.js';
 import { buildWeek } from './week.js';
 import { buildFamilySummary } from './summary.js';
+import { buildCallIcs, sendDownload } from './calendar.js';
 import { attentionPage, rematchPage } from '../views/features/attention.js';
 import { myWeekPage } from '../views/features/week.js';
 import { familySummaryPage } from '../views/features/summary.js';
@@ -68,5 +69,15 @@ export function registerFeatures(router, ctx) {
       now: now(),
     });
     render(req, res, { title: `Weekly summary: ${senior.name}`, active: 'dashboard', body: familySummaryPage(summary) });
+  });
+
+  // ----- Add to calendar (.ics) for a scheduled call -----
+  router.get('/contacts/:id/calendar.ics', (req, res) => {
+    const contact = store.contacts.find((c) => c.id === req.params.id);
+    const senior = contact ? store.senior(contact.seniorId) : null;
+    if (!contact || !senior) throw ctx.httpError(404, 'We could not find that call.');
+    if (contact.status !== 'scheduled') throw ctx.httpError(409, 'That call was already marked, so there is nothing to add to a calendar.');
+    const { body, filename } = buildCallIcs({ contact, senior, volunteer: store.volunteer(contact.volunteerId), now: now() });
+    sendDownload(res, { body, contentType: 'text/calendar; charset=utf-8', filename });
   });
 }
