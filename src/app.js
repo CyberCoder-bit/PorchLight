@@ -3,7 +3,7 @@
 // (worker.js), and tests can run it against a temporary data file.
 
 import { Router, createHandler, httpError } from './http.js';
-import { parseLocalDateTime } from './tz.js';
+import { parseLocalDateTime, startOfLocalDay } from './tz.js';
 import { isInterest, isSlot, isMethod, slotForDate, isMissedReason } from './vocab.js';
 import { rankVolunteers } from './matching.js';
 import { assessSenior, dashboardSummary, calendarDaysBetween } from './risk.js';
@@ -473,7 +473,7 @@ export function createApp({ store, sparks, now = () => new Date() }) {
     if (!matchId && req.query.seniorId) matchId = store.activeMatchForSenior(req.query.seniorId)?.id || '';
     const match = store.matches.find((m) => m.id === matchId && m.active);
     const senior = match ? store.senior(match.seniorId) : null;
-    const tomorrow = new Date(now().getTime() + 24 * 60 * 60 * 1000);
+    const tomorrow = startOfLocalDay(now(), 1); // a calendar day, even on the 25-hour day in November
     contactsView(req, res, {
       form: {
         matchId: match ? match.id : '',

@@ -22,6 +22,7 @@ export function seniorsListPage({ rows }) {
           <h2 class="card-title"><a href="/seniors/${senior.id}">${senior.name}</a></h2>
           <p class="card-meta">${senior.age ? `Age ${senior.age} · ` : ''}${senior.neighborhood || COMMUNITY.town} · prefers ${methodLabel(senior.contactMethod).toLowerCase()}s</p>
           <p class="badges">${statusBadge(assessment.status, assessment.info)} ${trendBadge(assessment.trend)}</p>
+    <p><a href="/seniors/${senior.id}/summary">Weekly summary for family</a></p>
           <p>${volunteer
             ? html`Companion: <a href="/volunteers/${volunteer.id}">${volunteer.name}</a>`
             : html`No companion yet. <a href="/match?seniorId=${senior.id}">Find a companion</a>`}</p>
@@ -95,7 +96,7 @@ export function seniorProfilePage({ senior, assessment, volunteer, match, upcomi
             : html`<p><a class="button" href="/match?seniorId=${senior.id}">Find a companion for ${name}</a></p>`}
           <h3>Coming up</h3>
           ${upcoming.length
-            ? html`<ul class="plain-list">${upcoming.map((c) => html`<li>${methodLabel(c.type)}: ${formatDateTime(c.scheduledFor)}</li>`)}</ul>`
+            ? html`<ul class="plain-list">${upcoming.map((c) => html`<li>${methodLabel(c.type)}: ${formatDateTime(c.scheduledFor)} <a href="/contacts/${c.id}/calendar.ics" download>Add to calendar<span class="visually-hidden">: ${methodLabel(c.type)} on ${formatDateTime(c.scheduledFor)}</span></a></li>`)}</ul>`
             : emptyState(match
               ? html`<p><strong>Nothing scheduled.</strong> <a href="/contacts?matchId=${match.id}">Schedule the next call</a> so ${name} has something to look forward to.</p>`
               : html`<p><strong>Nothing scheduled.</strong> Calls can be scheduled once ${name} has a companion.</p>`)}

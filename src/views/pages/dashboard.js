@@ -104,6 +104,7 @@ function seniorCard(r, volunteersById) {
         ${r.status === 'needs_match'
           ? html`<a class="button" href="/match?seniorId=${senior.id}">Find a companion for ${first}</a>`
           : html`<a class="button button-secondary" href="/seniors/${senior.id}">View ${first}'s profile</a>`}
+        <a class="button button-secondary" href="/seniors/${senior.id}/summary">Weekly summary<span class="visually-hidden"> for ${first}</span></a>
       </p>
     </li>`;
 }

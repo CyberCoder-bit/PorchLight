@@ -207,6 +207,8 @@ export function buildSeedData(now = new Date(), { riskThresholdDays = 7 } = {}) 
     completedAt: null,
     durationMinutes: null,
     notes: 'Ethan had to cancel because basketball practice ran late.',
+    missedReason: 'volunteer_conflict',
+    missedNote: null,
     createdAt: at(now, -9, 20),
   });
 

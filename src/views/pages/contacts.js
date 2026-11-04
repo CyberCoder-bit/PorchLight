@@ -107,6 +107,7 @@ function contactItem(c) {
         <form method="post" action="/contacts/${c.id}/missed" class="inline-form">
           <button type="submit" class="button button-secondary button-small">Mark as missed<span class="visually-hidden"> for ${c.senior.name} on ${formatDate(c.scheduledFor)}</span></button>
         </form>
+        <a class="button button-secondary button-small" href="/contacts/${c.id}/calendar.ics" download>Add to calendar<span class="visually-hidden">: ${c.senior.name} on ${formatDate(c.scheduledFor)}</span></a>
       </div>
     </li>`;
 }

@@ -94,7 +94,7 @@ export function suggestNextStep(a, { match, volunteer, missed, hadCompanion, thr
     return {
       kind: 'local_help',
       title: 'Get local help',
-      detail: `${name} couldn't be reached and has gone ${a.daysSince} days without a check-in. Ask ${help.name}${help.phone ? ` (call ${help.phone})` : ''} about a wellness check. If someone may be in danger, call 911.`,
+      detail: `${name} couldn't be reached and has gone ${a.daysSince} days without a check-in. Let the family know, and call ${help.name}${help.phone ? ` (${help.phone})` : ''} to ask what local support could help. If someone may be in danger, call 911.`,
       href: '/help',
       linkText: 'See local help',
     };

@@ -140,7 +140,8 @@ test('a senior who missed the call points to the family, then to local help afte
   store.save();
   hal = card(await page('/attention'), 's-harold');
   assert.match(hal, /Suggested next step: Get local help/);
-  assert.match(hal, /Indiana 211/);
+  // The community's own Area Agency on Aging comes first (CICOA for Carmel).
+  assert.match(hal, /CICOA Aging &amp; In-Home Solutions/);
   assert.match(hal, /If someone may be in danger, call 911\./);
   assert.match(hal, /<a class="button" href="\/help">/);
 });

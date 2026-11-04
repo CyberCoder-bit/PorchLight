@@ -115,6 +115,8 @@ h1, h2, h3 { margin: 0 0 var(--space-3); font-weight: 750; }
 h1 { font-size: var(--text-h1); line-height: var(--leading-h1); letter-spacing: var(--tracking-h1); font-weight: 800; }
 h2 { font-size: var(--text-h2); line-height: var(--leading-h2); letter-spacing: var(--tracking-h2); }
 h3 { font-size: var(--text-h3); line-height: var(--leading-h3); letter-spacing: var(--tracking-h3); }
+h4 { margin: 0 0 var(--space-2); font-size: 1.05rem; line-height: 1.3; font-weight: 700; }
+.contact-item .spark-panel { margin: var(--space-3) 0 0; }
 p { margin: 0 0 var(--space-3); }
 ul, ol { margin: 0 0 var(--space-4); }
 
@@ -592,7 +594,8 @@ fieldset { border: 0; padding: 0; margin: 0 0 var(--space-5); min-width: 0; }
   html, html.text-large, html.text-xlarge { font-size: 12pt; }
   body { background: #ffffff; color: #000000; }
   .site-header, .site-nav, .header-tools, .site-footer, .skip-link,
-  form, button, .button:not(.print-url), .chart-table summary, .table-hint, .back-link { display: none !important; }
+  form, button, .button:not(.print-url), .chart-table summary, .table-hint, .back-link, .breadcrumb { display: none !important; }
+  #summary-text { border: 0; padding: 0; resize: none; overflow: visible; font: inherit; color: #000000; }
   .button-row, .actions, .page-actions { margin: 0; }
   a.button.print-url {
     display: inline; min-height: 0; padding: 0; border: 0; background: none !important;
