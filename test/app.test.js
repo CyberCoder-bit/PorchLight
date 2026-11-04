@@ -227,6 +227,13 @@ test('a missed call can record a reason and return to the page it came from', as
   assert.equal(store.contacts.find((c) => c.id === call.id).missedReason, null);
 });
 
+test('sparks can return to the page that asked for them', async () => {
+  let res = await post('/seniors/s-harold/sparks', { variant: '0', back: '/volunteers/v-ethan/week' });
+  assert.equal(res.headers.get('location'), '/volunteers/v-ethan/week?msg=sparks');
+  res = await post('/seniors/s-harold/sparks', { variant: '0', back: '//evil.example' });
+  assert.equal(res.headers.get('location'), '/seniors/s-harold?msg=sparks#sparks');
+});
+
 test('text-size preference is stored in a cookie and rejects off-site redirects', async () => {
   const res = await post('/prefs/text-size', { size: 'xlarge', back: '//evil.example' });
   assert.match(res.headers.get('set-cookie'), /textsize=xlarge/);

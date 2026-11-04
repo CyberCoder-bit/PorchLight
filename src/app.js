@@ -31,7 +31,7 @@ const FLASH = {
   scheduled: 'Call scheduled.',
   logged: 'Call logged. The dashboard is updated.',
   completed: 'Marked as completed. The dashboard is updated.',
-  missed: 'Marked as missed.',
+  missed: 'Marked as missed. Next step: pick a new time for the call.',
   sparks: 'New conversation sparks are ready.',
   threshold: 'Alert setting updated.',
   reset: 'Demo data reset. Dates now start from today.',
@@ -43,6 +43,13 @@ const WARN = {
 
 const toArray = (v) => (v === undefined ? [] : Array.isArray(v) ? v : [v]);
 const str = (v) => (typeof v === 'string' ? v.trim() : Array.isArray(v) ? String(v[0] ?? '').trim() : '');
+
+// Optional `back` (a path on this site) returns the user to the page they came from.
+// Anything that could leave the site ("//evil.example") is ignored.
+function safeBack(v) {
+  const back = str(v);
+  return back.startsWith('/') && !back.startsWith('//') && !back.startsWith('/\\') ? back : null;
+}
 
 function flashFrom(req) {
   if (req.query.warn && WARN[req.query.warn]) return { kind: 'warning', text: WARN[req.query.warn] };
@@ -305,7 +312,8 @@ export function createApp({ store, sparks, now = () => new Date() }) {
     }
     store.save();
     const flag = result.mode === 'mock-fallback' ? 'warn=live_fallback' : 'msg=sparks';
-    res.redirect(`/seniors/${senior.id}?${flag}#sparks`);
+    const back = safeBack(req.body.back); // e.g. a volunteer's "My week" page
+    res.redirect(back ? `${back.split('#')[0]}${back.includes('?') ? '&' : '?'}${flag}` : `/seniors/${senior.id}?${flag}#sparks`);
   });
 
   // ----- volunteers -----
@@ -505,12 +513,6 @@ export function createApp({ store, sparks, now = () => new Date() }) {
     const warn = !isLog && (!slot || !shared.includes(slot)) ? '&warn=outside_hours' : '';
     res.redirect(`/contacts?msg=${isLog ? 'logged' : 'scheduled'}${warn}`);
   });
-
-  // Optional `back` (a path on this site) returns the user to the page they came from.
-  const safeBack = (v) => {
-    const back = str(v);
-    return back.startsWith('/') && !back.startsWith('//') && !back.startsWith('/\\') ? back : null;
-  };
 
   const markContact = (status) => (req, res) => {
     const contact = store.contacts.find((c) => c.id === req.params.id);

@@ -85,7 +85,7 @@ function callItem(c, { back, past, busyText }) {
     <li class="contact-item" id="call-${c.id}">
       <p><strong>${past ? formatDateTime(c.scheduledFor) : formatTime(c.scheduledFor)}</strong>: ${methodLabel(c.type)} with <a href="/seniors/${c.senior.id}">${c.senior.name}</a></p>
       ${c.notes ? html`<p class="muted">Your note: ${c.notes}</p>` : ''}
-      ${past ? '' : sparks(c, name, busyText)}
+      ${past ? '' : sparks(c, name, busyText, back)}
       <div class="actions">
         <form method="post" action="/contacts/${c.id}/complete" class="inline-form">
           <input type="hidden" name="back" value="${back}">
@@ -116,12 +116,13 @@ function callItem(c, { back, past, busyText }) {
     </li>`;
 }
 
-function sparks(c, name, busyText) {
+function sparks(c, name, busyText, back) {
   const set = c.sparkSet;
   if (!set) {
     return html`
       <form method="post" action="/seniors/${c.senior.id}/sparks" class="inline-form" data-busy-text="${busyText}">
         <input type="hidden" name="variant" value="0">
+        <input type="hidden" name="back" value="${back}">
         <button type="submit" class="button button-secondary">Get conversation sparks for ${name}</button>
       </form>`;
   }
