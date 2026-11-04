@@ -130,6 +130,7 @@ function hasTypedFields(req, body) {
 const ICONS = {
   person: '<circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="6.8" r="1.9" fill="currentColor"/><path d="M6.5 9.8 12 11l5.5-1.2M12 11v3.6m0 0-2.9 4.6m2.9-4.6 2.9 4.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
   chevron: '<path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>',
+  menu: '<path d="M4 6.5h16M4 12h16M4 17.5h16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>',
   sun: '<circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v2.6M12 19.4V22M2 12h2.6M19.4 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
   moon: '<path d="M20.2 14.6A8.6 8.6 0 0 1 9.4 3.8a8.6 8.6 0 1 0 10.8 10.8Z" fill="currentColor"/>',
   device: '<rect x="2.5" y="3.5" width="19" height="13.5" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 4.5h7.5a1 1 0 0 1 1 1V16H12Z" fill="currentColor"/><path d="M8 21h8M12 17v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
@@ -193,11 +194,41 @@ function withPrintCopies(body) {
   );
 }
 
+// The badge holds its full wording and a short one. Narrow screens show the
+// short one ("AI: Offline") and keep the full one for screen readers, so the
+// link's name is always the full wording and starts with what is on screen.
 function modeBadge(sparkMode) {
-  if (sparkMode.effective === 'live') {
-    return html`<a class="mode-badge mode-live" href="/about-ai" title="${sparkMode.reason}">AI: Live (Claude)</a>`;
-  }
-  return html`<a class="mode-badge mode-mock" href="/about-ai" title="${sparkMode.reason}">AI: Offline mode</a>`;
+  const live = sparkMode.effective === 'live';
+  const [long, short] = live ? ['AI: Live (Claude)', 'AI: Live'] : ['AI: Offline mode', 'AI: Offline'];
+  return html`<a class="mode-badge ${live ? 'mode-live' : 'mode-mock'}" href="/about-ai" title="${sparkMode.reason}"><span class="mode-badge-long">${long}</span><span class="mode-badge-short" aria-hidden="true">${short}</span></a>`;
+}
+
+// The main nav's list. It is drawn twice (see siteMenu below), the same both times.
+function navList(items, active) {
+  return html`<ul>
+        ${items.map(
+          (item) => html`<li><a href="${item.href}"${active === item.key ? html` aria-current="page"` : ''}>${item.label}</a></li>`
+        )}
+      </ul>`;
+}
+
+// Narrow screens (styles.css, "Menu") swap the nav bar for a "Menu" button
+// beside Accessibility. The button is a native <details>, so it opens and
+// closes with a click, Enter, or Space and needs no JavaScript. Its list is the
+// <nav> right after it: styles.css shows that nav only while Menu is open, so
+// the list opens right below the button and pushes the page down instead of
+// covering it. It comes after the Accessibility menu, so the order on screen
+// is the keyboard order. Exactly one of the two navs is ever displayed: this
+// one ("Main menu") on narrow screens, the bar ("Main") on wide ones. The other
+// is display: none, so screen readers meet a single navigation landmark.
+function siteMenu(links) {
+  return html`
+      <details class="site-menu">
+        <summary class="site-menu-summary" aria-controls="site-menu-nav">${icon('menu', 'site-menu-icon')}<span class="site-menu-text">Menu</span></summary>
+      </details>
+      <nav class="site-nav" id="site-menu-nav" aria-label="Main menu">
+      ${links}
+      </nav>`;
 }
 
 export function layout({ title, active, body, req, ctx, flash, wide = false }) {
@@ -206,6 +237,7 @@ export function layout({ title, active, body, req, ctx, flash, wide = false }) {
   // scrollbars) to match the theme.
   const colorScheme = { light: 'light', dark: 'dark', auto: 'light dark' }[prefs.theme];
   const nav = navFor(req.viewer, NAV); // [roles] signed-in people see only their own pages; demo mode gets NAV
+  const links = navList(nav, active);
   const signedIn = viewerLine(req.viewer); // [roles] "Signed in as ... · Sign out", or the demo-mode line
   return html`<!DOCTYPE html>
 <html lang="en" class="${htmlClass(prefs)}">
@@ -237,14 +269,11 @@ export function layout({ title, active, body, req, ctx, flash, wide = false }) {
         ${modeBadge(ctx.sparks.modeInfo)}
         ${accessibilityMenu(prefs, prefsReturnPath(req), hasTypedFields(req, body))}
       </div>
+      ${siteMenu(links)}
     </div>
     ${signedIn}
     <nav class="site-nav" aria-label="Main">
-      <ul>
-        ${nav.map(
-          (item) => html`<li><a href="${item.href}"${active === item.key ? html` aria-current="page"` : ''}>${item.label}</a></li>`
-        )}
-      </ul>
+      ${links}
     </nav>
   </header>
   <main id="main" tabindex="-1" class="${wide ? 'wide' : ''}">
