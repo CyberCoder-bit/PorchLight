@@ -39,10 +39,17 @@ export class Router {
       if (route.method !== method) continue;
       const m = route.regex.exec(pathname);
       if (!m) continue;
-      const params = {};
-      route.keys.forEach((key, i) => {
-        params[key] = decodeURIComponent(m[i + 1]);
-      });
+      // A broken %-escape ("/seniors/%E0%A4%A") can't name anything we have,
+      // so it is a "not found", never a crash.
+      let params = {};
+      try {
+        route.keys.forEach((key, i) => {
+          params[key] = decodeURIComponent(m[i + 1]);
+        });
+      } catch {
+        params = null;
+      }
+      if (!params) continue;
       return { handler: route.handler, params };
     }
     return null;
@@ -84,6 +91,19 @@ async function readBody(request) {
   return new TextDecoder().decode(bytes);
 }
 
+// Location values: printable ASCII only. Control characters (tab, CR, LF, ...)
+// mean someone is playing tricks, so we fall back to the home page. Other
+// characters outside ASCII are percent-encoded, as a browser would.
+function safeLocation(location) {
+  const value = String(location ?? '');
+  if (!value || /[\u0000-\u001f\u007f]/.test(value)) return '/';
+  try {
+    return value.replace(/[^\u0021-\u007e]/gu, (ch) => encodeURIComponent(ch));
+  } catch {
+    return '/'; // a lone surrogate can't be encoded
+  }
+}
+
 // Collects what a handler writes, then turns it into a Response.
 function createResponse() {
   const headers = new Headers();
@@ -110,16 +130,19 @@ function createResponse() {
     },
     // 303 See Other = "Post/Redirect/Get": after a form POST, the browser loads
     // a normal page, so pressing Refresh never re-submits the form.
+    // A Location header can't hold control characters (CR/LF would split the
+    // header), so a value with any of them goes home instead of crashing.
     redirect(location, code = 303) {
       status = code;
-      headers.set('Location', location);
+      headers.set('Location', safeLocation(location));
       sent = true;
     },
     setCookie(name, value, maxAgeSeconds = 60 * 60 * 24 * 365) {
       headers.append('Set-Cookie', `${name}=${encodeURIComponent(value)}; Path=/; Max-Age=${maxAgeSeconds}; SameSite=Lax`);
     },
-    toResponse() {
-      return new Response(body, { status, headers });
+    // HEAD gets the same status and headers as GET, with no body.
+    toResponse({ head = false } = {}) {
+      return new Response(head ? null : body, { status, headers });
     },
   };
 }
@@ -129,6 +152,9 @@ export function createHandler({ router, renderError }) {
   return async (request) => {
     const url = new URL(request.url);
     const res = createResponse();
+    // HEAD (used by link checkers and uptime monitors) runs the GET route;
+    // toResponse() then drops the body.
+    const head = request.method === 'HEAD';
     const req = {
       method: request.method,
       path: url.pathname,
@@ -139,10 +165,10 @@ export function createHandler({ router, renderError }) {
     };
 
     try {
-      const found = router.match(req.method, url.pathname);
+      const found = router.match(head ? 'GET' : req.method, url.pathname);
       if (!found) {
         renderError(req, res, 404, 'We could not find that page.');
-        return res.toResponse();
+        return res.toResponse({ head });
       }
       req.params = found.params;
       if (req.method === 'POST') req.body = parseForm(await readBody(request));
@@ -154,7 +180,7 @@ export function createHandler({ router, renderError }) {
         renderError(req, res, status, status === 500 ? 'Something went wrong on our side.' : err.message);
       }
     }
-    return res.toResponse();
+    return res.toResponse({ head });
   };
 }
 
