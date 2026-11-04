@@ -141,10 +141,77 @@ export function assessSenior(senior, { contacts, activeMatch, thresholdDays, now
     nextScheduled: upcoming[0] || null,
     trend: contactTrend(contacts, now),
     weekly: weeklyCounts(contacts, now, 8),
-    missedRecently: contacts.filter(
-      (c) => c.status === 'missed' && calendarDaysBetween(c.scheduledFor, now) <= 14
-    ).length,
+    // Missed calls whose day is within the last 14 days (a call can only be
+    // marked missed once its time has come, so none should be in the future).
+    missedRecently: contacts.filter((c) => {
+      if (c.status !== 'missed') return false;
+      const daysAgo = calendarDaysBetween(c.scheduledFor, now);
+      return daysAgo >= 0 && daysAgo <= 14;
+    }).length,
   };
+}
+
+// ----- the "Needs attention" list -----
+// ONE rule decides who is on it. Home, the Family Dashboard, and /attention all
+// use it, so the number is the same on every page. A senior is on the list if
+// any of these is true (from assessSenior; no AI):
+//   - "Isolation risk" (at_risk)
+//   - "Needs a companion" (needs_match)
+//   - "Contact dropping" (the 4-week trend flag)
+//   - a missed call in the last 14 days
+export function needsAttention(a) {
+  return a.status === 'at_risk' || a.status === 'needs_match' || a.trend.dropping || a.missedRecently > 0;
+}
+
+// The main reason a senior is on the list (one per senior, so the breakdown
+// adds up to the total), or null if they aren't on it.
+export function attentionReason(a) {
+  if (a.status === 'at_risk') return 'at_risk';
+  if (a.status === 'needs_match') return 'needs_match';
+  if (a.trend.dropping) return 'dropping';
+  if (a.missedRecently > 0) return 'missed';
+  return null;
+}
+
+export const ATTENTION_REASON_WORDS = {
+  at_risk: 'at isolation risk',
+  needs_match: 'waiting for a companion',
+  dropping: 'with contact dropping',
+  missed: 'with a recent missed call',
+};
+
+// "1 at isolation risk, 1 waiting for a companion": every number says what it counts.
+export function attentionBreakdown(assessments) {
+  const counts = new Map();
+  for (const a of assessments) {
+    const reason = attentionReason(a);
+    if (reason) counts.set(reason, (counts.get(reason) || 0) + 1);
+  }
+  return Object.keys(ATTENTION_REASON_WORDS)
+    .filter((k) => counts.has(k))
+    .map((k) => `${counts.get(k)} ${ATTENTION_REASON_WORDS[k]}`)
+    .join(', ');
+}
+
+// ----- when a scheduled call can be marked -----
+// A call counts as "in progress" for an hour after its start time, so a call
+// set for right now isn't asked about ("Did this happen?") straight away.
+export const CALL_GRACE_MINUTES = 60;
+
+// Still scheduled, and its time (plus the grace hour) has passed without anyone marking it.
+export function isUnmarkedPast(c, now = new Date()) {
+  return c.status === 'scheduled' && new Date(c.scheduledFor).getTime() + CALL_GRACE_MINUTES * 60 * 1000 < new Date(now).getTime();
+}
+
+// "Log this call" / "Mark as done" work for calls on today's date (Carmel
+// calendar) or earlier. A Thursday visit can't be logged on Tuesday.
+export function canLogNow(c, now = new Date()) {
+  return c.status === 'scheduled' && calendarDaysBetween(c.scheduledFor, now) >= 0;
+}
+
+// "Mark missed" works once the call's start time has come.
+export function canMarkMissedNow(c, now = new Date()) {
+  return c.status === 'scheduled' && new Date(c.scheduledFor) <= new Date(now);
 }
 
 // All seniors, most urgent first.

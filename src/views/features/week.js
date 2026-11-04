@@ -2,17 +2,11 @@
 // one-click "Log this call", and "Mark missed" with a reason.
 
 import { html, formatDate, formatTime, formatDateTime, formatLongDate, plural } from '../html.js';
-import { methodLabel } from '../components.js';
+import { methodLabel, sparkSourceLabel } from '../components.js';
 import { MISSED_REASONS } from '../../vocab.js';
 import { COMMUNITY } from '../../community.js';
 import { firstName } from '../../features/words.js';
 
-const sourceText = (set) =>
-  set.mode === 'live'
-    ? `Written by Claude (${set.model})`
-    : set.mode === 'mock-fallback'
-      ? 'From the offline templates (live AI was unavailable)'
-      : 'From the offline templates (MOCK mode)';
 
 const noun = (type) => (type === 'visit' ? 'visit' : 'call');
 
@@ -86,12 +80,21 @@ function callItem(c, { back, past, busyText }) {
       <p><strong>${past ? formatDateTime(c.scheduledFor) : formatTime(c.scheduledFor)}</strong>: ${methodLabel(c.type)} with <a href="/seniors/${c.senior.id}">${c.senior.name}</a></p>
       ${c.notes ? html`<p class="muted">Your note: ${c.notes}</p>` : ''}
       ${past ? '' : sparks(c, name, busyText, back)}
+      ${c.canLog
+        ? html`
       <div class="actions">
         <form method="post" action="/contacts/${c.id}/complete" class="inline-form">
           <input type="hidden" name="back" value="${back}">
           <button type="submit" class="button">Log this ${noun(c.type)}${forWhom}</button>
         </form>
-      </div>
+      </div>`
+        : html`<p class="muted">You can log this ${noun(c.type)} on ${formatLongDate(c.scheduledFor)}, once it has happened.</p>`}
+      ${c.canMiss ? missedForm(c, back, forWhom) : c.canLog ? html`<p class="muted">If it doesn't happen, you can mark it missed after ${formatTime(c.scheduledFor)}.</p>` : ''}
+    </li>`;
+}
+
+function missedForm(c, back, forWhom) {
+  return html`
       <form method="post" action="/contacts/${c.id}/missed" class="stack-form">
         <fieldset>
           <legend>Didn't happen? Mark it missed</legend>
@@ -105,15 +108,14 @@ function callItem(c, { back, past, busyText }) {
             </div>
             <div class="field">
               <label for="note-${c.id}">Short note (optional)</label>
-              <p class="hint" id="hint-note-${c.id}">Up to 200 characters. Only coordinators see it. It is never sent to the AI.</p>
+              <p class="hint" id="hint-note-${c.id}">Up to 200 characters. It shows only on the coordinator's Needs attention list. It is never put in the family summary or sent to the AI.</p>
               <input type="text" id="note-${c.id}" name="reasonNote" maxlength="200" aria-describedby="hint-note-${c.id}">
             </div>
           </div>
           <input type="hidden" name="back" value="${back}">
           <button type="submit" class="button button-secondary">Mark missed${forWhom}</button>
         </fieldset>
-      </form>
-    </li>`;
+      </form>`;
 }
 
 function sparks(c, name, busyText, back) {
@@ -133,6 +135,6 @@ function sparks(c, name, busyText, back) {
         ${set.sparks.map((s) => html`<li><p class="spark-text">${s.text}</p><p class="spark-basis">Based on: ${s.basedOn}</p></li>`)}
       </ol>
       ${set.tip ? html`<p class="tip"><strong>Volunteer tip:</strong> ${set.tip}</p>` : ''}
-      <p class="muted small">Suggestions only. ${sourceText(set)} · ${formatDateTime(set.createdAt)}</p>
+      <p class="muted small">Suggestions only. ${sparkSourceLabel(set)} · ${formatDateTime(set.createdAt)}</p>
     </div>`;
 }

@@ -2,7 +2,7 @@
 // from the same fixed lists, which makes matching exact and explainable
 // ("you both chose Gardening") instead of guessing from free text.
 
-import { localParts } from './tz.js';
+import { localParts, fromLocal } from './tz.js';
 
 export const INTERESTS = [
   { id: 'gardening', label: 'Gardening' },
@@ -39,10 +39,11 @@ export const DAYS = [
 ];
 
 // Each day is split into three blocks. A "slot" id looks like "tue-afternoon".
+// `suggest` is the hour the call form fills in for that block.
 export const PERIODS = [
-  { id: 'morning', label: 'Morning', hours: '9 AM–noon', start: 9, end: 12 },
-  { id: 'afternoon', label: 'Afternoon', hours: 'noon–5 PM', start: 12, end: 17 },
-  { id: 'evening', label: 'Evening', hours: '5–8 PM', start: 17, end: 20 },
+  { id: 'morning', label: 'Morning', hours: '9 AM–noon', start: 9, end: 12, suggest: 10 },
+  { id: 'afternoon', label: 'Afternoon', hours: 'noon–5 PM', start: 12, end: 17, suggest: 16 },
+  { id: 'evening', label: 'Evening', hours: '5–8 PM', start: 17, end: 20, suggest: 18 },
 ];
 
 export const SLOTS = DAYS.flatMap((d) =>
@@ -76,6 +77,23 @@ export function slotForDate(date) {
   const day = DAYS[(weekday + 6) % 7]; // JS: Sunday=0, we start on Monday
   const period = PERIODS.find((p) => hour >= p.start && hour < p.end);
   return period ? `${day.id}-${period.id}` : null;
+}
+
+// The next time inside one of `slotIds` (e.g. a pair's shared free time), at
+// least `leadMinutes` from `now`, looking up to two weeks ahead on the Carmel
+// calendar. Returns a Date, or null if there are no usable slots.
+export function nextSlotTime(slotIds, now = new Date(), { leadMinutes = 60 } = {}) {
+  const wanted = new Set(slotIds.filter(isSlot));
+  if (!wanted.size) return null;
+  const earliest = new Date(now).getTime() + leadMinutes * 60 * 1000;
+  const p = localParts(now);
+  for (let d = 0; d < 15; d++) {
+    for (const period of PERIODS) {
+      const when = fromLocal(p.year, p.month, p.day + d, period.suggest);
+      if (when.getTime() >= earliest && wanted.has(slotForDate(when))) return when;
+    }
+  }
+  return null;
 }
 
 // Why a scheduled call was missed. Shown to coordinators; never sent to the AI.

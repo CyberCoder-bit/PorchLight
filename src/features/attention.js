@@ -1,6 +1,7 @@
 // The coordinator's "Needs attention" queue.
 //
-// Who is on it (the flags come from src/risk.js; nothing is re-derived here):
+// Who is on it: needsAttention() in src/risk.js, the same rule Home and the
+// Family Dashboard use for their counts:
 //   - "Isolation risk" (at_risk)
 //   - "Contact dropping" (the 4-week trend flag)
 //   - "Needs a companion" (needs_match)
@@ -18,19 +19,31 @@
 //   3. Isolation risk, 2x the alert days,   -> get local help
 //      and the senior didn't answer
 //   4. The senior missed the latest call    -> let the family know
-//   5. Nothing scheduled                    -> schedule a call
-//   6. A call is scheduled                  -> remind the volunteer
+//   5. A past call with the companion was   -> ask the volunteer whether it
+//      never marked                            happened, then log or mark it
+//   6. Nothing scheduled                    -> schedule a call
+//   7. A call is scheduled                  -> remind the volunteer
 
-import { dashboardSummary } from '../risk.js';
+import { dashboardSummary, needsAttention, isUnmarkedPast, calendarDaysBetween } from '../risk.js';
 import { methodLabel } from '../vocab.js';
 import { COMMUNITY, localHelpFor } from '../community.js';
-import { daysAgoText, formatDateTime, plural } from '../views/html.js';
+import { daysAgoText, formatDateTime, formatTime, plural } from '../views/html.js';
 import { firstName, capitalize, missedCallsWithin, trendText } from './words.js';
 
 const SENIOR_SIDE = new Set(['no_answer', 'senior_unavailable']);
 
-export function isOnQueue(a) {
-  return a.status === 'at_risk' || a.status === 'needs_match' || a.trend.dropping || a.missedRecently > 0;
+// Kept for other modules and tests; the rule itself lives in src/risk.js.
+export const isOnQueue = needsAttention;
+
+// "a phone call", "an in-person visit"
+const withArticle = (words) => `${/^[aeiou]/i.test(words) ? 'an' : 'a'} ${words}`;
+
+// "today at 3:30 PM", "yesterday at 3:30 PM", or "Monday, November 2 at 3:30 PM".
+function whenText(iso, now) {
+  const days = calendarDaysBetween(iso, now);
+  if (days === 0) return `today at ${formatTime(iso)}`;
+  if (days === 1) return `yesterday at ${formatTime(iso)}`;
+  return formatDateTime(iso);
 }
 
 // "No completed call or visit in 12 days; only 3 check-ins in the last 4
@@ -53,7 +66,7 @@ export function reasonText(a, { missed, hadCompanion }) {
 }
 
 // Returns { kind, title, detail, href, linkText }.
-export function suggestNextStep(a, { match, volunteer, missed, hadCompanion, thresholdDays, help }) {
+export function suggestNextStep(a, { match, volunteer, missed, hadCompanion, thresholdDays, help, unmarked = [], now = new Date() }) {
   const id = a.senior.id;
   const name = firstName(a.senior);
   const vName = volunteer ? firstName(volunteer) : 'their companion';
@@ -109,6 +122,19 @@ export function suggestNextStep(a, { match, volunteer, missed, hadCompanion, thr
     };
   }
 
+  // A past call that nobody marked: find out what happened before planning more.
+  const pending = unmarked.find((c) => c.volunteerId === match.volunteerId);
+  if (pending) {
+    const noun = pending.type === 'visit' ? 'visit' : 'call';
+    return {
+      kind: 'confirm',
+      title: `Ask ${vName} about the last ${noun}`,
+      detail: `${vName} had ${withArticle(methodLabel(pending.type).toLowerCase())} with ${name} ${whenText(pending.scheduledFor, now)}, and nobody has marked it yet. Ask whether it happened, then log it or mark it missed on ${vName}'s week.`,
+      href: volunteer ? `/volunteers/${volunteer.id}/week` : `/contacts`,
+      linkText: volunteer ? `Open ${vName}'s week` : 'Open Calls & Visits',
+    };
+  }
+
   if (!a.nextScheduled) {
     const noun = a.senior.contactMethod === 'visit' ? 'visit' : 'call';
     return {
@@ -122,7 +148,7 @@ export function suggestNextStep(a, { match, volunteer, missed, hadCompanion, thr
   return {
     kind: 'remind',
     title: `Remind ${vName}`,
-    detail: `${vName} has a ${methodLabel(a.nextScheduled.type).toLowerCase()} with ${name} on ${formatDateTime(a.nextScheduled.scheduledFor)}. A quick reminder helps it happen.`,
+    detail: `${vName} has ${withArticle(methodLabel(a.nextScheduled.type).toLowerCase())} with ${name} ${calendarDaysBetween(a.nextScheduled.scheduledFor, now) === 0 ? `today at ${formatTime(a.nextScheduled.scheduledFor)}` : `on ${formatDateTime(a.nextScheduled.scheduledFor)}`}. A quick reminder helps it happen.`,
     href: volunteer ? `/volunteers/${volunteer.id}/week` : `/seniors/${id}`,
     linkText: volunteer ? `Open ${vName}'s week` : `Open ${name}'s profile`,
   };
@@ -133,12 +159,16 @@ export function buildAttentionQueue(store, now) {
   const thresholdDays = store.settings.riskThresholdDays;
   const help = localHelpFor(COMMUNITY)[0] || null;
   const summary = dashboardSummary(store, now);
-  const items = summary.filter(isOnQueue).map((a) => {
+  const items = summary.filter(needsAttention).map((a) => {
     const match = store.activeMatchForSenior(a.senior.id);
     const volunteer = match ? store.volunteer(match.volunteerId) : null;
-    const missed = missedCallsWithin(store.contactsForSenior(a.senior.id), now);
+    const contacts = store.contactsForSenior(a.senior.id);
+    const missed = missedCallsWithin(contacts, now);
+    const unmarked = contacts
+      .filter((c) => isUnmarkedPast(c, now))
+      .sort((x, y) => new Date(y.scheduledFor) - new Date(x.scheduledFor));
     const hadCompanion = store.matches.some((m) => m.seniorId === a.senior.id && !m.active);
-    const facts = { match, volunteer, missed, hadCompanion, thresholdDays, help };
+    const facts = { match, volunteer, missed, hadCompanion, thresholdDays, help, unmarked, now };
     return {
       assessment: a,
       senior: a.senior,
@@ -150,6 +180,6 @@ export function buildAttentionQueue(store, now) {
     };
   });
   // Seniors who aren't on the queue yet but are getting close.
-  const comingUp = summary.filter((a) => !isOnQueue(a) && a.status === 'due_soon');
+  const comingUp = summary.filter((a) => !needsAttention(a) && a.status === 'due_soon');
   return { items, comingUp, thresholdDays };
 }

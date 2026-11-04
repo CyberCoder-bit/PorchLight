@@ -115,7 +115,7 @@ export function rematchPage({ senior, match, volunteer, together, missedWithVolu
     <section class="panel" aria-labelledby="what-heading">
       <h2 id="what-heading">What happens next</h2>
       <ul class="plain-list">
-        <li>The match between ${name} and ${vName} ends today. ${vFirst} gets a free spot for someone else.</li>
+        <li>The match between ${name} and ${vName} ends today. ${vFirst} gets a free spot for someone else. Calls they had planned come off the calendar.</li>
         <li><strong>Nothing is deleted.</strong> Every past call and visit stays in ${name}'s history and still counts on the Family Dashboard.</li>
         <li>You go straight to the Match page to choose ${name}'s new companion. You can pick ${vFirst} again if they are still the best fit.</li>
       </ul>
