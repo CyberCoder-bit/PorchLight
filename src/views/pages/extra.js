@@ -47,8 +47,14 @@ export const TOUR_STEPS = [
     action: "See Hal's sparks",
   },
   {
-    title: 'Get help in Indiana, and bigger text',
-    notice: 'Local help and Indiana 211 for this community. Then try A++ at the top of any page: every page grows with the text.',
+    title: "See it as Hal's family",
+    notice: "Use the demo sign-in (no passwords) as Mike Whitaker, Hal's son. He sees only his dad, never the volunteer's call notes, and other pages tell him they are for coordinators. Sign out to see everything again.",
+    href: '/sign-in',
+    action: 'Open the demo sign-in',
+  },
+  {
+    title: 'Get help in Indiana, and the Accessibility menu',
+    notice: 'Local help and Indiana 211 for this community. Then open Accessibility at the top of any page for bigger text, high contrast, or dark mode. Every page adapts.',
     href: '/help',
     action: 'Open Get help',
   },

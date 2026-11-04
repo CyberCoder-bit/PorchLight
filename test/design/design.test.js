@@ -63,11 +63,12 @@ test('the demo tour renders and links to every fixed route, starting with a rese
     '/match?seniorId=s-eugene',
     '/volunteers/v-ethan/week',
     '/seniors/s-harold#sparks',
+    '/sign-in',
     '/help',
   ]);
   // Numbered steps, each with one "what to notice" sentence.
-  assert.equal((main.match(/<h2>Step \d+: /g) || []).length, 7);
-  assert.equal((main.match(/What to notice:/g) || []).length, 7);
+  assert.equal((main.match(/<h2>Step \d+: /g) || []).length, 8);
+  assert.equal((main.match(/What to notice:/g) || []).length, 8);
   // A no-JS A++ button that comes back to the tour.
   assert.match(main, /action="\/prefs\/text-size"/);
   assert.match(main, /name="back" value="\/tour"/);
