@@ -24,6 +24,8 @@ flowchart TB
     end
     VIEWS["HTML pages and SVG chart<br/>src/views/"]
     STORE["Data store<br/>src/store-core.js"]
+    COMM["Community profile<br/>src/community.js<br/>town, time zone, local touches, local help"]
+    TZ["Clock<br/>src/tz.js<br/>every date in the community's time zone"]
   end
 
   DB[("data/db.json locally, or Durable Object storage on Cloudflare<br/>seniors, volunteers, matches,<br/>calls and visits, sparks, settings")]
@@ -36,9 +38,17 @@ flowchart TB
   ROUTER <-->|"read and save"| STORE
   STORE <-->|"atomic write"| DB
   SPARK <-->|"LIVE_MODE only: first name, interests,<br/>days since contact; 3 starters back as JSON"| CLAUDE
+  COMM --> TZ
+  TZ --> ROUTER
+  TZ --> Engines
+  %% VERIFY AFTER MERGE: sparks read local touches from the community profile
+  COMM -->|"local touches"| SPARK
 ```
 
-**How to read it:** every click in the browser becomes an HTTP request to the router. The router asks the right engine for an answer (who matches, who is at risk, what to say on the next call), saves changes through the store, and sends back a finished HTML page. The only data that ever leaves the server is the optional, privacy-limited call to Claude.
+**How to read it:** every click in the browser becomes an HTTP request to the router. Everything
+that changes from one Indiana town to another (its time zone, local touches for sparks, and local
+help) comes from the community profile, and every date goes through the clock module, so times are
+right even on a server that runs on UTC. The router asks the right engine for an answer (who matches, who is at risk, what to say on the next call), saves changes through the store, and sends back a finished HTML page. The only data that ever leaves the server is the optional, privacy-limited call to Claude.
 
 ## 2. The PorchLight loop
 
