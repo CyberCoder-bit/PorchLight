@@ -77,3 +77,12 @@ export function slotForDate(date) {
   const period = PERIODS.find((p) => hour >= p.start && hour < p.end);
   return period ? `${day.id}-${period.id}` : null;
 }
+
+// Why a scheduled call was missed. Shown to coordinators; never sent to the AI.
+export const MISSED_REASONS = [
+  { id: 'no_answer', label: 'No answer' },
+  { id: 'senior_unavailable', label: 'Senior was unavailable' },
+  { id: 'volunteer_conflict', label: 'Volunteer had a conflict' },
+  { id: 'other', label: 'Other' },
+];
+export const isMissedReason = (id) => MISSED_REASONS.some((r) => r.id === id);

@@ -3,7 +3,10 @@
 // Workers, whose clock is always UTC: without this, "4:00 PM" typed into the
 // call form would be saved as 11 AM in Carmel.
 
-export const TIME_ZONE = 'America/Indiana/Indianapolis';
+import { COMMUNITY } from './community.js';
+
+// America/Indiana/Indianapolis for Carmel. See src/community.js.
+export const TIME_ZONE = COMMUNITY.timeZone;
 
 const partsFormat = new Intl.DateTimeFormat('en-US', {
   timeZone: TIME_ZONE,

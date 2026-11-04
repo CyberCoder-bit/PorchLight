@@ -4,7 +4,7 @@
 
 import { Router, createHandler, httpError } from './http.js';
 import { parseLocalDateTime } from './tz.js';
-import { isInterest, isSlot, isMethod, slotForDate } from './vocab.js';
+import { isInterest, isSlot, isMethod, slotForDate, isMissedReason } from './vocab.js';
 import { rankVolunteers } from './matching.js';
 import { assessSenior, dashboardSummary, calendarDaysBetween } from './risk.js';
 import { buildSparkInput } from './sparks/index.js';
@@ -16,6 +16,9 @@ import { volunteersListPage, volunteerProfilePage, volunteerFormPage } from './v
 import { matchIndexPage, matchSeniorPage } from './views/pages/match.js';
 import { contactsPage } from './views/pages/contacts.js';
 import { dashboardPage } from './views/pages/dashboard.js';
+import { registerFeatures } from './features/index.js';
+import { registerIndiana } from './indiana/index.js';
+import { registerDesignPages } from './views/pages/extra.js';
 
 // Short messages shown after a form is submitted (?msg=...).
 const FLASH = {
@@ -503,10 +506,25 @@ export function createApp({ store, sparks, now = () => new Date() }) {
     res.redirect(`/contacts?msg=${isLog ? 'logged' : 'scheduled'}${warn}`);
   });
 
+  // Optional `back` (a path on this site) returns the user to the page they came from.
+  const safeBack = (v) => {
+    const back = str(v);
+    return back.startsWith('/') && !back.startsWith('//') && !back.startsWith('/\\') ? back : null;
+  };
+
   const markContact = (status) => (req, res) => {
     const contact = store.contacts.find((c) => c.id === req.params.id);
     if (!contact) throw httpError(404, 'We could not find that call.');
     if (contact.status !== 'scheduled') throw httpError(409, 'That call was already marked.');
+    if (status === 'missed') {
+      // Optional reason. Old forms without one still work.
+      const reason = str(req.body.reason);
+      const reasonNote = str(req.body.reasonNote);
+      if (reason && !isMissedReason(reason)) throw httpError(400, 'Choose a reason from the list.');
+      if (reasonNote.length > 200) throw httpError(400, 'The note about the missed call must be 200 characters or fewer.');
+      contact.missedReason = reason || null;
+      contact.missedNote = reasonNote || null;
+    }
     contact.status = status;
     if (status === 'completed') {
       // If it was marked early, count it as happening now, not in the future.
@@ -516,7 +534,8 @@ export function createApp({ store, sparks, now = () => new Date() }) {
     }
     contact.markedAt = now().toISOString();
     store.save();
-    res.redirect(`/contacts?msg=${status}`);
+    const back = safeBack(req.body.back);
+    res.redirect(back ? `${back}${back.includes('?') ? '&' : '?'}msg=${status}` : `/contacts?msg=${status}`);
   };
   router.post('/contacts/:id/complete', markContact('completed'));
   router.post('/contacts/:id/missed', markContact('missed'));
@@ -572,6 +591,19 @@ export function createApp({ store, sparks, now = () => new Date() }) {
     store.reset(now());
     res.redirect('/dashboard?msg=reset');
   });
+
+  // ----- add-on modules -----
+  // Each module registers its own routes, so adding one never means editing
+  // this file. `ctx` is the contract they get.
+  const ctx = {
+    store, sparks, now, render, assess, seniorOr404, volunteerOr404, withPeople,
+    httpError, str, toArray, safeBack,
+    flashMessages: FLASH, // add keys: ctx.flashMessages.my_key = 'Text'
+    warnMessages: WARN,
+  };
+  registerFeatures(router, ctx);
+  registerIndiana(router, ctx);
+  registerDesignPages(router, ctx);
 
   return createHandler({ router, renderError });
 }

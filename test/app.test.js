@@ -198,6 +198,35 @@ test('editing a volunteer saves changes', async () => {
   assert.deepEqual(store.volunteer('v-linda').availability, ['tue-morning', 'sat-morning']);
 });
 
+test('a missed call can record a reason and return to the page it came from', async () => {
+  const match = store.matches.find((m) => m.active);
+  let res = await post('/contacts', { matchId: match.id, action: 'schedule', type: 'phone', date: localDate(2), time: '15:00' });
+  assert.equal(res.status, 303);
+  const pending = () => store.contacts.filter((c) => c.matchId === undefined && c.seniorId === match.seniorId && c.status === 'scheduled').at(-1);
+
+  // Bad reason is rejected and nothing changes
+  let call = pending();
+  res = await post(`/contacts/${call.id}/missed`, { reason: 'aliens' });
+  assert.equal(res.status, 400);
+  assert.equal(store.contacts.find((c) => c.id === call.id).status, 'scheduled');
+
+  // Valid reason + note, back to a same-site page
+  res = await post(`/contacts/${call.id}/missed`, { reason: 'no_answer', reasonNote: 'Tried twice', back: `/volunteers/${match.volunteerId}` });
+  assert.equal(res.status, 303);
+  assert.equal(res.headers.get('location'), `/volunteers/${match.volunteerId}?msg=missed`);
+  const saved = store.contacts.find((c) => c.id === call.id);
+  assert.equal(saved.status, 'missed');
+  assert.equal(saved.missedReason, 'no_answer');
+  assert.equal(saved.missedNote, 'Tried twice');
+
+  // Old form (no reason) still works; off-site back is ignored
+  await post('/contacts', { matchId: match.id, action: 'schedule', type: 'phone', date: localDate(3), time: '15:00' });
+  call = pending();
+  res = await post(`/contacts/${call.id}/missed`, { back: '//evil.example' });
+  assert.equal(res.headers.get('location'), '/contacts?msg=missed');
+  assert.equal(store.contacts.find((c) => c.id === call.id).missedReason, null);
+});
+
 test('text-size preference is stored in a cookie and rejects off-site redirects', async () => {
   const res = await post('/prefs/text-size', { size: 'xlarge', back: '//evil.example' });
   assert.match(res.headers.get('set-cookie'), /textsize=xlarge/);
