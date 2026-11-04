@@ -67,6 +67,8 @@ test('B-02: safeBack() blocks tab tricks on sparks, complete, and missed', async
     for (const action of ['complete', 'missed']) {
       const call = store.contacts.find((c) => c.status === 'scheduled');
       assert.ok(call, 'a scheduled call to mark');
+      // Since B-09, only a call whose time has come can be marked, so make this one an hour ago.
+      call.scheduledFor = new Date(Date.now() - 60 * 60 * 1000).toISOString();
       res = await post(`/contacts/${call.id}/${action}`, { back });
       assert.equal(res.status, 303, `${action} ${JSON.stringify(back)}`);
       assert.ok(staysOnSite(res.headers.get('location')), `${action} back=${JSON.stringify(back)} -> ${res.headers.get('location')}`);
