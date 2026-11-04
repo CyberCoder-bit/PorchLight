@@ -14,7 +14,9 @@
 //     - the Carmel deployment (Eastern) serves towns in the 80 Eastern counties;
 //     - a second deployment with a Central-time profile (for example the
 //       `evansville` profile in src/community.js) serves the 12 Central counties.
-//   Two deployments cover all 92 counties. The town picker and the town filter
+//   So the time-zone design covers all 92 counties with two deployments. The
+//   town LIST is not complete yet: it has 66 towns in 52 counties, and adding a
+//   town is one line below (check its county on in.gov first). The town picker and the town filter
 //   only offer DEPLOYMENT_TOWNS: the towns whose county is in this deployment's
 //   zone, decided by timeZoneForCounty(). A town on the other zone is rejected
 //   by the form, never silently saved with the wrong clock.
