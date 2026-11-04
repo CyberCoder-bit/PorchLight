@@ -108,6 +108,7 @@
 
   /* ----- targets and motion ----- */
   --target: max(44px, 2.4rem);
+  --target-min: 44px; /* the floor: the narrow header uses it so A++ does not stack 60px rows */
   --press: 100ms;
 
   /* ----- type scale (rem). No text is smaller than 1rem. ----- */
@@ -423,13 +424,16 @@ main:focus, section:focus, fieldset:focus { outline: none; box-shadow: none; }
 .mode-badge.mode-live, .mode-badge.mode-live:visited { background: var(--ok-bg); color: var(--ok-text); border-color: var(--ok-text); }
 .mode-badge.mode-mock, .mode-badge.mode-mock:visited { background: var(--soon-bg); color: var(--soon-text); border-color: var(--soon-text); }
 .mode-badge:hover { text-decoration: underline; }
+/* The short wording is for narrow screens only (see "Menu" below). */
+.mode-badge-short { display: none; }
 
 /* ---------- Accessibility menu ----------
    A native <details>: the summary is the button, the panel drops down from it,
    on top of the page, until a choice is made (the page then reloads with the
-   menu closed) or the summary is pressed again. */
+   menu closed) or the summary is pressed again.
+   The narrow-screen "Menu" button (below) shares this button style. */
 .a11y-menu { margin-left: auto; }
-.a11y-summary {
+.a11y-summary, .site-menu-summary {
   display: inline-flex; align-items: center; gap: var(--space-2);
   min-height: var(--target); padding: var(--space-1) var(--space-3);
   background: var(--header-bg); color: var(--header-text);
@@ -438,11 +442,12 @@ main:focus, section:focus, fieldset:focus { outline: none; box-shadow: none; }
   -webkit-tap-highlight-color: transparent; touch-action: manipulation;
   transition: background-color var(--press) ease-out, transform var(--press) ease-out;
 }
-.a11y-summary::-webkit-details-marker { display: none; }
-.a11y-summary::marker { content: ""; }
-.a11y-summary:hover { background: var(--header-hover); }
-.a11y-summary:active { background: var(--header-press); transform: scale(0.98); }
-.a11y-menu[open] > .a11y-summary { background: var(--header-text); color: var(--header-bg); border-color: var(--header-text); }
+.a11y-summary::-webkit-details-marker, .site-menu-summary::-webkit-details-marker { display: none; }
+.a11y-summary::marker, .site-menu-summary::marker { content: ""; }
+.a11y-summary:hover, .site-menu-summary:hover { background: var(--header-hover); }
+.a11y-summary:active, .site-menu-summary:active { background: var(--header-press); transform: scale(0.98); }
+.a11y-menu[open] > .a11y-summary,
+.site-menu[open] > .site-menu-summary { background: var(--header-text); color: var(--header-bg); border-color: var(--header-text); }
 .a11y-icon { width: 1.35em; height: 1.35em; flex: none; }
 .a11y-chevron { width: 1em; height: 1em; flex: none; }
 .a11y-menu[open] .a11y-chevron { transform: rotate(180deg); }
@@ -513,7 +518,9 @@ main:focus, section:focus, fieldset:focus { outline: none; box-shadow: none; }
 .site-nav a[aria-current="page"] { border-bottom-color: var(--brand); color: var(--brand); font-weight: 800; background: var(--header-bg); }
 
 /* Phones and A++ on small windows: compact header, two-column nav grid.
-   The nav is never hidden behind a menu, so every page is one tap away. */
+   Browsers with container queries go further and put the nav behind "Menu"
+   (see "Menu" below); older ones keep this grid, so every page stays one tap
+   away there too. */
 @media (max-width: 40em) {
   .header-inner { padding: var(--space-2) var(--space-3); gap: var(--space-2); }
   .brand-mark { width: 1.8rem; height: 1.8rem; }
@@ -542,6 +549,74 @@ main:focus, section:focus, fieldset:focus { outline: none; box-shadow: none; }
     line-height: 1.2;
   }
   .site-nav a[aria-current="page"] { border-left-color: var(--brand); }
+}
+
+/* ---------- Menu: the nav on narrow screens ----------
+   When the header is narrower than 32rem, the nav bar turns into a "Menu"
+   button beside Accessibility (layout.js, siteMenu): a native <details>, so it
+   needs no JavaScript. The header is a size container, and rem in a container
+   query is the page's own rem (20px, 22px with A+, 25px with A++), so the
+   Menu takes over at 640px wide with normal text, 704px with A+, and 800px
+   with A++. Browsers without container queries keep the nav bar above.
+   Exactly one of the two navs is displayed at any width; the other is
+   display: none, so screen readers meet one navigation landmark. */
+.site-header { container: site-header / inline-size; }
+.site-menu, .header-inner > .site-nav { display: none; }
+.site-menu-icon { width: 1.2em; height: 1.2em; flex: none; }
+
+@container site-header (max-width: 32rem) {
+  .site-header > .site-nav { display: none; }
+
+  /* The brand on the left; the AI badge, Accessibility, and Menu packed to the
+     right, in that order, wrapping as the text grows. A phone shows the brand
+     and badge on one row and the two buttons on the next (stacked with A++).
+     While Menu is open, its page list comes right after it, edge to edge, and
+     pushes the page down; it never covers anything. */
+  .header-inner { padding: var(--space-2); gap: var(--space-1) var(--space-2); justify-content: flex-end; }
+  .header-tools { display: contents; } /* its badge and menu join the row above */
+  .brand { min-height: var(--target-min); gap: var(--space-1); margin-right: auto; }
+  .brand-mark { width: 1.5rem; height: 1.5rem; }
+  .brand-name { font-size: clamp(1rem, 6.5cqi, 1.25rem); } /* never under 1rem */
+  .a11y-menu { margin-left: 0; }
+  .site-menu { display: block; }
+  .site-menu-summary, .a11y-summary { min-height: var(--target-min); padding: var(--space-1) var(--space-2); gap: var(--space-1); }
+  .site-menu-icon, .a11y-icon { width: 1.1em; height: 1.1em; }
+  .mode-badge { min-height: var(--target-min); padding: var(--space-1) var(--space-2); }
+  /* "AI: Offline" on screen; screen readers still hear "AI: Offline mode". */
+  .mode-badge-long {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+  }
+  .mode-badge-short { display: inline; }
+
+  /* The open Menu: one page per row, edge to edge. The current page has
+     aria-current, a yellow bar, and bold yellow text (never color alone). */
+  .site-menu[open] + .site-nav {
+    display: block; flex: 0 0 calc(100% + 2 * var(--space-2)); margin: 0 calc(-1 * var(--space-2));
+    border-bottom: 1px solid var(--header-line);
+  }
+  .header-inner > .site-nav ul { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; padding: var(--space-1) 0; }
+  .header-inner > .site-nav a {
+    min-height: var(--target-min); padding: var(--space-2) var(--space-3);
+    border-bottom: 0; border-left: 4px solid transparent; line-height: 1.25;
+  }
+  .header-inner > .site-nav a[aria-current="page"] { border-left-color: var(--brand); }
+  /* The rows touch the screen edges, so the usual ring (dark line + yellow
+     halo) is drawn inside the row instead of outside it. */
+  .header-inner > .site-nav a:focus-visible { outline-offset: -4px; box-shadow: inset 0 0 0 8px var(--focus); }
+
+  /* "Signed in as ... · Switch" runs as one paragraph with Sign out right
+     after it, instead of Sign out taking a row of its own.
+     .site-header in front: beats the [roles] .viewer-line rules further down. */
+  .site-header > .viewer-line { display: block; padding: 0 var(--space-2) var(--space-2); line-height: 1.35; }
+  .site-header > .viewer-line p { display: inline; margin-right: var(--space-2); }
+}
+
+/* The smallest headers (a phone with A++): the lantern is decoration (the
+   link's name is "PorchLight home"), so it steps aside to keep the brand and
+   the AI badge on one row. */
+@container site-header (max-width: 16rem) {
+  .brand-mark { display: none; }
 }
 
 /* ---------- main layout ---------- */
@@ -880,7 +955,7 @@ fieldset { border: 0; padding: 0; margin: 0 0 var(--space-5); min-width: 0; }
 /* ---------- motion and preferences ---------- */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
-  .button:active, .pref-option:active, .a11y-summary:active { transform: none; }
+  .button:active, .pref-option:active, .a11y-summary:active, .site-menu-summary:active { transform: none; }
 }
 
 /* The device asks for more contrast: text and lines go to full ink (black, or
@@ -906,7 +981,7 @@ fieldset { border: 0; padding: 0; margin: 0 0 var(--space-5); min-width: 0; }
    buttons, the menu, the current page, chosen options, and focus visible. */
 @media (forced-colors: active) {
   .badge, .tile, .panel, .card, .loop-step, .banner, .flash, .error-summary, .empty-state, .a11y-panel { border: 2px solid CanvasText; }
-  .button, .pref-option, .a11y-summary, .mode-badge { border: 2px solid ButtonText; }
+  .button, .pref-option, .a11y-summary, .site-menu-summary, .mode-badge { border: 2px solid ButtonText; }
   .site-nav a { border-color: Canvas; }
   .site-nav a[aria-current="page"] { border-color: Highlight; text-decoration: underline; }
   .pref-option[aria-pressed="true"] { border-color: Highlight; outline: 3px solid Highlight; outline-offset: -6px; }
