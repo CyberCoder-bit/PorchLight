@@ -8,13 +8,14 @@ PorchLight is one small server that renders HTML pages, stores data in one JSON 
 flowchart TB
   subgraph People["People, using a web browser"]
     direction LR
-    SEN["Senior<br/>profile and next call"]
+    SEN["Senior<br/>own page and next call"]
     VOL["Volunteer<br/>My week, logs calls, sparks"]
-    FAM["Family or caregiver<br/>dashboard, weekly summary, get help"]
+    FAM["Family or caregiver<br/>own senior's card, weekly summary, get help"]
     COO["Coordinator<br/>matching, Needs attention"]
   end
 
   subgraph Server["PorchLight server: Node.js locally, or a Cloudflare Worker + Durable Object"]
+    GUARD["Demo sign-in and access rules<br/>src/roles/<br/>checked before every request"]
     ROUTER["Router and form validation<br/>src/http.js, src/app.js"]
     subgraph Engines["Logic: plain functions, covered by tests"]
       direction LR
@@ -25,14 +26,18 @@ flowchart TB
     VIEWS["HTML pages and SVG chart<br/>src/views/"]
     STORE["Data store<br/>src/store-core.js"]
     COMM["Community profile<br/>src/community.js<br/>town, time zone, local touches, local help"]
-    TZ["Clock<br/>src/tz.js<br/>every date in the community's time zone"]
+    TZ["Clock<br/>src/tz.js<br/>every date in the deployment's time zone"]
+    TOWNS["Towns and counties<br/>src/towns/<br/>town filter, same-county visits"]
+    PREFS["Accessibility choices<br/>text size, contrast, theme<br/>cookies read by src/views/layout.js"]
     ADDON["Add-on pages, each registering its own routes<br/>src/features/: Needs attention, re-match, My week,<br/>family summary, calendar file<br/>src/indiana/: Get help in Indiana<br/>src/views/pages/extra.js: demo tour"]
   end
 
   DB[("data/db.json locally, or Durable Object storage on Cloudflare<br/>seniors, volunteers, matches,<br/>calls and visits, sparks, settings")]
   CLAUDE["Claude API, optional<br/>claude-sonnet-5-5"]
 
-  People -->|"HTTP: page views and form posts"| ROUTER
+  People -->|"HTTP: page views and form posts"| GUARD
+  GUARD -->|"allowed"| ROUTER
+  PREFS --> VIEWS
   ROUTER --> Engines
   Engines --> VIEWS
   VIEWS -->|"finished HTML page"| People
@@ -46,12 +51,20 @@ flowchart TB
   ROUTER --> ADDON
   ADDON --> Engines
   COMM -->|"local help"| ADDON
+  COMM -->|"time zone"| TOWNS
+  TOWNS --> ROUTER
+  TOWNS -->|"same county for visits"| MATCH
 ```
 
-**How to read it:** every click in the browser becomes an HTTP request to the router. Everything
-that changes from one Indiana town to another (its time zone, local touches for sparks, and local
-help) comes from the community profile, and every date goes through the clock module, so times are
-right even on a server that runs on UTC. The router asks the right engine for an answer (who matches, who is at risk, what to say on the next call), saves changes through the store, and sends back a finished HTML page. The only data that ever leaves the server is the optional, privacy-limited call to Claude.
+**How to read it:** every click in the browser becomes an HTTP request. If someone used the demo
+sign-in, the access rules check the request first and answer "This page is for coordinators" for
+anything that person shouldn't see; signed out, everything is allowed. Then the request goes to the
+router. Everything that changes from one Indiana community to another (its time zone, local touches
+for sparks, and local help) comes from the community profile, and every date goes through the clock
+module, so times are right even on a server that runs on UTC. One deployment serves every town whose
+county shares its time zone, so two deployments cover Indiana's 92 counties. The Accessibility
+choices are cookies that the page layout reads, so every page is drawn in the chosen text size,
+contrast, and theme without JavaScript. The router asks the right engine for an answer (who matches, who is at risk, what to say on the next call), saves changes through the store, and sends back a finished HTML page. The only data that ever leaves the server is the optional, privacy-limited call to Claude.
 
 ## 2. The PorchLight loop
 
@@ -134,10 +147,12 @@ erDiagram
     string contactMethod
     string aboutMe
     object caregiver
+    string town
   }
   VOLUNTEER {
     string id
     string name
+    string town
     list interests
     list availability
     list contactMethods
@@ -168,4 +183,4 @@ erDiagram
   }
 ```
 
-A `CONTACT` has a status of `scheduled`, `completed`, or `missed`. Only `completed` contacts count toward the dashboard. A missed contact can record an optional reason (no answer, senior was unavailable, volunteer had a conflict, or other) and a short note. Coordinators see these on the Needs attention list; they are never sent to the AI.
+A `CONTACT` has a status of `scheduled`, `completed`, `missed`, or `cancelled` (a future call that was cancelled because its match ended; it stays in the history). Only `completed` contacts count toward the dashboard. A missed contact can record an optional reason (no answer, senior was unavailable, volunteer had a conflict, or other) and a short note. Coordinators see these on the Needs attention list; they are never sent to the AI.
