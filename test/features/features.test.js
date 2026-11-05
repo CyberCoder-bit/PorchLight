@@ -255,7 +255,8 @@ test('My week shows the next 7 days in Carmel time, with saved sparks inline and
   addCall({ scheduledFor: localAt(10, 15).toISOString() }); // outside the 7-day window
   let html = await page('/volunteers/v-maya/week');
   assert.match(html, /<title>My week: Maya Patel · PorchLight<\/title>/);
-  assert.match(html, /<a href="\/volunteers" aria-current="page">/);
+  // [v2 brand] signed out shows the public site nav; a coordinator's nav marks Volunteers.
+  assert.match(await (await fetch(base + '/volunteers/v-maya/week', { headers: { cookie: 'viewer=coordinator' } })).text(), /<a href="\/volunteers" aria-current="page">/);
   assert.match(html, /Times are Carmel, Indiana time \((EST|EDT)\)\./);
   const call = dorothyCall();
   assert.match(html, new RegExp(`id="call-${call.id}"`));

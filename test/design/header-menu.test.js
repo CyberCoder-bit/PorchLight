@@ -40,6 +40,9 @@ const page = async (p, cookie) => {
   assert.equal(res.status, 200, p);
   return res.text();
 };
+// [v2] Signed out, the header shows the public website; the app's nav is for
+// signed-in people. The demo sign-in cookie stands in for a signed-in admin.
+const ADMIN = 'viewer=coordinator';
 const headerOf = (body) => body.slice(body.indexOf('<header class="site-header">'), body.indexOf('</header>'));
 // Each nav by its label: "Main menu" is the narrow-screen copy, "Main" the bar.
 const navNamed = (body, label) => {
@@ -67,7 +70,7 @@ const stripComments = (css) => css.replace(/\/\*[\s\S]*?\*\//g, '');
 const NARROW = '@container site-header (max-width: 32rem)';
 
 test('the Menu is a labeled native <details> whose page list comes right after it', async () => {
-  const header = headerOf(await page('/dashboard'));
+  const header = headerOf(await page('/dashboard', ADMIN));
   // A real <summary> (a button with an expanded/collapsed state, no JavaScript)
   // whose name is the word "Menu"; the icon is decoration.
   assert.match(
@@ -81,15 +84,15 @@ test('the Menu is a labeled native <details> whose page list comes right after i
 });
 
 test('both navs list the same pages, each with aria-current on the page you are on, and distinct labels', async () => {
-  for (const [url, here] of [['/', '/'], ['/dashboard', '/dashboard'], ['/attention', '/attention'], ['/seniors/s-harold', '/seniors'], ['/help', '/help']]) {
-    const body = await page(url);
+  for (const [url, here] of [['/admin', '/'], ['/dashboard', '/dashboard'], ['/attention', '/attention'], ['/seniors/s-harold', '/seniors'], ['/help', '/help']]) {
+    const body = await page(url, ADMIN);
     const labels = [...headerOf(body).matchAll(/<nav\b[^>]*aria-label="([^"]+)"/g)].map((m) => m[1]);
     assert.deepEqual(labels, ['Main menu', 'Main'], `${url}: two navs, two different names`);
     assert.equal((body.match(/<nav\b/g) || []).length, 2, `${url}: no other nav`);
     const menu = navNamed(body, 'Main menu');
     const bar = navNamed(body, 'Main');
     assert.deepEqual(links(menu), links(bar), url);
-    assert.equal(links(menu).length, 8, `${url}: demo mode shows every page`);
+    assert.equal(links(menu).length, 8, `${url}: the coordinator sees every page`);
     assert.deepEqual(current(menu), [here], `${url}: Menu marks ${here}`);
     assert.deepEqual(current(bar), [here], `${url}: the bar marks ${here}`);
   }

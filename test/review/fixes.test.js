@@ -230,7 +230,7 @@ test('a senior on the list only for a missed call is counted, in words, on Home 
   store.save();
   const words = '1 at isolation risk, 1 waiting for a companion, 1 with a recent missed call';
   assert.equal(attentionBreakdown(dashboardSummary(store, NOW).filter(needsAttention)), words);
-  assert.match(await page('/'), new RegExp(`<p class="tile-value">3</p>\\s*<p class="tile-label">seniors need attention</p>\\s*<p class="tile-detail">${words}</p>`));
+  assert.match(await page('/admin'), new RegExp(`<p class="tile-value">3</p>\\s*<p class="tile-label">seniors need attention</p>\\s*<p class="tile-detail">${words}</p>`));
   assert.match(await page('/dashboard'), new RegExp(`Right now, 3 seniors need attention: ${words}\\.`));
   assert.equal((await page('/attention')).match(/<li class="card dash-card/g).length, 3);
 });
