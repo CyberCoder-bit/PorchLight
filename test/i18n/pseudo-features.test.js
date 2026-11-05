@@ -89,7 +89,7 @@ const ORGS = [
       .flatMap((r) => [r.name, r.shortName, r.url && new URL(r.url).hostname.replace(/^www\./, '')]) // web addresses too
       .filter(Boolean)
   ),
-  'Indiana', 'Hamilton County', 'Vanderburgh County', 'Carmel', 'Gemini', 'Google',
+  'Indiana', 'Hamilton County', 'Vanderburgh County', 'Carmel', 'Gemini', 'Google', 'Cloudflare Workers AI',
 ];
 
 // Text from helpers the pages pass owns (components.js, html.js).

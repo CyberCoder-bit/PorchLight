@@ -324,7 +324,7 @@ export function createApp({ store, sparks, now = () => new Date() }) {
   router.get('/about-ai', (req, res) => {
     render(req, res, {
       title: t('core.title.aboutAi'),
-      body: aboutAiPage({ modeInfo: sparks.modeInfo, model: sparks.model, lastFallback: sparks.lastFallback || null }),
+      body: aboutAiPage({ modeInfo: sparks.modeInfo, model: sparks.model, backupModel: sparks.backupModel || null, lastFallback: sparks.lastFallback || null }),
     });
   });
 
@@ -439,6 +439,7 @@ export function createApp({ store, sparks, now = () => new Date() }) {
       variant,
       mode: result.mode,
       model: result.model,
+      provider: result.provider || null,
       sparks: result.sparks,
       tip: result.tip,
       notice: result.notice,

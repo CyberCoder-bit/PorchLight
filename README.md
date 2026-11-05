@@ -33,7 +33,7 @@ pages. A coordinator approves new volunteers and family links.
 - **Matching** by interests, free time, and a shared language; in-person visits need the same
   county.
 - **Conversation sparks:** built-in ideas work offline, and with a free Gemini API key, Gemini
-  writes them, in the senior's language too.
+  writes them, in the senior's language too (on Cloudflare, Workers AI is the backup).
 - **My week** for volunteers: upcoming calls, one-click logging, and "Did these calls happen?"
 - **Needs attention** for coordinators: who needs help, why, and one suggested next step.
 - **Family dashboard and weekly summary:** check-ins per week and an isolation-risk flag.

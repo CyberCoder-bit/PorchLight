@@ -1,31 +1,14 @@
-// LIVE mode: Google's Gemini API, called with fetch(). There is no package to
-// install, and the same code runs in Node and on Cloudflare Workers.
-//
-// The free tier is often busy ("503: high demand"), so each request tries the
-// models in GEMINI_MODEL (comma-separated) in order, within one time budget.
-// Only a bad API key or a refusal stops early. On any failure the caller falls
-// back to the offline (MOCK) ideas, so nobody is ever left without an answer.
-//
-// The reply is structured output: JSON that must match the schema we send.
+// Google's Gemini API, called with fetch(). There is no package to install,
+// and the same code runs in Node and on Cloudflare Workers. The reply is
+// structured output: JSON that must match the schema we send.
+
+import { LiveSparkError } from './errors.js';
 
 export const GEMINI_API = 'https://generativelanguage.googleapis.com';
 // Flash-Lite first: it answers in about a second when it isn't busy. "-latest"
 // names follow Google's newest model, so the app keeps working when an older
 // model is retired; a retired name (404) just moves on to the next one.
-export const DEFAULT_GEMINI_MODELS = Object.freeze(['gemini-flash-lite-latest', 'gemini-3-flash-preview', 'gemini-flash-latest']);
-// A busy model sometimes hangs instead of saying so: stop waiting for it after
-// this long, so the next model still has time. The last model gets all that is left.
-export const ATTEMPT_MAX_MS = 5000;
-
-export class LiveSparkError extends Error {
-  // retry: true when another model might still answer (busy, timeout, bad output).
-  constructor(reason, { cause, retry = false } = {}) {
-    super(reason);
-    this.reason = reason;
-    this.cause = cause;
-    this.retry = retry;
-  }
-}
+export const DEFAULT_GEMINI_MODELS = Object.freeze(['gemini-flash-lite-latest', 'gemini-3-flash-preview']);
 
 // "a, models/b" -> ['a', 'b']; empty -> the defaults.
 export function parseModels(value) {
@@ -53,7 +36,7 @@ function httpError(status, body) {
 const networkError = (err) =>
   new LiveSparkError(err?.name === 'TimeoutError' || err?.name === 'AbortError' ? 'the request timed out' : 'could not reach the Gemini API (offline?)', { cause: err, retry: true });
 
-async function askModel(model, { apiKey, baseURL, system, user, schema, maxOutputTokens, timeoutMs }) {
+export async function askGemini(model, { apiKey, baseURL, system, user, schema, maxOutputTokens, timeoutMs }) {
   const url = `${String(baseURL || GEMINI_API).replace(/\/+$/, '')}/v1beta/models/${encodeURIComponent(model)}:generateContent`;
   let response;
   let body = null;
@@ -98,32 +81,8 @@ async function askModel(model, { apiKey, baseURL, system, user, schema, maxOutpu
     .join('');
   if (!text.trim()) throw new LiveSparkError('the response had no text', { retry: true });
   try {
-    return { json: JSON.parse(text), model: body.modelVersion || model };
+    return { json: JSON.parse(text), model: body.modelVersion || model, provider: 'gemini' };
   } catch {
     throw new LiveSparkError('the response was not valid JSON', { retry: true });
   }
-}
-
-/**
- * Ask Gemini for JSON matching `schema`. Resolves to { json, model }.
- * Throws LiveSparkError (with a short, friendly .reason) when every model failed.
- */
-export async function generateJson({ apiKey, models, baseURL, system, user, schema, timeoutMs, maxOutputTokens = 4000 }) {
-  const list = Array.isArray(models) && models.length ? models : [...DEFAULT_GEMINI_MODELS];
-  const deadline = Date.now() + timeoutMs;
-  let lastError = new LiveSparkError('the request timed out');
-  for (const [index, model] of list.entries()) {
-    const left = deadline - Date.now();
-    if (left < 250) break;
-    try {
-      // Share what is left among the models still to try (at most ATTEMPT_MAX_MS each, but the last).
-      const last = index === list.length - 1;
-      const timeout = last ? left : Math.min(ATTEMPT_MAX_MS, Math.floor(left / (list.length - index)));
-      return await askModel(model, { apiKey, baseURL, system, user, schema, maxOutputTokens, timeoutMs: timeout });
-    } catch (err) {
-      lastError = err instanceof LiveSparkError ? err : new LiveSparkError('unexpected error', { cause: err });
-      if (!lastError.retry) throw lastError;
-    }
-  }
-  throw lastError;
 }

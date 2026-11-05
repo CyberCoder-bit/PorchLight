@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import { createSparkService, buildSparkInput, resolveSparkMode } from '../src/sparks/index.js';
 import { buildConfig } from '../src/config.js';
 import { buildSeedData } from '../src/seed.js';
-import { DEFAULT_GEMINI_MODELS, parseModels } from '../src/gemini.js';
+import { DEFAULT_GEMINI_MODELS, parseModels } from '../src/ai/index.js';
 import { fakeGemini, geminiReply, systemOf, userOf, schemaOf } from './translate/helpers.js';
 
 let api;
@@ -145,4 +145,82 @@ test('a model that hangs is given up on in time for the next one to answer', asy
   assert.equal(result.mode, 'live');
   assert.ok(Date.now() - started < 7000, `took ${Date.now() - started} ms`);
   assert.equal(api.received.length, 2);
+});
+
+// ---------- Cloudflare Workers AI backup ----------
+
+// A stand-in for the Worker's AI binding (env.AI).
+function fakeWorkersAi(answer = SPARKS) {
+  const calls = [];
+  return {
+    calls,
+    run: async (model, inputs) => {
+      calls.push({ model, inputs });
+      if (answer instanceof Error) throw answer;
+      return { choices: [{ index: 0, finish_reason: 'stop', message: { role: 'assistant', content: JSON.stringify(answer) } }] };
+    },
+  };
+}
+
+const BUSY = () => ({ status: 503, json: { error: { code: 503, status: 'UNAVAILABLE', message: 'high demand' } } });
+const BAD_KEY = () => ({ status: 400, json: { error: { code: 400, status: 'INVALID_ARGUMENT', message: 'API key not valid.', details: [{ reason: 'API_KEY_INVALID' }] } } });
+
+test('when every Gemini model is busy, Cloudflare Workers AI answers with the same schema', async () => {
+  api.received.length = 0;
+  api.setReply(BUSY);
+  const AI = fakeWorkersAi();
+  const result = await service({ AI }).generate(input, 0);
+  assert.equal(result.mode, 'live');
+  assert.equal(result.provider, 'workers-ai');
+  assert.equal(result.model, '@cf/google/gemma-4-26b-a4b-it');
+  assert.equal(api.received.length, DEFAULT_GEMINI_MODELS.length, 'every Gemini model was tried first');
+  const { inputs } = AI.calls[0];
+  assert.equal(inputs.response_format.type, 'json_schema');
+  assert.equal(inputs.chat_template_kwargs.enable_thinking, false);
+  assert.ok(inputs.response_format.json_schema.schema.properties.sparks);
+  assert.match(inputs.messages[0].content, /exactly 3 conversation starters/);
+  assert.match(inputs.messages[1].content, /Basketball/);
+  assert.doesNotMatch(JSON.stringify(inputs), /Mike Whitaker|gin rummy/);
+});
+
+test('a bad Gemini key skips the other Gemini models but still tries the backup', async () => {
+  api.received.length = 0;
+  api.setReply(BAD_KEY);
+  const result = await service({ AI: fakeWorkersAi() }).generate(input, 0);
+  assert.equal(result.provider, 'workers-ai');
+  assert.equal(api.received.length, 1);
+
+  // Both fail: the bad key is the reason people see.
+  const both = await service({ AI: fakeWorkersAi(new Error('5xx')) }).generate(input, 0);
+  assert.equal(both.mode, 'mock-fallback');
+  assert.match(both.notice, /API key was rejected/);
+});
+
+test('with only the Workers AI binding (no Gemini key), LIVE mode uses Workers AI', async () => {
+  const config = buildConfig({ AI: fakeWorkersAi() });
+  const mode = await resolveSparkMode(config);
+  assert.equal(mode.effective, 'live');
+  assert.match(mode.reason, /Cloudflare Workers AI/);
+  const result = await createSparkService(config, mode).generate(input, 0);
+  assert.equal(result.provider, 'workers-ai');
+  // Locally (Node) there is no binding: a string env var named AI is not one.
+  assert.equal(buildConfig({ AI: 'yes' }).workersAi, null);
+});
+
+test('a used-up Workers AI allowance falls back to MOCK with a clear reason', async () => {
+  const config = buildConfig({ AI: fakeWorkersAi(new Error('4006: you have used up your daily free allocation of 10,000 neurons')) });
+  const result = await createSparkService(config, { effective: 'live', reason: 'test' }).generate(input, 0);
+  assert.equal(result.mode, 'mock-fallback');
+  assert.match(result.notice, /free Workers AI allowance is used up/);
+});
+
+test('translations use the backup too, and a backup spark set is labeled as Cloudflare', async () => {
+  const { translateLive } = await import('../src/translate/live.js');
+  const { sparkSourceLabel } = await import('../src/views/components.js');
+  api.setReply(BUSY);
+  const svc = service({ AI: fakeWorkersAi({ translation: '¡Gracias!' }) });
+  const out = await translateLive({ text: 'Thanks!', fromName: 'English', toName: 'Spanish' }, svc.liveOptions());
+  assert.equal(out.text, '¡Gracias!');
+  assert.match(sparkSourceLabel({ mode: 'live', provider: 'workers-ai', model: '@cf/google/gemma-4-26b-a4b-it' }), /Cloudflare Workers AI/);
+  assert.match(sparkSourceLabel({ mode: 'live', provider: 'gemini', model: 'gemini-3.5-flash-lite' }), /Gemini/);
 });

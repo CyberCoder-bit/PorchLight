@@ -1,4 +1,4 @@
-// LIVE translation: Gemini, through the Gemini API (src/gemini.js) (v2).
+// LIVE translation: Gemini, with Cloudflare Workers AI as the backup (src/ai/) (v2).
 //
 // Same pattern as the conversation sparks (src/sparks/live.js): the reply is
 // structured output (JSON that must match TRANSLATION_SCHEMA), and any
@@ -15,7 +15,7 @@
 // JSON string, which the page escapes like any other user text.
 
 import { redactContactDetails } from '../sparks/live.js';
-import { generateJson, LiveSparkError } from '../gemini.js';
+import { generateJson, LiveSparkError } from '../ai/index.js';
 
 export const TRANSLATE_TIMEOUT_MS = 10000;
 
@@ -46,12 +46,13 @@ export function buildTranslateMessage({ text, fromName, toName }) {
  * Ask Gemini for one translation. Resolves to { text, model }.
  * Throws LiveSparkError (with a friendly .reason) on any failure.
  */
-export async function translateLive({ text, fromName, toName }, { apiKey, models, baseURL, timeoutMs = TRANSLATE_TIMEOUT_MS }) {
+export async function translateLive({ text, fromName, toName }, { apiKey, models, baseURL, workersAi = null, timeoutMs = TRANSLATE_TIMEOUT_MS }) {
   // Ten seconds in all: a person is waiting for the page.
   const { json, model } = await generateJson({
     apiKey,
     models,
     baseURL,
+    workersAi,
     timeoutMs,
     system: TRANSLATE_SYSTEM_PROMPT,
     user: buildTranslateMessage({ text, fromName, toName }),

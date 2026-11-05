@@ -59,7 +59,10 @@ export { slotLabel, methodLabel };
 // Where a saved set of conversation sparks came from, in plain words. One
 // label everywhere sparks are shown (the senior's profile and My week).
 export function sparkSourceLabel(set) {
-  if (set.mode === 'live') return t('core.components.sparkSource.live', { model: set.model });
+  if (set.mode === 'live') {
+    const backup = set.provider === 'workers-ai';
+    return t(backup ? 'core.components.sparkSource.liveBackup' : 'core.components.sparkSource.live', { model: set.model });
+  }
   if (set.mode === 'mock-fallback') return t('core.components.sparkSource.fallback');
   return t('core.components.sparkSource.offline');
 }

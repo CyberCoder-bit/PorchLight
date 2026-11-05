@@ -1,7 +1,7 @@
 // Conversation Spark service: decides between MOCK_MODE and LIVE_MODE and
 // always returns 3 sparks, even if the live API fails.
 //
-//   SPARK_MODE=auto (default)  LIVE if GEMINI_API_KEY is set, else MOCK
+//   SPARK_MODE=auto (default)  LIVE if GEMINI_API_KEY is set or the Workers AI binding exists, else MOCK
 //   SPARK_MODE=mock            always offline templates
 //   SPARK_MODE=live            ask for LIVE. If the key is missing, warn and use MOCK.
 
@@ -15,9 +15,12 @@ export async function resolveSparkMode(config) {
   if (config.sparkMode === 'mock') {
     return { effective: 'mock', reason: 'SPARK_MODE=mock', warning: null };
   }
+  const backup = config.workersAi ? `Cloudflare Workers AI (${config.workersAiModel})` : '';
   if (config.geminiApiKey) {
-    return { effective: 'live', reason: `GEMINI_API_KEY found; using ${config.geminiModels.join(', ')}`, warning: null };
+    const using = `GEMINI_API_KEY found; using ${config.geminiModels.join(', ')}`;
+    return { effective: 'live', reason: backup ? `${using}, then ${backup} as a backup` : using, warning: null };
   }
+  if (backup) return { effective: 'live', reason: `no GEMINI_API_KEY; using ${backup}`, warning: null };
   const missing = 'no GEMINI_API_KEY is set';
   return {
     effective: 'mock',
@@ -45,12 +48,15 @@ export function buildSparkInput(senior, contacts, now = new Date()) {
   };
 }
 
+const workersAiOf = (config) => (config.workersAi ? { ai: config.workersAi, model: config.workersAiModel } : null);
+
 export function createSparkService(config, modeInfo) {
   return {
     modeInfo,
-    model: config.geminiModels[0],
+    model: config.geminiApiKey || !config.workersAi ? config.geminiModels[0] : config.workersAiModel,
+    backupModel: config.workersAi ? config.workersAiModel : null,
     // [v2 translate] The same Gemini settings, for translating messages (src/translate). A method, so the key is never serialized.
-    liveOptions: () => ({ apiKey: config.geminiApiKey, models: config.geminiModels, model: config.geminiModels[0], baseURL: config.geminiBaseUrl, perAccount: config.translateDailyPerAccount, total: config.translateDailyTotal }),
+    liveOptions: () => ({ apiKey: config.geminiApiKey, models: config.geminiModels, model: config.geminiModels[0], baseURL: config.geminiBaseUrl, workersAi: workersAiOf(config), perAccount: config.translateDailyPerAccount, total: config.translateDailyTotal }),
     // In LIVE mode: { reason, at } when the most recent request fell back to
     // MOCK, or null after a LIVE success. Lets the header and /about-ai say
     // what is really happening instead of "Live" while every call falls back.
@@ -74,11 +80,13 @@ export function createSparkService(config, modeInfo) {
             apiKey: config.geminiApiKey,
             models: config.geminiModels,
             baseURL: config.geminiBaseUrl,
+            workersAi: workersAiOf(config),
           });
           this.lastFallback = null;
           return {
             mode: 'live',
             model: live.model,
+            provider: live.provider,
             sparks: live.sparks,
             tip: pickTip(`${input.seniorId}|${variant}`),
             notice: null,

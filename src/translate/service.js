@@ -29,7 +29,7 @@ export async function cacheKey(from, to, text) {
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-// live: { apiKey, models, model, baseURL } to use Gemini, or null for MOCK only.
+// live: { apiKey, models, model, baseURL, workersAi } to use the AI, or null for MOCK only.
 export function createTranslateService({ store, live = null, limits = DEFAULT_LIMITS, now = () => new Date(), translateFn = translateLive } = {}) {
   const perAccount = Number.isInteger(limits?.perAccount) ? limits.perAccount : DEFAULT_LIMITS.perAccount;
   const total = Number.isInteger(limits?.total) ? limits.total : DEFAULT_LIMITS.total;
@@ -96,7 +96,7 @@ export function createTranslateService({ store, live = null, limits = DEFAULT_LI
 
         const result = await translateFn(
           { text: source, fromName: englishName(from), toName: englishName(to) },
-          { apiKey: live.apiKey, models: live.models, baseURL: live.baseURL }
+          { apiKey: live.apiKey, models: live.models, baseURL: live.baseURL, workersAi: live.workersAi }
         );
         remember(key, result.text);
         store.save();

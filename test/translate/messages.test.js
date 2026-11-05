@@ -79,7 +79,7 @@ test("each message shows in the reader's language, with a no-JS Show original li
   assert.match(original.text, /lang="es"/);
   assert.match(original.text, /Show translation/);
   // The form says plainly what is sent, before anything is sent.
-  assert.match(page.text, /will be sent to an AI service \(Gemini\) to be translated/);
+  assert.match(page.text, /will be sent to an AI service \(Gemini, or Cloudflare Workers AI as a backup\) to be translated/);
 });
 
 test('posting: blank and over-500 text is refused; 500 emoji graphemes are fine; HTML is escaped', async () => {

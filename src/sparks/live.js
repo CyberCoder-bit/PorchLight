@@ -13,7 +13,7 @@ import { interestLabelEn as interestLabel, methodLabelEn as methodLabel } from '
 import { formatLocal } from '../tz.js';
 import { COMMUNITY } from '../community.js';
 import { englishName } from '../translate/phrases.js'; // [v2 translate] sparks in the senior's language
-import { generateJson, LiveSparkError } from '../gemini.js';
+import { generateJson, LiveSparkError } from '../ai/index.js';
 
 export { LiveSparkError };
 
@@ -126,16 +126,17 @@ export function buildUserMessage(input) {
 }
 
 /**
- * Ask Gemini for 3 sparks. Resolves to { sparks: [{text, basedOn}], model }.
+ * Ask the AI for 3 sparks. Resolves to { sparks: [{text, basedOn}], model, provider }.
  * Throws LiveSparkError (with a friendly .reason) on any failure; the caller
  * falls back to MOCK sparks so the volunteer is never left empty-handed.
  */
-export async function generateLiveSparks(input, { apiKey, models, baseURL, timeoutMs = 15000 }) {
+export async function generateLiveSparks(input, { apiKey, models, baseURL, workersAi = null, timeoutMs = 15000 }) {
   const second = secondLanguageOf(input); // [v2 translate]
-  const { json, model } = await generateJson({
+  const { json, model, provider } = await generateJson({
     apiKey,
     models,
     baseURL,
+    workersAi,
     timeoutMs,
     system: second ? SYSTEM_PROMPT + bilingualInstruction(second.name) : SYSTEM_PROMPT,
     user: buildUserMessage(input),
@@ -145,10 +146,10 @@ export async function generateLiveSparks(input, { apiKey, models, baseURL, timeo
     .filter((s) => s && typeof s.text === 'string' && s.text.trim())
     .slice(0, 3)
     .map((s) => {
-      const spark = { text: s.text.trim(), basedOn: String(s.based_on || '').trim() || 'Gemini' };
+      const spark = { text: s.text.trim(), basedOn: String(s.based_on || '').trim() || 'AI' };
       const other = second && typeof s.text_senior_language === 'string' ? s.text_senior_language.trim() : '';
       return other ? { ...spark, translations: { [second.code]: other } } : spark;
     });
   if (sparks.length < 3) throw new LiveSparkError('the response had fewer than 3 starters');
-  return { sparks, model };
+  return { sparks, model, provider };
 }

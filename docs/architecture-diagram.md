@@ -38,7 +38,7 @@ flowchart TB
   end
 
   DB[("data/db.json locally, or Durable Object storage on Cloudflare<br/>users, sessions, family links, seniors, volunteers,<br/>matches, calls and visits, sparks, messages,<br/>translation cache, daily usage, settings")]
-  GEMINI["Gemini API (Google), optional<br/>free tier; tries the next model when one is busy"]
+  GEMINI["Gemini API (Google), optional<br/>free tier; tries the next model when one is busy<br/>backup: Cloudflare Workers AI (Gemma 4)"]
 
   People -->|"HTTP: page views and form posts"| AUTH
   AUTH -->|"who is asking"| GUARD
@@ -112,7 +112,7 @@ sequenceDiagram
   alt LIVE_MODE (GEMINI_API_KEY set)
     Svc->>Live: generateLiveSparks()
     Live->>API: generateContent with JSON schema, low thinking<br/>(next model if one is busy)
-    alt Gemini answers
+    alt Gemini (or the Workers AI backup) answers
       API-->>Live: 3 starters as JSON
       Live-->>Svc: sparks, model name
     else timeout, bad key, refusal, or bad output

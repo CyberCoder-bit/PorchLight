@@ -6,6 +6,8 @@
   // src/i18n/index.js uses AsyncLocalStorage (node:async_hooks).
   "compatibility_flags": ["nodejs_compat"],
   "assets": { "directory": "./public" },
+  // Cloudflare Workers AI: the backup when Gemini is busy (src/ai/workers-ai.js).
+  "ai": { "binding": "AI" },
   "durable_objects": {
     "bindings": [{ "name": "PORCHLIGHT", "class_name": "PorchLightData" }]
   },

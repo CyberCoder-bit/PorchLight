@@ -40,7 +40,7 @@ test('helper: two sides, the notice before sending, the disclaimer, and its scri
   assert.equal(page.status, 200);
   assert.match(page.text, /I speak/);
   assert.match(page.text, /They speak/);
-  assert.match(page.text, /will be sent to an AI service \(Gemini\) to be translated/);
+  assert.match(page.text, /will be sent to an AI service \(Gemini, or Cloudflare Workers AI as a backup\) to be translated/);
   assert.ok(page.text.includes(DISCLAIMER));
   assert.match(page.text, /<script src="\/translate\.js" defer><\/script>/);
   assert.doesNotMatch((await app.get('/messages')).text, /translate\.js/);

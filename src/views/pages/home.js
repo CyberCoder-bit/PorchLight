@@ -119,7 +119,7 @@ export function homePage({ stats, attention }) {
 // `lastFallback`: set when LIVE mode is on but the most recent request fell
 // back to the offline ideas ({ reason }), so this page never says "Live" while
 // sparks are actually coming from the built-in ideas.
-export function aboutAiPage({ modeInfo, model, lastFallback = null }) {
+export function aboutAiPage({ modeInfo, model, backupModel = null, lastFallback = null }) {
   const live = modeInfo.effective === 'live';
   const fellBack = live && lastFallback;
   return html`
@@ -142,6 +142,7 @@ export function aboutAiPage({ modeInfo, model, lastFallback = null }) {
       <p>${tx('core.about.offline.text', { town: COMMUNITY.town })}</p>
       <h3>${tx('core.about.live.heading')}</h3>
       <p>${tx('core.about.live.text', { model })}</p>
+      ${backupModel ? html`<p>${tx('core.about.live.backup', { model: backupModel })}</p>` : ''}
       <h3>${tx('core.about.neverSees.heading')}</h3>
       <p>${tx('core.about.neverSees.text')}</p>
       <h3>${tx('core.about.neverDecides.heading')}</h3>

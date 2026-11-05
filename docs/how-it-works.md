@@ -134,7 +134,7 @@ Every translated message is labeled as a machine translation that may contain mi
 | Pages | Server-rendered HTML and plain CSS, with the Atkinson Hyperlegible Next font |
 | Data | One JSON document: a file locally, a Durable Object on Cloudflare |
 | Chart | Inline SVG drawn on the server |
-| AI (optional) | Gemini, Google's AI model, through the Gemini API (plain `fetch`, no package), for sparks and translation only |
+| AI (optional) | Gemini, Google's AI model, through the Gemini API (plain `fetch`, no package), with Cloudflare Workers AI (Gemma 4) as the backup on Cloudflare; for sparks and translation only |
 | Tests | Node's built-in test runner |
 
 - **No required dependencies,** so `npm start` works on a locked-down school network.
@@ -150,8 +150,8 @@ Every translated message is labeled as a machine translation that may contain mi
 - The demo accounts are open on purpose; a real launch would remove them.
 - No email is sent (no password reset or email alerts); notifications are on-screen only.
 - Translations are machine-made and haven't been checked by native speakers.
-- The free Gemini tier is sometimes busy. PorchLight then tries the next model, and if none
-  answers in time, it uses the offline ideas and says so.
+- The free Gemini tier is sometimes busy. PorchLight then tries the next model and, on Cloudflare,
+  the Workers AI backup; if none answers in time, it uses the offline ideas and says so.
 - One time zone per deployment, and the town list covers 52 of 92 counties so far. A few towns
   (Zionsville, Greenwood, Plainfield, West Lafayette, Mishawaka, Elkhart, Gary, Hammond, Portage,
   Michigan City, Newburgh) haven't been checked against an official page yet.

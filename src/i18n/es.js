@@ -368,7 +368,7 @@ export default {
   'translate.disclaimer': 'Traducción automática, puede tener errores. No la use para tomar decisiones médicas ni de dinero.',
 
   'translate.notice.word': 'Antes de escribir',
-  'translate.notice.sent': 'El texto que escriba aquí se enviará a un servicio de IA (Gemini) para traducirlo. Su nombre y su perfil no se envían.',
+  'translate.notice.sent': 'El texto que escriba aquí se enviará a un servicio de IA (Gemini, o Cloudflare Workers AI como respaldo) para traducirlo. Su nombre y su perfil no se envían.',
   'translate.notice.liveOn': 'La traducción con IA está activada.',
   'translate.notice.liveOff': 'La traducción con IA está desactivada en este momento. Solo se pueden traducir los mensajes de ejemplo y la tarjeta de frases, y nada de lo que usted escriba sale de PorchLight.',
 
@@ -1017,6 +1017,7 @@ export default {
   'core.components.noneListed': 'Nada indicado',
   'core.components.noTimesListed': 'No se indicaron horarios',
   'core.components.sparkSource.live': 'Escritas por Gemini, una IA ({model})',
+  'core.components.sparkSource.liveBackup': 'Escritas por una IA de Cloudflare Workers AI ({model})',
   'core.components.sparkSource.fallback': 'De las ideas incluidas (la IA en vivo no estaba disponible)',
   'core.components.sparkSource.offline': 'De las ideas incluidas (modo sin conexión)',
   'core.components.banner.status': 'Nota',
@@ -1116,6 +1117,7 @@ export default {
   'core.about.offline.text': 'Las ideas vienen de un conjunto escrito a mano para cada interés, con toques de cada temporada y toques locales de {town}. Los mismos datos siempre dan las mismas ideas, y "Mostrar otras ideas" elige un conjunto nuevo. No se necesita internet ni una clave de API. (En el código se llama modo MOCK.)',
   'core.about.live.heading': 'Modo en vivo (con una clave de API de Gemini)',
   'core.about.live.text': 'Las ideas las escribe Gemini ({model}), el modelo de IA de Google, por medio de la API de Gemini. En el plan gratuito de Gemini, Google puede usar lo que se envía para mejorar sus productos. Si no se puede conectar con Gemini, PorchLight usa las ideas sin conexión, para que un voluntario nunca se quede con las manos vacías. La página lo indica con una nota breve, y esas ideas llevan la etiqueta "la IA en vivo no estaba disponible". El README explica cómo activarlo. (En el código se llama modo LIVE.)',
+  'core.about.live.backup': 'Cuando Gemini está ocupado, responde en su lugar una IA de respaldo en Cloudflare Workers AI ({model}).',
   'core.about.neverSees.heading': 'Lo que la IA nunca ve',
   'core.about.neverSees.text': 'Solo se envían a la IA el nombre de pila preferido de la persona mayor, sus intereses, su texto "Sobre mí", los días desde el último contacto y la fecha de hoy. Nunca se envían los contactos de la familia, las notas de las llamadas ni los motivos de las llamadas perdidas. Si alguien escribe un número de teléfono o un correo electrónico en "Sobre mí", PorchLight lo quita antes de enviar el texto.',
   'core.about.neverDecides.heading': 'Lo que la IA nunca decide',

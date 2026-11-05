@@ -65,7 +65,9 @@ npx wrangler login     # one time
 npm run deploy         # prints your URL, like https://porchlight.<your-subdomain>.workers.dev
 ```
 
-- For LIVE mode, run `npx wrangler secret put GEMINI_API_KEY`, then deploy again.
+- For LIVE mode, run `npx wrangler secret put GEMINI_API_KEY`, then deploy again. On Cloudflare,
+  Workers AI (the `ai` binding in `wrangler.jsonc`, no key needed, free daily allowance) is the
+  backup when every Gemini model is busy.
 - Run `npm install` and `wrangler` on the same system you deploy from (a `node_modules` folder
   from WSL won't work in Windows PowerShell, and the other way around).
 - Times stay in Indiana time even though Cloudflare runs on UTC: every date goes through
@@ -92,14 +94,15 @@ Or run `GEMINI_API_KEY=... npm start`. The header badge changes to **AI: Live (G
 |---|---|---|
 | `GEMINI_API_KEY` | (none) | Your Gemini API key |
 | `SPARK_MODE` | `auto` | `auto`: LIVE if a key is set. `mock`: always offline. `live`: ask for LIVE and warn if it can't run |
-| `GEMINI_MODEL` | `gemini-flash-lite-latest,gemini-3-flash-preview,gemini-flash-latest` | Models to try, in order. The free tier is often busy, so when one model is busy or slow, the next one is tried |
+| `GEMINI_MODEL` | `gemini-flash-lite-latest,gemini-3-flash-preview` | Models to try, in order. The free tier is often busy, so when one model is busy or slow, the next one is tried |
+| `WORKERS_AI_MODEL` | `@cf/google/gemma-4-26b-a4b-it` | The Cloudflare Workers AI backup, tried after Gemini (Cloudflare only) |
 | `RISK_THRESHOLD_DAYS` | `7` | Starting value for the dashboard alert setting |
 | `TRANSLATE_DAILY_PER_ACCOUNT` | `30` | LIVE translations per account per day |
 | `TRANSLATE_DAILY_TOTAL` | `300` | LIVE translations for the whole site per day |
 | `DATA_FILE` | `data/db.json` | Local data file (Node only) |
 | `PORT` | `3000` | Web server port |
 
-If every model fails, PorchLight falls back to the offline mode and says why. On the free tier,
+If every model (and, on Cloudflare, the Workers AI backup) fails, PorchLight falls back to the offline mode and says why. On the free tier,
 Google may use what is sent to improve its products, so don't send real people's information
 through a free key.
 
@@ -111,7 +114,7 @@ TZ=UTC npm test                   # same results on a UTC server (like Cloudflar
 TZ=America/Chicago npm test       # same results on a Central-time computer
 ```
 
-All 322 tests pass. The LIVE-mode tests run against a local fake Gemini API server, so they need
+All 327 tests pass. The LIVE-mode tests run against a local fake Gemini API server, so they need
 no key or internet. The tests cover matching, the risk flag, sparks, accounts and
 access for every role, every language file, translation, both Indiana time zones and
 daylight-saving days, towns, accessibility colors, the public site, a full end-to-end run, and a
