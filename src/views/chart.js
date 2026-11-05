@@ -11,6 +11,8 @@
 
 import { html, raw, escapeHtml } from './html.js';
 import { formatLocal } from '../tz.js';
+import { t } from '../i18n/index.js'; // [v2 i18n]
+import { tx } from './components.js';
 
 const W = 420; // viewBox width
 const H = 200; // viewBox height (includes the x-axis label band)
@@ -49,7 +51,7 @@ export function weeklyChart(weeks, { idPrefix, name }) {
     const cx = PAD.left + slot * i + slot / 2;
     const x = cx - barW / 2;
     const isLatest = i === weeks.length - 1;
-    const tip = `${isLatest ? 'This week' : `Week of ${weekRange(w)}`}: ${w.count} ${w.count === 1 ? 'call or visit' : 'calls and visits'}`;
+    const tip = t(`core.chart.tip.${isLatest ? 'thisWeek' : 'week'}.${w.count === 1 ? 'one' : 'other'}`, { range: weekRange(w), n: w.count });
     svg += `<g><title>${escapeHtml(tip)}</title>`;
     // Invisible full-height hit area so the tooltip is easy to trigger.
     svg += `<rect x="${PAD.left + slot * i}" y="${PAD.top}" width="${slot}" height="${plotH}" fill="transparent"/>`;
@@ -68,10 +70,10 @@ export function weeklyChart(weeks, { idPrefix, name }) {
     `<text x="${PAD.left + slot * i + slot / 2}" y="${H - 10}" text-anchor="${anchor}" font-size="16" fill="${COLORS.text}">${escapeHtml(text)}</text>`;
   svg += labelAt(0, shortDate(weeks[0].start), 'start');
   svg += labelAt(Math.floor(weeks.length / 2), shortDate(weeks[Math.floor(weeks.length / 2)].start), 'middle');
-  svg += labelAt(weeks.length - 1, 'This week', 'end');
+  svg += labelAt(weeks.length - 1, t('core.chart.thisWeek'), 'end');
 
   const counts = weeks.map((w) => w.count);
-  const summary = `Calls and visits per week for ${name} over the last ${weeks.length} weeks, oldest to newest: ${counts.join(', ')}. This week: ${counts[counts.length - 1]}.`;
+  const summary = t('core.chart.summary', { name, weeks: weeks.length, counts: counts.join(', '), latest: counts[counts.length - 1] });
 
   return html`
     <figure class="chart">
@@ -79,15 +81,15 @@ export function weeklyChart(weeks, { idPrefix, name }) {
         <title id="${idPrefix}-title">${summary}</title>
         ${raw(svg)}
       </svg>
-      <figcaption class="chart-caption">Each bar is one week of completed calls and visits.</figcaption>
+      <figcaption class="chart-caption">${tx('core.chart.caption')}</figcaption>
       <details class="chart-table">
-        <summary>Show weekly numbers as a table</summary>
+        <summary>${tx('core.chart.showTable')}</summary>
         <table>
-          <caption class="visually-hidden">Calls and visits each week for ${name}</caption>
-          <thead><tr><th scope="col">Week</th><th scope="col">Calls and visits</th></tr></thead>
+          <caption class="visually-hidden">${tx('core.chart.tableCaption', { name })}</caption>
+          <thead><tr><th scope="col">${tx('core.chart.week')}</th><th scope="col">${tx('core.chart.count')}</th></tr></thead>
           <tbody>
             ${[...weeks].reverse().map(
-              (w, i) => html`<tr><th scope="row">${i === 0 ? `This week (${weekRange(w)})` : weekRange(w)}</th><td>${w.count}</td></tr>`
+              (w, i) => html`<tr><th scope="row">${i === 0 ? t('core.chart.thisWeekRange', { range: weekRange(w) }) : weekRange(w)}</th><td>${w.count}</td></tr>`
             )}
           </tbody>
         </table>

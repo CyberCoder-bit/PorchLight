@@ -7,8 +7,26 @@
 //     the field with aria-describedby and aria-invalid
 //   - status is shown with an icon AND words, never color alone
 
-import { html } from './html.js';
+import { html, raw } from './html.js';
+import { t } from '../i18n/index.js'; // [v2 i18n]
 import { INTERESTS, DAYS, PERIODS, CONTACT_METHODS, interestLabel, methodLabel, slotLabel } from '../vocab.js';
+
+// [v2 i18n] tx(): t() for text that sits in the page as written in the
+// template. The catalog text is plain: &, < and > are escaped, quotes stay as
+// they are (as they did when the words were in the template). Each {variable}
+// is filled with html`` rules: escaped text, or SafeHtml such as a link, so a
+// sentence can hold a link that translators can move.
+//   tx('core.x.sentence', { link: html`<a href="/x">${t('core.x.link')}</a>`, name })
+const escapeText = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+export function tx(key, vars) {
+  if (!vars) return raw(escapeText(t(key)));
+  const slots = Object.fromEntries(Object.keys(vars).map((name) => [name, `\u0001${name}\u0002`]));
+  return raw(escapeText(t(key, slots)).replace(/\u0001(\w+)\u0002/g, (whole, name) => String(html`${vars[name]}`)));
+}
+
+// [v2 i18n] Plurals: one of two keys, "<key>.one" or "<key>.other", by the count.
+//   t(many(n, 'core.home.tile.seniors'), { n })
+export const many = (n, key) => `${key}.${n === 1 ? 'one' : 'other'}`;
 
 export function statusBadge(status, info) {
   return html`<span class="badge badge-${status}"><span class="badge-icon" aria-hidden="true">${info.icon}</span> ${info.label}</span>`;
@@ -16,16 +34,16 @@ export function statusBadge(status, info) {
 
 export function trendBadge(trend) {
   if (!trend.dropping) return '';
-  return html`<span class="badge badge-dropping"><span class="badge-icon" aria-hidden="true">↓</span> Contact dropping</span>`;
+  return html`<span class="badge badge-dropping"><span class="badge-icon" aria-hidden="true">↓</span> ${tx('core.components.contactDropping')}</span>`;
 }
 
 export function chips(ids, labelFn = interestLabel) {
-  if (!ids || !ids.length) return html`<p class="muted">None listed</p>`;
+  if (!ids || !ids.length) return html`<p class="muted">${tx('core.components.noneListed')}</p>`;
   return html`<ul class="chips">${ids.map((id) => html`<li>${labelFn(id)}</li>`)}</ul>`;
 }
 
 export function slotList(ids) {
-  if (!ids || !ids.length) return html`<p class="muted">No times listed</p>`;
+  if (!ids || !ids.length) return html`<p class="muted">${tx('core.components.noTimesListed')}</p>`;
   // Group by day: "Monday: morning, afternoon"
   const byDay = DAYS.map((d) => ({
     day: d,
@@ -41,9 +59,9 @@ export { slotLabel, methodLabel };
 // Where a saved set of conversation sparks came from, in plain words. One
 // label everywhere sparks are shown (the senior's profile and My week).
 export function sparkSourceLabel(set) {
-  if (set.mode === 'live') return `Written by Claude, an AI (${set.model})`;
-  if (set.mode === 'mock-fallback') return 'From the built-in ideas (live AI was unavailable)';
-  return 'From the built-in ideas (offline mode)';
+  if (set.mode === 'live') return t('core.components.sparkSource.live', { model: set.model });
+  if (set.mode === 'mock-fallback') return t('core.components.sparkSource.fallback');
+  return t('core.components.sparkSource.offline');
 }
 
 // ---------- feedback banner ----------
@@ -55,11 +73,12 @@ export function sparkSourceLabel(set) {
 //   error   (role="alert")   ✕ Problem
 // Forms with errors keep their own focusable error summary (errorSummary below).
 // U+FE0E asks for the plain text symbol, not a color emoji.
+// [v2 i18n] `word` is read in the reader's language each time.
 export const BANNER_KINDS = {
-  status: { icon: 'ℹ︎', word: 'Note' },
-  success: { icon: '✓', word: 'Done' },
-  warning: { icon: '⚠︎', word: 'Heads up' },
-  error: { icon: '✕', word: 'Problem' },
+  status: { icon: 'ℹ︎', get word() { return t('core.components.banner.status'); } },
+  success: { icon: '✓', get word() { return t('core.components.banner.success'); } },
+  warning: { icon: '⚠︎', get word() { return t('core.components.banner.warning'); } },
+  error: { icon: '✕', get word() { return t('core.components.banner.error'); } },
 };
 
 export function banner({ kind = 'status', text, body, next, word, role, extraClass = '' }) {
@@ -84,7 +103,7 @@ export function banner({ kind = 'status', text, body, next, word, role, extraCla
 
 // "How do I get out?" A plain link back to the parent page, shown above the h1.
 export function backLink(href, label) {
-  return html`<p class="back-link"><a href="${href}"><span aria-hidden="true">←</span> Back to ${label}</a></p>`;
+  return html`<p class="back-link"><a href="${href}"><span aria-hidden="true">←</span> ${tx('core.components.backTo', { place: label })}</a></p>`;
 }
 
 // What an empty list says: what it means, and what to do next.
@@ -97,7 +116,7 @@ export function errorSummary(errors) {
   if (!entries.length) return '';
   return html`
     <div class="error-summary" role="alert" tabindex="-1" id="error-summary" aria-labelledby="error-summary-title">
-      <h2 id="error-summary-title"><span aria-hidden="true">✕</span> Please fix ${entries.length === 1 ? 'this problem' : `these ${entries.length} problems`}</h2>
+      <h2 id="error-summary-title"><span aria-hidden="true">✕</span> ${tx(entries.length === 1 ? 'core.components.fixProblems.one' : 'core.components.fixProblems.other', { n: entries.length })}</h2>
       <ul>${entries.map(([field, message]) => html`<li><a href="#field-${field}">${message}</a></li>`)}</ul>
     </div>`;
 }
@@ -118,7 +137,7 @@ function fieldMessages(name, hint, error) {
 export function textField({ name, label, value = '', error, hint, type = 'text', required = false, autocomplete, attrs = '' }) {
   return html`
     <div class="field${error ? ' has-error' : ''}">
-      <label for="field-${name}">${label}${required ? html` <span class="required">(required)</span>` : ''}</label>
+      <label for="field-${name}">${label}${required ? html` <span class="required">${tx('core.components.required')}</span>` : ''}</label>
       ${fieldMessages(name, hint, error)}
       <input id="field-${name}" name="${name}" type="${type}" value="${value ?? ''}"
         ${required ? html`required` : ''} ${autocomplete ? html`autocomplete="${autocomplete}"` : ''}
@@ -139,7 +158,7 @@ export function textArea({ name, label, value = '', error, hint, rows = 4 }) {
 export function selectField({ name, label, options, value, error, hint, required = false }) {
   return html`
     <div class="field${error ? ' has-error' : ''}">
-      <label for="field-${name}">${label}${required ? html` <span class="required">(required)</span>` : ''}</label>
+      <label for="field-${name}">${label}${required ? html` <span class="required">${tx('core.components.required')}</span>` : ''}</label>
       ${fieldMessages(name, hint, error)}
       <select id="field-${name}" name="${name}" ${required ? html`required` : ''}
         ${error ? html`aria-invalid="true"` : ''}${describedBy(name, hint, error)}>
@@ -170,8 +189,8 @@ function choiceGroup({ name, legend, hint, error, type, choices, selected = [], 
 export function interestCheckboxes(selected, error) {
   return choiceGroup({
     name: 'interests',
-    legend: 'Interests and hobbies',
-    hint: 'Choose all that apply. We use these to find a good match and to suggest things to talk about.',
+    legend: t('core.components.interests.legend'),
+    hint: t('core.components.interests.hint'),
     error,
     type: 'checkbox',
     choices: INTERESTS,
@@ -183,7 +202,7 @@ export function interestCheckboxes(selected, error) {
 export function methodRadios(selected, error) {
   return choiceGroup({
     name: 'contactMethod',
-    legend: 'Preferred way to connect',
+    legend: t('core.components.methodRadios.legend'),
     error,
     type: 'radio',
     choices: CONTACT_METHODS,
@@ -194,8 +213,8 @@ export function methodRadios(selected, error) {
 export function methodCheckboxes(selected, error) {
   return choiceGroup({
     name: 'contactMethods',
-    legend: 'Ways you can connect',
-    hint: 'Choose all that apply.',
+    legend: t('core.components.methodCheckboxes.legend'),
+    hint: t('core.components.methodCheckboxes.hint'),
     error,
     type: 'checkbox',
     choices: CONTACT_METHODS,
@@ -207,9 +226,9 @@ export function methodCheckboxes(selected, error) {
 // "Monday, group, Morning 9 AM–noon, checkbox".
 export function availabilityFieldset(selected = [], error) {
   return html`
-    <fieldset class="availability${error ? ' has-error' : ''}" id="field-availability" tabindex="-1"${describedBy('availability', 'Pick every time block that usually works.', error)}>
-      <legend>Weekly availability</legend>
-      ${fieldMessages('availability', 'Pick every time block that usually works.', error)}
+    <fieldset class="availability${error ? ' has-error' : ''}" id="field-availability" tabindex="-1"${describedBy('availability', t('core.components.availability.hint'), error)}>
+      <legend>${tx('core.components.availability.legend')}</legend>
+      ${fieldMessages('availability', t('core.components.availability.hint'), error)}
       <div class="availability-grid">
         ${DAYS.map(
           (d) => html`
