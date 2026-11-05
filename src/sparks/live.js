@@ -109,7 +109,7 @@ export function buildUserMessage(input) {
 }
 
 // Turn any failure into a short, human-readable reason for the UI.
-function describeError(Anthropic, err) {
+export function describeError(Anthropic, err) {
   if (err instanceof LiveSparkError) return err;
   if (Anthropic) {
     if (err instanceof Anthropic.AuthenticationError) return new LiveSparkError('the API key was rejected', err);

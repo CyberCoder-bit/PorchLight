@@ -22,6 +22,7 @@ import { registerFeatures } from './features/index.js';
 import { registerIndiana } from './indiana/index.js';
 import { registerDesignPages } from './views/pages/extra.js';
 import { registerSite } from './views/site/index.js'; // [v2] public website
+import { registerTranslate } from './translate/index.js'; // [v2] messages, phrase card, conversation helper
 import { checkTown, townFromQuery, rowsInTown } from './towns/index.js'; // [towns]
 import { townFilter } from './towns/views.js'; // [towns]
 import { registerRoles, withoutPrivateNotes, seniorsVisibleTo, callsVisibleTo, seesEverything, isFamilyOrSenior, viewerFromCookie } from './roles/index.js'; // [roles]
@@ -753,6 +754,7 @@ export function createApp({ store, sparks, now = () => new Date() }) {
   registerIndiana(router, ctx);
   registerDesignPages(router, ctx);
   registerSite(router, ctx); // [v2] public website: /, /how-it-works, ...
+  registerTranslate(router, ctx); // [v2] /messages, /phrases, /translate
   registerRoles(router, ctx); // [roles] must be last: adds /sign-in and checks every route on the server
 
   return createHandler({ router, renderError });

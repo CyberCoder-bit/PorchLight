@@ -18,5 +18,8 @@ export function buildAppConfig(env = {}) {
     anthropicApiKey: env.ANTHROPIC_API_KEY || '',
     anthropicBaseUrl: env.ANTHROPIC_BASE_URL || undefined, // only used by tests / proxies
     claudeModel: env.CLAUDE_MODEL || 'claude-sonnet-5-5',
+    // [v2 translate] AI translations per day (Indiana calendar day): per account, and for everyone together.
+    translateDailyPerAccount: toInt(env.TRANSLATE_DAILY_PER_ACCOUNT, 30, 0, 10000),
+    translateDailyTotal: toInt(env.TRANSLATE_DAILY_TOTAL, 300, 0, 100000),
   };
 }

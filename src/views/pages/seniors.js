@@ -7,6 +7,7 @@ import {
 } from '../components.js';
 import { placeText, townLabel } from '../../towns/index.js'; // [towns]
 import { townSelectField } from '../../towns/views.js'; // [towns]
+import { t } from '../../i18n/index.js'; // [v2 translate] the Messages link
 import { noPhone } from '../../roles/viewer.js'; // phone numbers are never displayed, even if typed into a name field
 
 export function seniorsListPage({ rows, townFilter = '', townName = null }) { // [towns] townFilter, townName
@@ -84,6 +85,7 @@ export function seniorProfilePage({ senior, assessment, volunteer, match, upcomi
       ${volunteer
         ? html`<p class="big">Your companion is <strong>${volunteer.name}</strong>.</p>`
         : html`<p class="big">We're finding a companion for you.</p>`}
+      ${volunteer && match ? html`<p><a class="button button-secondary" href="/messages/${match.id}">${t('translate.thread.title', { name: volunteer.name.split(' ')[0] })}</a></p>` : ''}
       ${assessment.nextScheduled
         ? html`<p class="big">Your next ${methodLabel(assessment.nextScheduled.type).toLowerCase()}: <strong>${formatDateTime(assessment.nextScheduled.scheduledFor)}</strong>.</p>`
         : html`<p class="big">No call is scheduled yet.</p>`}
