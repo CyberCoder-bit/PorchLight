@@ -65,7 +65,7 @@ test('the senior page shows the second language with each spark (MOCK)', async (
   assert.equal(res.status, 303);
   const page = await app.get('/seniors/s-rosa');
   assert.doesNotMatch(page.text, /Not ready in Español/);
-  assert.ok((page.text.match(/lang="es"/g) || []).length >= 3, 'each spark has a Spanish version');
+  assert.equal((page.text.match(/<p class="spark-text" lang="es" dir="ltr">/g) || []).length, 3, 'each spark has a Spanish version');
   // Same language: nothing extra.
   await app.post('/seniors/s-dorothy/sparks', { variant: '0' });
   assert.doesNotMatch((await app.get('/seniors/s-dorothy')).text, /Not ready in/);
