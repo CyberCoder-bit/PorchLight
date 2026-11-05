@@ -8,7 +8,7 @@ import {
 import { placeText, townLabel } from '../../towns/index.js'; // [towns]
 import { townSelectField } from '../../towns/views.js'; // [towns]
 import { languageFieldset, formatLanguages } from '../../i18n/fields.js'; // [v2 i18n]
-import { t } from '../../i18n/index.js'; // [v2 i18n, translate, accounts]
+import { t, lowerInText } from '../../i18n/index.js'; // [v2 i18n, translate, accounts]
 import { bilingualSpark } from '../../translate/views.js'; // [v2 translate] sparks in both languages
 import { noPhone } from '../../roles/viewer.js'; // phone numbers are never displayed, even if typed into a name field
 
@@ -26,7 +26,7 @@ export function seniorsListPage({ rows, townFilter = '', townName = null }) { //
         ({ senior, assessment, volunteer }) => html`
         <li class="card">
           <h2 class="card-title"><a href="/seniors/${senior.id}">${senior.name}</a></h2>
-          <p class="card-meta">${senior.age ? `${t('core.seniors.card.age', { age: senior.age })} · ` : ''}${placeText(senior)} · ${tx('core.seniors.card.prefers', { method: methodLabel(senior.contactMethod).toLowerCase() })}</p>
+          <p class="card-meta">${senior.age ? `${t('core.seniors.card.age', { age: senior.age })} · ` : ''}${placeText(senior)} · ${tx('core.seniors.card.prefers', { method: lowerInText(methodLabel(senior.contactMethod)) })}</p>
           <p class="badges">${statusBadge(assessment.status, assessment.info)} ${trendBadge(assessment.trend)}</p>
     <p><a href="/seniors/${senior.id}/summary">${tx('core.seniors.card.summary')}</a></p>
           <p>${volunteer
@@ -89,7 +89,7 @@ export function seniorProfilePage({ senior, assessment, volunteer, match, upcomi
         : html`<p class="big">${tx('core.senior.welcome.finding')}</p>`}
       ${volunteer && match ? html`<p><a class="button button-secondary" href="/messages/${match.id}">${t('translate.thread.title', { name: volunteer.name.split(' ')[0] })}</a></p>` : ''}
       ${assessment.nextScheduled
-        ? html`<p class="big">${tx('core.senior.welcome.next', { method: methodLabel(assessment.nextScheduled.type).toLowerCase(), when: html`<strong>${formatDateTime(assessment.nextScheduled.scheduledFor)}</strong>` })}</p>`
+        ? html`<p class="big">${tx('core.senior.welcome.next', { method: lowerInText(methodLabel(assessment.nextScheduled.type)), when: html`<strong>${formatDateTime(assessment.nextScheduled.scheduledFor)}</strong>` })}</p>`
         : html`<p class="big">${tx('core.senior.welcome.noNext')}</p>`}
       ${seniorView && senior.familyCode /* [v2 accounts] */
         ? html`<p>${t('auth.account.familyCodeTitle')}: <strong class="family-code">${senior.familyCode}</strong>. ${t('auth.account.familyCodeText')}</p>

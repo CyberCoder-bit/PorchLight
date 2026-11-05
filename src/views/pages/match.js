@@ -4,7 +4,7 @@ import { html } from '../html.js';
 import { chips, slotList, methodLabel, backLink, emptyState, banner, tx, many } from '../components.js';
 import { WEIGHTS } from '../../matching.js';
 import { townOf } from '../../towns/index.js'; // [towns]
-import { t } from '../../i18n/index.js'; // [v2 i18n]
+import { t, lowerInText } from '../../i18n/index.js'; // [v2 i18n]
 
 export function matchIndexPage({ unmatched, matched }) {
   return html`
@@ -17,7 +17,7 @@ export function matchIndexPage({ unmatched, matched }) {
         ? html`<ul class="card-list">${unmatched.map(
             (s) => html`<li class="card">
               <h3 class="card-title">${s.name}</h3>
-              <p class="card-meta">${tx('core.match.prefers', { method: methodLabel(s.contactMethod).toLowerCase() })}</p>
+              <p class="card-meta">${tx('core.match.prefers', { method: lowerInText(methodLabel(s.contactMethod)) })}</p>
               ${chips(s.interests)}
               <p><a class="button" href="/admin/match?seniorId=${s.id}">${tx('core.dashboard.card.findCompanion', { name: s.preferredName || s.name.split(' ')[0] })}</a></p>
             </li>`
@@ -63,7 +63,7 @@ export function matchSeniorPage({ senior, currentMatch, currentVolunteer, rankin
 
     <section class="panel" aria-labelledby="senior-summary-heading">
       <h2 id="senior-summary-heading">${tx('core.match.glance', { name: first })}</h2>
-      <p>${tx('core.match.glanceText', { method: html`<strong>${tx('core.senior.about.prefersMethod', { method: methodLabel(senior.contactMethod).toLowerCase() })}</strong>`, town: townOf(senior) })}</p>
+      <p>${tx('core.match.glanceText', { method: html`<strong>${tx('core.senior.about.prefersMethod', { method: lowerInText(methodLabel(senior.contactMethod)) })}</strong>`, town: townOf(senior) })}</p>
       <h3>${tx('core.senior.about.interests')}</h3>
       ${chips(senior.interests)}
       <h3>${tx('core.senior.about.available')}</h3>
@@ -110,7 +110,7 @@ export function matchSeniorPage({ senior, currentMatch, currentVolunteer, rankin
                   </form>`}
             </li>`
           )}</ol>`
-        : banner({ kind: 'warning', text: t('core.match.noneEligible', { name: first, method: methodLabel(senior.contactMethod).toLowerCase() }) })}
+        : banner({ kind: 'warning', text: t('core.match.noneEligible', { name: first, method: lowerInText(methodLabel(senior.contactMethod)) }) })}
     </section>
 
     ${ranking.ineligible.length

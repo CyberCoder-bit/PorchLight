@@ -8,7 +8,7 @@
 //   - status is shown with an icon AND words, never color alone
 
 import { html, raw } from './html.js';
-import { t } from '../i18n/index.js'; // [v2 i18n]
+import { t, lowerInText } from '../i18n/index.js'; // [v2 i18n]
 import { INTERESTS, DAYS, PERIODS, CONTACT_METHODS, interestLabel, methodLabel, slotLabel } from '../vocab.js';
 
 // [v2 i18n] tx(): t() for text that sits in the page as written in the
@@ -50,7 +50,7 @@ export function slotList(ids) {
     periods: PERIODS.filter((p) => ids.includes(`${d.id}-${p.id}`)),
   })).filter((g) => g.periods.length);
   return html`<ul class="slot-list">${byDay.map(
-    (g) => html`<li><strong>${g.day.label}:</strong> ${g.periods.map((p) => `${p.label.toLowerCase()} (${p.hours})`).join(', ')}</li>`
+    (g) => html`<li><strong>${g.day.label}:</strong> ${g.periods.map((p) => `${lowerInText(p.label)} (${p.hours})`).join(', ')}</li>`
   )}</ul>`;
 }
 

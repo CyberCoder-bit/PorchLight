@@ -79,6 +79,14 @@ export function setPseudoMarkersForTests(on) {
 const fill = (text, vars) =>
   vars ? text.replace(/\{(\w+)\}/g, (whole, name) => (vars[name] === undefined || vars[name] === null ? whole : String(vars[name]))) : text;
 
+// A label used inside a sentence ("Prefers phone calls"). English and most
+// languages lowercase it there; German keeps nouns capitalized ("Telefonanruf"),
+// and scripts without case are unchanged anyway.
+const KEEP_CASE = new Set(['de']);
+export function lowerInText(text) {
+  return KEEP_CASE.has(currentLang()) ? String(text) : String(text).toLowerCase();
+}
+
 // The reader's language, then English, then the key itself (so a missing key
 // shows up as "auth.signIn.title" on screen and in tests, never as "undefined").
 export function t(key, vars) {

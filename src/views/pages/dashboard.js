@@ -6,7 +6,7 @@ import { statusBadge, trendBadge, methodLabel, errorSummary, emptyState, tx, man
 import { weeklyChart } from '../chart.js';
 import { STATUS_INFO, needsAttention, attentionBreakdown } from '../../risk.js';
 import { noPhone } from '../../roles/viewer.js'; // phone numbers are never displayed, even if typed into a name field
-import { t } from '../../i18n/index.js'; // [v2 i18n]
+import { t, lowerInText } from '../../i18n/index.js'; // [v2 i18n]
 
 // One sentence that says exactly what every number counts, e.g.
 // "Right now, 2 seniors need attention: 1 at isolation risk, 1 waiting for a companion."
@@ -105,7 +105,7 @@ function seniorCard(r, volunteersById) {
           ? tx(lastVolunteer ? 'core.dashboard.card.lastWhenWith' : 'core.dashboard.card.lastWhen', {
             when: html`<strong>${daysAgoText(r.daysSince)}</strong>`,
             date: formatDate(last.completedAt),
-            method: methodLabel(last.type).toLowerCase(),
+            method: lowerInText(methodLabel(last.type)),
             name: lastVolunteer ? lastVolunteer.name : '',
           })
           : tx(r.since.kind === 'match' ? 'core.dashboard.card.noneMatched' : 'core.dashboard.card.noneJoined', {

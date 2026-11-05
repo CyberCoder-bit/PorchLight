@@ -10,7 +10,7 @@ import { misfitNote } from './seniors.js';
 import { townLabel } from '../../towns/index.js'; // [towns]
 import { townSelectField } from '../../towns/views.js'; // [towns]
 import { languageFieldset, formatLanguages } from '../../i18n/fields.js'; // [v2 i18n]
-import { t } from '../../i18n/index.js'; // [v2 i18n, translate]
+import { t, lowerInText } from '../../i18n/index.js'; // [v2 i18n, translate]
 
 export function volunteersListPage({ rows, townFilter = '', townName = null }) { // [towns] townFilter, townName
   return html`
@@ -31,7 +31,7 @@ export function volunteersListPage({ rows, townFilter = '', townName = null }) {
           ${seniors.length
             ? html`<p>${seniors.map((s, i) => html`${i ? ', ' : ''}<a href="/seniors/${s.id}">${s.name}</a>`)}</p>`
             : html`<p class="muted">${tx('core.volunteers.card.ready')}</p>`}
-          <p class="muted">${tx('core.volunteers.card.canDo', { methods: volunteer.contactMethods.map((m) => methodLabel(m).toLowerCase()).join(', ') })}</p>
+          <p class="muted">${tx('core.volunteers.card.canDo', { methods: volunteer.contactMethods.map((m) => lowerInText(methodLabel(m))).join(', ') })}</p>
           <p><a href="/volunteers/${volunteer.id}/week">${tx('core.volunteers.card.week', { name: volunteer.name.split(' ')[0] })}</a></p>
         </li>`
       )}
