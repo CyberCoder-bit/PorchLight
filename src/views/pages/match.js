@@ -4,6 +4,7 @@ import { html } from '../html.js';
 import { chips, slotList, methodLabel, backLink, emptyState, banner } from '../components.js';
 import { WEIGHTS } from '../../matching.js';
 import { townOf } from '../../towns/index.js'; // [towns]
+import { t } from '../../i18n/index.js'; // [v2 i18n]
 
 export function matchIndexPage({ unmatched, matched }) {
   return html`
@@ -42,8 +43,8 @@ function howMatchingWorks() {
     <section class="panel explain" aria-labelledby="how-heading">
       <h2 id="how-heading">How matching works</h2>
       <ol>
-        <li><strong>Must-haves.</strong> A volunteer is only suggested if they have room for another senior, are free at least one of the same times each week, and offer the senior's preferred way to connect. For in-person visits, they also live in the same county. Phone and video calls work anywhere in Indiana.</li>
-        <li><strong>Points.</strong> +${WEIGHTS.perSharedInterest} for each shared interest. +${WEIGHTS.perSharedSlot} for each shared time slot (up to ${WEIGHTS.maxCountedSlots}). +${WEIGHTS.newVolunteerBonus} if the volunteer has no seniors yet.</li>
+        <li><strong>Must-haves.</strong> A volunteer is only suggested if they have room for another senior, are free at least one of the same times each week, and offer the senior's preferred way to connect. For in-person visits, they also live in the same county. Phone and video calls work anywhere in Indiana. ${t('lang.match.howLanguage')}</li>
+        <li><strong>Points.</strong> +${WEIGHTS.perSharedInterest} for each shared interest. +${WEIGHTS.perSharedSlot} for each shared time slot (up to ${WEIGHTS.maxCountedSlots}). ${t('lang.match.howPoints', { points: WEIGHTS.sharedLanguage })} +${WEIGHTS.newVolunteerBonus} if the volunteer has no seniors yet.</li>
         <li><strong>Ranking.</strong> Highest score first. Ties go to the volunteer with fewer seniors.</li>
         <li><strong>No AI.</strong> Matching uses only these plain rules, so every score can be explained.</li>
       </ol>
@@ -91,11 +92,12 @@ export function matchSeniorPage({ senior, currentMatch, currentVolunteer, rankin
                 <p class="score"><span class="score-number">${r.score}</span> points</p>
               </div>
               <p class="card-meta">${r.volunteer.affiliation || 'Community volunteer'} · ${townOf(r.volunteer)} · companion to ${r.currentLoad} of ${r.volunteer.maxSeniors} senior${r.volunteer.maxSeniors === 1 ? '' : 's'} now</p>
+              ${r.usesTranslateHelp ? html`<p class="badges"><span class="badge badge-translate">${t('lang.match.translateBadge')}</span></p>` : ''}
               <table class="breakdown">
                 <caption class="visually-hidden">Why ${r.volunteer.name} scored ${r.score} points</caption>
                 <thead><tr><th scope="col">Reason</th><th scope="col" class="num">Points</th></tr></thead>
                 <tbody>
-                  ${r.breakdown.map((b) => html`<tr><th scope="row">${b.label}<span class="detail">${b.detail}</span></th><td class="num">+${b.points}</td></tr>`)}
+                  ${r.breakdown.map((b) => html`<tr><th scope="row">${b.label}${b.detail ? html`<span class="detail">${b.detail}</span>` : ''}</th><td class="num">+${b.points}</td></tr>`)}
                 </tbody>
                 <tfoot><tr><th scope="row">Total</th><td class="num">${r.score}</td></tr></tfoot>
               </table>
