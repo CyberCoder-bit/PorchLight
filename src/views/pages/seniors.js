@@ -7,6 +7,8 @@ import {
 } from '../components.js';
 import { placeText, townLabel } from '../../towns/index.js'; // [towns]
 import { townSelectField } from '../../towns/views.js'; // [towns]
+import { languageFieldset, formatLanguages } from '../../i18n/fields.js'; // [v2 i18n]
+import { t } from '../../i18n/index.js'; // [v2 i18n]
 import { noPhone } from '../../roles/viewer.js'; // phone numbers are never displayed, even if typed into a name field
 
 export function seniorsListPage({ rows, townFilter = '', townName = null }) { // [towns] townFilter, townName
@@ -123,6 +125,7 @@ export function seniorProfilePage({ senior, assessment, volunteer, match, upcomi
             <dt>Neighborhood</dt><dd>${senior.neighborhood || 'Not given'}</dd>
             <dt>Town</dt><dd>${townLabel(senior)}</dd>
             <dt>Prefers</dt><dd>${methodLabel(senior.contactMethod)}s</dd>
+            <dt>${t('lang.profile.languages')}</dt><dd>${formatLanguages(senior)}${senior.translateHelp ? ` · ${t('lang.profile.translateHelp')}` : ''}</dd>
             <dt>Companion</dt><dd>${volunteer ? html`<a href="/volunteers/${volunteer.id}">${volunteer.name}</a>` : 'Not matched yet'}</dd>
             <dt>Family contact</dt><dd>${senior.caregiver?.name ? `${noPhone(senior.caregiver.name)}${senior.caregiver.relationship ? ` (${noPhone(senior.caregiver.relationship)})` : ''}` : 'Not given'}</dd>
             <dt>Last call or visit</dt><dd>${assessment.lastContact ? `${daysAgoText(assessment.daysSince)} (${formatDate(assessment.lastContact.completedAt)})` : 'None yet'}</dd>
@@ -166,6 +169,7 @@ export function seniorFormPage({ senior = {}, errors = {}, isNew }) {
       ${textArea({ name: 'aboutMe', label: 'About them, in their own words', value: senior.aboutMe, error: errors.aboutMe, hint: 'A few sentences about their life and what they enjoy. Used to make the conversation sparks personal. Please leave out phone numbers, emails, and addresses: PorchLight removes phone numbers and emails before anything goes to the AI. Up to 500 characters.' })}
       ${availabilityFieldset(senior.availability || [], errors.availability)}
       ${methodRadios(senior.contactMethod, errors.contactMethod)}
+      ${languageFieldset({ values: senior, errors })}
       <fieldset class="choice-group">
         <legend>Family or caregiver contact (optional)</legend>
         ${textField({ name: 'caregiverName', label: 'Name', value: senior.caregiver?.name, error: errors.caregiverName })}

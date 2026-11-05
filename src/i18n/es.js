@@ -11,6 +11,7 @@ export default {
   'lang.picker.machine': 'Los idiomas que no son inglés se tradujeron por computadora y pueden tener errores.',
 
   'lang.fields.legend': 'Idiomas que habla',
+  'lang.fields.legendYou': 'Idiomas que usted habla',
   'lang.fields.hint': 'Agregue hasta 3 idiomas. Emparejamos a personas que comparten un idioma.',
   'lang.fields.language': 'Idioma {n}',
   'lang.fields.level': 'Qué tan bien, idioma {n}',

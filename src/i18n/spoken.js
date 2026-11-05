@@ -31,7 +31,7 @@ export const SPOKEN_LANGUAGES = Object.freeze([
   // Spoken list only: mostly spoken, not written.
   { code: 'pdc', name: 'Deitsch', english: 'Pennsylvania Dutch', ui: null },
   { code: 'pa', name: 'ਪੰਜਾਬੀ', english: 'Punjabi', ui: null },
-  { code: 'tl', name: 'Tagalog', english: 'Tagalog (Filipino)', ui: null },
+  { code: 'tl', name: 'Tagalog', english: 'Tagalog', ui: null },
   { code: 'te', name: 'తెలుగు', english: 'Telugu', ui: null },
   { code: 'vi', name: 'Tiếng Việt', english: 'Vietnamese', ui: 'vi' },
 ]);

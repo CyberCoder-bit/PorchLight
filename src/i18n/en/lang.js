@@ -10,6 +10,7 @@ export default {
 
   // Spoken languages on a profile (src/i18n/fields.js)
   'lang.fields.legend': 'Languages they speak',
+  'lang.fields.legendYou': 'Languages you speak',
   'lang.fields.hint': 'Add up to 3 languages. We pair people who share a language.',
   'lang.fields.language': 'Language {n}',
   'lang.fields.level': 'How well, language {n}',
