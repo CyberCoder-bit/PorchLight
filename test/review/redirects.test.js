@@ -1,6 +1,5 @@
-// Review: open-redirect attempts through every `back` field.
-// Each test FAILS on the current code and passes once the bug is fixed.
-// Findings B-01, B-02, B-16.
+// Review: open-redirect attempts through every `back` field (B-01, B-02,
+// B-16). Each test failed before its bug was fixed.
 
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';

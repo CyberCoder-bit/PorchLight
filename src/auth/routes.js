@@ -48,7 +48,7 @@ export function newFamilyCode(store) {
   }
 }
 
-// The language fields are a stub until src/i18n/fields.js fills them in.
+// The language fields come from src/i18n/fields.js.
 // While they draw nothing, saving a form must not wipe the languages we have.
 const languageFieldsReady = () => String(languageFieldset({ values: {}, errors: {} }) || '').trim() !== '';
 

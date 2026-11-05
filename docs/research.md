@@ -5,8 +5,7 @@ the gap we're trying to fill. Part 2 of the submission (the narrative) summarize
 
 - **Secondary research (sections 2 and 3)** comes from public sources. Each number below was checked
   against the source page on **November 3, 2026**, and the exact wording is quoted so anyone can check
-  it.
-  If a number couldn't be confirmed on a page we could open, we left it out.
+  it. If a number couldn't be confirmed on a page we could open, we left it out.
 - **Primary research (sections 1, 4, and 5)** is what our team did ourselves. Anything marked
   **[TEAM: ...]** is still to be filled in by the team. Nothing in those sections has been made up:
   no quotes, results, or names.

@@ -1,7 +1,6 @@
 // Review: dates and times. The app runs on a fixed clock (Tuesday,
 // November 3, 2026 at noon in Carmel), so these tests behave the same on any
-// day and in any TZ. Each test FAILS on the current code and passes once the
-// bug is fixed.
+// day and in any TZ. Each test failed before its bug was fixed.
 
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';

@@ -1,5 +1,5 @@
 // Review: odd input, error pages, and small routing gaps.
-// Each test FAILS on the current code and passes once the bug is fixed.
+// Each test failed before its bug was fixed.
 
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';

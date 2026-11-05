@@ -1,5 +1,5 @@
 // Review: numbers and state that disagree between pages, and the demo
-// tour. Each test FAILS on the current code and passes once the bug is fixed.
+// tour. Each test failed before its bug was fixed.
 
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';

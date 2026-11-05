@@ -1,4 +1,4 @@
-// Bugs found in the final v2 review, each as a test.
+// Bugs found in the final v2 review (B1, F2, F4), each as a test.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

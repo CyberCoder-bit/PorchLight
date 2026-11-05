@@ -3,7 +3,7 @@
    high contrast (text colors meet WCAG AAA, 7:1), big targets (at least 44px),
    and a thick, obvious keyboard focus ring.
 
-   Design system:
+   Design system (see docs/brand.md):
    - every size comes from the tokens below, in rem, so A / A+ / A++ scale the
      whole layout, not just the text
    - every color comes from the tokens below, so the Accessibility menu's

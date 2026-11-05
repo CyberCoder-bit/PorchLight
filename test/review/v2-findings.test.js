@@ -1,6 +1,5 @@
-// Review of v2 (accounts, roles, /admin, languages, messages, translate).
-// Each test FAILS on c45a378 and passes once the bug is fixed.
-// Findings V2-B-01 to V2-B-10.
+// Review of v2 (accounts, roles, /admin, languages, messages, translate):
+// findings V2-B-01 to V2-B-13. Each test failed before its bug was fixed.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

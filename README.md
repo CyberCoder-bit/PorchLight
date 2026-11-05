@@ -115,9 +115,8 @@ Measured on November 4, 2026, on the `v2` branch:
   in Arabic, right to left (mobile). In v1, it scored 100 in the
   light, dark, and high-contrast themes, on desktop and at 375px wide with A++ text.
 - **Two runtimes:** in v1, Node (`npm start`) and Cloudflare Workers (`npx wrangler dev`) returned
-  identical HTML for the demo pages. A v2 review found that the
-  Worker didn't start (V2-B-01), and it
-  was fixed. [TEAM: run `npx wrangler dev` once more before you deploy.]
+  identical HTML for the demo pages. A v2 review found that the Worker didn't start (V2-B-01), and
+  it was fixed. [TEAM: run `npx wrangler dev` once more before you deploy.]
 
 ---
 
@@ -397,8 +396,8 @@ B16001 for Indiana, plus local sources for Burmese and Chin in Indianapolis).
   Vietnamese (`vi`). Pick one from the language menu on any page. Signed in, it's saved on your
   account. Otherwise PorchLight uses the `lang` cookie, then your browser's language, then English.
   Dates and times use the reader's language and stay in Indiana time.
-- **Every language other than English was machine-translated** and needs a native
-  speaker to check it before real use. Each language file (`src/i18n/<code>.js`) says so at the top.
+- **Every language other than English was machine-translated** and needs a native speaker to
+  check it before real use. Each language file (`src/i18n/<code>.js`) says so at the top.
 - **Spoken languages** are a longer list (`src/i18n/spoken.js`): the 8 above plus Hakha Chin,
   Pennsylvania Dutch, Chinese, French, Hindi, Telugu, Korean, Tagalog, and others. They're used for
   matching. Hakha Chin and Pennsylvania Dutch are spoken-language options only: there's no interface
@@ -431,7 +430,8 @@ county**: that's why Linda, who lives in Indianapolis (Marion County), is left o
 with the reason "Lives in Marion County - too far for in-person visits." The town list is fixed
 data: county seats were checked against the Indiana Historical Bureau's county table on in.gov, and
 the Hamilton County cities against Visit Hamilton County. A few larger cities haven't been checked
-against an official page yet.
+against an official page yet: Zionsville, Greenwood, Plainfield, West Lafayette, Mishawaka,
+Elkhart, Gary, Hammond, Portage, Michigan City, and Newburgh.
 
 **Indiana has two time zones.** Most counties use Eastern time. Twelve use Central time: Jasper, Lake,
 LaPorte, Newton, Porter, and Starke in the northwest, and Gibson, Perry, Posey, Spencer, Vanderburgh,
@@ -766,8 +766,7 @@ public/                CSS (themes, high contrast, print styles), fonts, logo fi
                        small optional script, icons
 test/                  Automated tests (features/, indiana/, towns/, roles/, i18n/, translate/,
                        accessibility/, design/, integration/, review/, helpers/, and core tests)
-docs/                  Competition write-ups, research, diagrams,
-                       screenshots
+docs/                  Competition write-ups, research, brand, diagrams, screenshots
 ```
 
 ## Documentation
@@ -791,8 +790,9 @@ docs/                  Competition write-ups, research, diagrams,
   sessions, rate limits), but a real launch would remove the demo accounts and buttons.
 - **No email is ever sent.** There's no "forgot password" email, no email check at sign-up, and no
   email alerts. A coordinator would have to reset a password by hand.
-- **The translations are machine-made.** The 7 interface languages besides English were machine-translated, and no native speaker has checked them yet. Some screens may still show English where a
-  translation is missing. Translated messages can be wrong, and each one says so.
+- **The translations are machine-made.** The 7 interface languages besides English were
+  machine-translated, and no native speaker has checked them yet. Some screens may still show
+  English where a translation is missing. Translated messages can be wrong, and each one says so.
 - **Hakha Chin and Pennsylvania Dutch are spoken-language options only.** People can list them for
   matching, but there's no interface in them.
 - **LIVE translation and LIVE bilingual sparks haven't been tried with a real API key.** They were
@@ -808,8 +808,8 @@ docs/                  Competition write-ups, research, diagrams,
   contact seniors.
 - **Notifications are on-screen only.** Families have to open the dashboard or the weekly summary to
   see a flag.
-- **Small leftovers**: HEAD requests for static
-  files (like `/styles.css`) return 404. HEAD works for pages.
+- **Small leftovers:** HEAD requests for static files (like `/styles.css`) return 404. HEAD works
+  for pages.
 - **"Same county" is a rough stand-in for distance.** A senior and a volunteer a few miles apart can
   be in different counties (Carmel and Indianapolis, for example), so in-person matching is stricter
   than it needs to be.
@@ -835,4 +835,3 @@ the demo.
 ## Credits
 
 [TEAM: team member names and roles. See `docs/part2_narrative.md`.]
-

@@ -1,7 +1,7 @@
 // Review, round 2: the demo sign-in by role, the Accessibility menu,
 // and the parts of round-1 fixes that only cover the exact input in the
-// round-1 tests. Each test FAILS on d8dd722 and passes once the bug is fixed.
-// Findings B-12, B-20, B-21, B-25, B-29 to B-34.
+// round-1 tests (B-12, B-20, B-21, B-25, B-29 to B-34). Each test failed
+// before its bug was fixed.
 
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
