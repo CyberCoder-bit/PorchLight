@@ -826,5 +826,4 @@ the demo.
 
 ## Credits
 
-Jason Xu
-William Geng
+Jason Xu, William Geng
