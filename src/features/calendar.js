@@ -5,7 +5,9 @@
 // moment itself was fixed in Carmel time when the call was scheduled (tz.js).
 // The file never includes call notes or family contact details.
 
-import { methodLabel } from '../vocab.js';
+// [v2 i18n] The .ics file's contents stay in English on purpose (calendar apps show
+// them as they are, and the file may be shared). So it uses methodLabelEn, not t().
+import { methodLabelEn as methodLabel } from '../vocab.js';
 import { toDateInput } from '../views/html.js';
 import { firstName } from './words.js';
 

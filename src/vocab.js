@@ -85,6 +85,11 @@ export const slotLabel = (id) => {
   return s ? t(`core.slot.${s.period.id}`, { day: s.day.label }) : id;
 };
 
+// Inside a sentence: "phone call" (methodLower), "a phone call" (methodWithArticle).
+// Their own keys, because lowercasing or adding "a"/"an" only works in English.
+export const methodLower = (id) => (methodById.has(id) ? t(`core.methodLower.${id}`) : id);
+export const methodWithArticle = (id) => (methodById.has(id) ? t(`core.methodWithArticle.${id}`) : id);
+
 // English, whatever the reader's language: for text that is saved (spark
 // "Based on" lines) or sent to the AI as a prompt.
 export const interestLabelEn = (id) => withLang(DEFAULT_LANG, () => interestLabel(id));

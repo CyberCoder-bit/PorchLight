@@ -23,26 +23,27 @@
 //      never marked                            happened, then log or mark it
 //   6. Nothing scheduled                    -> schedule a call
 //   7. A call is scheduled                  -> remind the volunteer
+//
+// [v2 i18n] Every sentence is a core.attention.* key (src/i18n/en/core-features.js).
+// The queue is built for each request, so the words are in the reader's language.
 
 import { dashboardSummary, needsAttention, isUnmarkedPast, calendarDaysBetween } from '../risk.js';
-import { methodLabel } from '../vocab.js';
+import { methodLower, methodWithArticle } from '../vocab.js';
 import { COMMUNITY, localHelpFor } from '../community.js';
-import { daysAgoText, formatDateTime, formatTime, plural } from '../views/html.js';
-import { firstName, capitalize, missedCallsWithin, trendText } from './words.js';
+import { daysAgoText, formatDateTime, formatTime } from '../views/html.js';
+import { firstName, capitalize, missedCallsWithin, trendText, tCount } from './words.js';
+import { t } from '../i18n/index.js';
 
 const SENIOR_SIDE = new Set(['no_answer', 'senior_unavailable']);
 
 // Kept for other modules and tests; the rule itself lives in src/risk.js.
 export const isOnQueue = needsAttention;
 
-// "a phone call", "an in-person visit"
-const withArticle = (words) => `${/^[aeiou]/i.test(words) ? 'an' : 'a'} ${words}`;
-
 // "today at 3:30 PM", "yesterday at 3:30 PM", or "Monday, November 2 at 3:30 PM".
 function whenText(iso, now) {
   const days = calendarDaysBetween(iso, now);
-  if (days === 0) return `today at ${formatTime(iso)}`;
-  if (days === 1) return `yesterday at ${formatTime(iso)}`;
+  if (days === 0) return t('core.attention.todayAt', { time: formatTime(iso) });
+  if (days === 1) return t('core.attention.yesterdayAt', { time: formatTime(iso) });
   return formatDateTime(iso);
 }
 
@@ -51,42 +52,44 @@ function whenText(iso, now) {
 export function reasonText(a, { missed, hadCompanion }) {
   const parts = [];
   if (a.status === 'needs_match') {
-    parts.push(hadCompanion ? 'no companion right now' : 'waiting for a first companion');
-    parts.push(a.lastContact ? `last check-in was ${daysAgoText(a.daysSince)}` : `joined ${daysAgoText(a.daysSince)}`);
+    parts.push(hadCompanion ? t('core.attention.reason.noCompanion') : t('core.attention.reason.waitingFirst'));
+    parts.push(a.lastContact
+      ? t('core.attention.reason.lastCheckIn', { when: daysAgoText(a.daysSince) })
+      : t('core.attention.reason.joined', { when: daysAgoText(a.daysSince) }));
   } else if (!a.lastContact) {
-    parts.push(`matched ${daysAgoText(a.daysSince)}, and no call has happened yet`);
+    parts.push(t('core.attention.reason.matchedNoCall', { when: daysAgoText(a.daysSince) }));
   } else if (a.status === 'at_risk') {
-    parts.push(`no completed call or visit in ${a.daysSince} days`);
+    parts.push(t('core.attention.reason.noContactDays', { days: a.daysSince }));
   } else {
-    parts.push(`last check-in was ${daysAgoText(a.daysSince)}`);
+    parts.push(t('core.attention.reason.lastCheckIn', { when: daysAgoText(a.daysSince) }));
   }
   if (a.trend.dropping) parts.push(trendText(a.trend));
-  if (missed.length) parts.push(`${plural(missed.length, 'missed call')} in the last 2 weeks`);
-  return `${capitalize(parts.join('; '))}.`;
+  if (missed.length) parts.push(tCount('core.attention.reason.missed', missed.length));
+  return t('core.attention.reason.sentence', { text: capitalize(parts.join(t('core.attention.reason.separator'))) });
 }
 
 // Returns { kind, title, detail, href, linkText }.
 export function suggestNextStep(a, { match, volunteer, missed, hadCompanion, thresholdDays, help, unmarked = [], now = new Date() }) {
   const id = a.senior.id;
   const name = firstName(a.senior);
-  const vName = volunteer ? firstName(volunteer) : 'their companion';
+  const vName = volunteer ? firstName(volunteer) : t('core.attention.theirCompanion');
   const caregiver = a.senior.caregiver?.name;
 
   if (a.status === 'needs_match' || !match) {
     return hadCompanion
       ? {
           kind: 'new_companion',
-          title: 'Find a new companion',
-          detail: `${name}'s last match has ended. Choose someone new. Past calls stay in the history.`,
+          title: t('core.attention.step.newCompanion.title'),
+          detail: t('core.attention.step.newCompanion.detail', { name }),
           href: `/admin/match?seniorId=${id}`,
-          linkText: `Find a new companion for ${name}`,
+          linkText: t('core.attention.step.newCompanion.link', { name }),
         }
       : {
           kind: 'first_companion',
-          title: 'Find a first companion',
-          detail: `${name} hasn't been matched with a volunteer yet.`,
+          title: t('core.attention.step.firstCompanion.title'),
+          detail: t('core.attention.step.firstCompanion.detail', { name }),
           href: `/admin/match?seniorId=${id}`,
-          linkText: `Find a companion for ${name}`,
+          linkText: t('core.attention.step.firstCompanion.link', { name }),
         };
   }
 
@@ -94,31 +97,33 @@ export function suggestNextStep(a, { match, volunteer, missed, hadCompanion, thr
   if (conflicts >= 2) {
     return {
       kind: 'rematch',
-      title: 'Find a new companion',
-      detail: `${vName} has had to cancel ${conflicts} times in the last 2 weeks. A companion with more free time may be a better fit.`,
+      title: t('core.attention.step.rematch.title'),
+      detail: t('core.attention.step.rematch.detail', { volunteer: vName, count: conflicts }),
       href: `/attention/${id}/rematch`,
-      linkText: `Review ${name}'s match`,
+      linkText: t('core.attention.step.rematch.link', { name }),
     };
   }
 
   const latest = missed[0];
   const seniorMissed = latest && SENIOR_SIDE.has(latest.missedReason);
   if (seniorMissed && a.status === 'at_risk' && a.daysSince >= 2 * thresholdDays && help) {
+    // The agency's name and phone number stay as they are.
+    const agency = help.phone ? `${help.name} (${help.phone})` : help.name;
     return {
       kind: 'local_help',
-      title: 'Get local help',
-      detail: `${name} couldn't be reached and has gone ${a.daysSince} days without a check-in. Let the family know, and call ${help.name}${help.phone ? ` (${help.phone})` : ''} to ask what local support could help. If someone may be in danger, call 911.`,
+      title: t('core.attention.step.localHelp.title'),
+      detail: t('core.attention.step.localHelp.detail', { name, days: a.daysSince, agency }),
       href: '/help',
-      linkText: 'See local help',
+      linkText: t('core.attention.step.localHelp.link'),
     };
   }
   if (seniorMissed) {
     return {
       kind: 'family',
-      title: 'Let the family know',
-      detail: `${name} couldn't be reached for the last call. Ask ${caregiver || 'their family'} to check in. The weekly summary has a message ready to copy.`,
+      title: t('core.attention.step.family.title'),
+      detail: t('core.attention.step.family.detail', { name, who: caregiver || t('core.attention.theirFamily') }),
       href: `/seniors/${id}/summary`,
-      linkText: `Open ${name}'s weekly summary`,
+      linkText: t('core.attention.step.family.link', { name }),
     };
   }
 
@@ -128,10 +133,15 @@ export function suggestNextStep(a, { match, volunteer, missed, hadCompanion, thr
     const noun = pending.type === 'visit' ? 'visit' : 'call';
     return {
       kind: 'confirm',
-      title: `Ask ${vName} about the last ${noun}`,
-      detail: `${vName} had ${withArticle(methodLabel(pending.type).toLowerCase())} with ${name} ${whenText(pending.scheduledFor, now)}, and nobody has marked it yet. Ask whether it happened, then log it or mark it missed on ${vName}'s week.`,
+      title: t(`core.attention.step.confirm.title.${noun}`, { volunteer: vName }),
+      detail: t('core.attention.step.confirm.detail', {
+        volunteer: vName,
+        call: methodWithArticle(pending.type),
+        name,
+        when: whenText(pending.scheduledFor, now),
+      }),
       href: volunteer ? `/volunteers/${volunteer.id}/week` : `/contacts`,
-      linkText: volunteer ? `Open ${vName}'s week` : 'Open Calls & Visits',
+      linkText: volunteer ? t('core.attention.openWeek', { volunteer: vName }) : t('core.attention.openContacts'),
     };
   }
 
@@ -139,18 +149,26 @@ export function suggestNextStep(a, { match, volunteer, missed, hadCompanion, thr
     const noun = a.senior.contactMethod === 'visit' ? 'visit' : 'call';
     return {
       kind: 'schedule',
-      title: `Schedule a ${noun}`,
-      detail: `Nothing is on the calendar with ${vName}. Set up the next ${methodLabel(a.senior.contactMethod).toLowerCase()}.`,
+      title: t(`core.attention.step.schedule.title.${noun}`),
+      detail: t('core.attention.step.schedule.detail', { volunteer: vName, method: methodLower(a.senior.contactMethod) }),
       href: `/contacts?seniorId=${id}`,
-      linkText: `Schedule a ${noun} with ${name}`,
+      linkText: t(`core.attention.step.schedule.link.${noun}`, { name }),
     };
   }
+  const next = a.nextScheduled.scheduledFor;
   return {
     kind: 'remind',
-    title: `Remind ${vName}`,
-    detail: `${vName} has ${withArticle(methodLabel(a.nextScheduled.type).toLowerCase())} with ${name} ${calendarDaysBetween(a.nextScheduled.scheduledFor, now) === 0 ? `today at ${formatTime(a.nextScheduled.scheduledFor)}` : `on ${formatDateTime(a.nextScheduled.scheduledFor)}`}. A quick reminder helps it happen.`,
+    title: t('core.attention.step.remind.title', { volunteer: vName }),
+    detail: t('core.attention.step.remind.detail', {
+      volunteer: vName,
+      call: methodWithArticle(a.nextScheduled.type),
+      name,
+      when: calendarDaysBetween(next, now) === 0
+        ? t('core.attention.todayAt', { time: formatTime(next) })
+        : t('core.attention.onDate', { date: formatDateTime(next) }),
+    }),
     href: volunteer ? `/volunteers/${volunteer.id}/week` : `/seniors/${id}`,
-    linkText: volunteer ? `Open ${vName}'s week` : `Open ${name}'s profile`,
+    linkText: volunteer ? t('core.attention.openWeek', { volunteer: vName }) : t('core.attention.openProfile', { name }),
   };
 }
 
