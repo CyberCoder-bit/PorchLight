@@ -22,6 +22,7 @@ import zhHans from './zh-Hans.js';
 import vi from './vi.js';
 import ht from './ht.js';
 import de from './de.js';
+import ar from './ar.js';
 
 export const PLANNED_UI_LANGUAGES = Object.freeze([
   { code: 'en', name: 'English', english: 'English', dir: 'ltr', locale: 'en-US' },
@@ -36,7 +37,7 @@ export const PLANNED_UI_LANGUAGES = Object.freeze([
 ]);
 
 // code -> catalog object. English is assembled in ./index.js from ./en/*.js.
-export const CATALOGS = Object.freeze({ es, 'zh-Hans': zhHans, vi, ht, de });
+export const CATALOGS = Object.freeze({ es, 'zh-Hans': zhHans, vi, ht, de, ar });
 
 export const UI_LANGUAGES = Object.freeze(
   PLANNED_UI_LANGUAGES.filter((l) => l.code === 'en' || Object.hasOwn(CATALOGS, l.code))

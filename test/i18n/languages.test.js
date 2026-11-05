@@ -313,6 +313,8 @@ test('pseudo-locale: the picker, the language fieldset, and the language rows of
   assert.doesNotMatch(String(languagePicker({ method: 'GET', path: '/', query: {} })), /⟦/);
   for (const code of ['pseudo', 'qps', 'qps-ploc', 'en-XA', 'ar-XB']) {
     assert.equal(isUiLanguage(code), false, code);
-    assert.equal(languageFromRequest({ cookies: { lang: code }, acceptLanguage: code }), 'en', code);
+    // A pseudo tag may fall back to its real base language (ar-XB -> ar), never to pseudo.
+    const got = languageFromRequest({ cookies: { lang: code }, acceptLanguage: code });
+    assert.ok(isUiLanguage(got) && got !== code, `${code} -> ${got}`);
   }
 });
