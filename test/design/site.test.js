@@ -113,7 +113,7 @@ test('/languages lists the real interface languages and is honest about machine 
   const main = mainOf(await page('/languages'));
   assert.match(main, /<span lang="en" dir="ltr" class="language-name">English<\/span>/);
   assert.match(main, /made by a computer\. They can be wrong\./);
-  assert.match(main, /Native speakers have not checked/);
+  assert.match(main, /No native speaker has checked any of our translations yet/); // none have been checked
 });
 
 test('/about keeps the team placeholders and only sourced facts', async () => {

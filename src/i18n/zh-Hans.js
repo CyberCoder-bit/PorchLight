@@ -32,7 +32,7 @@ export default {
   'site.home.title': '为长者提供志愿陪伴',
   'site.home.eyebrow': '为 Indiana 的长者，以及关心他们的人',
   'site.home.heading': '为年长的邻居留一盏门廊灯。',
-  'site.home.lead': 'PorchLight 为每位长者配对一位志愿者。志愿者每周打电话或上门探访，家人也能看到电话一直在打。',
+  'site.home.lead': "PorchLight 为每位长者配对一位志愿者，志愿者每周用双方都会说的语言打电话或上门探访，家人也能看到通话确实在进行。如果双方没有共同语言，PorchLight 会帮助翻译。",
   'site.home.getStarted': '开始使用',
   'site.home.tour': '看看 2 分钟导览',
   'site.home.rolesHeading': 'PorchLight 适合谁？',
@@ -49,7 +49,7 @@ export default {
   'site.home.step1.title': '注册',
   'site.home.step1.body': '告诉我们您的兴趣、方便的日子和时间，以及您会说的语言。',
   'site.home.step2.title': '配对',
-  'site.home.step2.body': '由一位真人协调员，为每位长者配对一位兴趣相投、空闲时间也合得来的志愿者。',
+  'site.home.step2.body': "由一位真实的协调员为每位长者配对一位兴趣、空闲时间和语言相同的志愿者。",
   'site.home.step3.title': '每周聊天',
   'site.home.step3.body': '志愿者打电话或上门探访，每次结束后标记为已完成。PorchLight 会提供友善的聊天话题。',
   'site.home.step4.title': '家人随时了解情况',
@@ -145,7 +145,7 @@ export default {
   'site.languages.translateBody': '即使长者和志愿者没有共同语言，也可以互相发消息。任何一方都可以请 PorchLight 翻译消息。还有一份常用语列表，用两种语言显示。',
   'site.languages.honestHeading': '在依赖翻译之前',
   'site.languages.honest1': '我们的翻译是电脑做的，可能会出错。',
-  'site.languages.honest2': '我们的屏幕文字还没有在每种语言中都经过母语人士检查。如果您发现错误，请告诉您的协调员。',
+  'site.languages.honest2': "目前还没有任何母语人士检查过我们的翻译。如果您发现错误，请告诉您的协调员。",
   'site.languages.honest3': '只有您选择要翻译的那条消息会发送给 AI，而且发送之前会先告诉您。',
 
   // ----- site: safety -----

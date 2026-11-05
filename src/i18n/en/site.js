@@ -34,7 +34,7 @@ export default {
   'site.home.title': 'Volunteer companions for older adults',
   'site.home.eyebrow': 'For older adults in Indiana and the people who care about them',
   'site.home.heading': 'Leave the porch light on for older neighbors.',
-  'site.home.lead': 'PorchLight matches an older adult with a volunteer who calls or visits every week, and lets their family see that the calls are happening.',
+  'site.home.lead': "PorchLight matches an older adult with a volunteer who calls or visits every week, in a language they both speak, and lets their family see that the calls are happening. When they don't share a language, PorchLight helps them translate.",
   'site.home.getStarted': 'Get started',
   'site.home.tour': 'Take the 2-minute tour',
   'site.home.rolesHeading': 'Who is PorchLight for?',
@@ -51,7 +51,7 @@ export default {
   'site.home.step1.title': 'Sign up',
   'site.home.step1.body': 'Tell us your interests, the days and times that work for you, and the languages you speak.',
   'site.home.step2.title': 'Get matched',
-  'site.home.step2.body': 'A coordinator, who is a real person, pairs each senior with a volunteer who shares their interests and free time.',
+  'site.home.step2.body': "A coordinator, who is a real person, pairs each senior with a volunteer who shares their interests, free time, and a language.",
   'site.home.step3.title': 'Talk every week',
   'site.home.step3.body': 'The volunteer calls or visits and marks each one as done. PorchLight suggests friendly things to talk about.',
   'site.home.step4.title': 'Family stays in the loop',
@@ -147,7 +147,7 @@ export default {
   'site.languages.translateBody': 'A senior and a volunteer who do not share a language can still write to each other. Either one can ask PorchLight to translate a message. There is also a list of common phrases, shown in both languages.',
   'site.languages.honestHeading': 'Before you rely on a translation',
   'site.languages.honest1': 'Our translations are made by a computer. They can be wrong.',
-  'site.languages.honest2': 'Native speakers have not checked our screens in every language yet. If you see a mistake, please tell your coordinator.',
+  'site.languages.honest2': "No native speaker has checked any of our translations yet. If you see a mistake, please tell your coordinator.",
   'site.languages.honest3': 'Only the message you choose to translate is sent to the AI, and you are told before it is sent.',
 
   // ----- safety -----
