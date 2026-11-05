@@ -12,27 +12,29 @@ import { languagePicker } from '../i18n/picker.js'; // [v2 i18n]
 // which marks that link with aria-current="page".
 // [v2] This is the coordinator's (admin's) nav. Other people get their own
 // pages from navFor() (src/roles/views.js); signed out, there is no app nav.
+// [v2 i18n] `label` is a catalog key; adminNav() turns it into words for this request.
 const NAV = [
-  { href: '/admin', label: 'Home', key: 'home' },
-  { href: '/admin/seniors', label: 'Seniors', key: 'seniors' },
-  { href: '/admin/volunteers', label: 'Volunteers', key: 'volunteers' },
-  { href: '/admin/match', label: 'Match', key: 'match' },
-  { href: '/contacts', label: 'Calls & Visits', key: 'contacts' },
-  { href: '/admin/dashboard', label: 'Family Dashboard', key: 'dashboard' },
-  { href: '/admin/attention', label: 'Needs attention', key: 'attention' },
-  { href: '/admin/approvals', label: 'Approvals', key: 'approvals' },
-  { href: '/help', label: 'Get help', key: 'help' },
+  { href: '/admin', label: 'core.nav.home', key: 'home' },
+  { href: '/admin/seniors', label: 'core.nav.seniors', key: 'seniors' },
+  { href: '/admin/volunteers', label: 'core.nav.volunteers', key: 'volunteers' },
+  { href: '/admin/match', label: 'core.nav.match', key: 'match' },
+  { href: '/contacts', label: 'core.nav.contacts', key: 'contacts' },
+  { href: '/admin/dashboard', label: 'core.nav.dashboard', key: 'dashboard' },
+  { href: '/admin/attention', label: 'core.nav.attention', key: 'attention' },
+  { href: '/admin/approvals', label: 'core.nav.approvals', key: 'approvals' },
+  { href: '/help', label: 'core.nav.help', key: 'help' },
 ];
+const adminNav = () => NAV.map((item) => ({ ...item, label: t(item.label) }));
 
 // "No dead ends": after a success message, offer the obvious next step.
 // Built only from the message key and the current path (no user text).
 function nextStep(req) {
   const msg = req.query.msg;
   const seniorId = (req.path.match(/^\/seniors\/([^/]+)$/) || [])[1];
-  if (msg === 'reset' && req.path !== '/tour') return { href: '/tour', label: 'Continue the 2-minute demo tour' };
-  if (msg === 'matched' && seniorId) return { href: `/contacts?seniorId=${encodeURIComponent(seniorId)}`, label: 'Schedule the first call' };
-  if (msg === 'senior_added' && seniorId) return { href: `/admin/match?seniorId=${encodeURIComponent(seniorId)}`, label: 'Find a companion' };
-  if ((msg === 'completed' || msg === 'logged') && req.path !== '/dashboard') return { href: '/dashboard', label: 'See the Family Dashboard' };
+  if (msg === 'reset' && req.path !== '/tour') return { href: '/tour', label: t('core.next.tour') };
+  if (msg === 'matched' && seniorId) return { href: `/contacts?seniorId=${encodeURIComponent(seniorId)}`, label: t('core.next.firstCall') };
+  if (msg === 'senior_added' && seniorId) return { href: `/admin/match?seniorId=${encodeURIComponent(seniorId)}`, label: t('core.next.findCompanion') };
+  if ((msg === 'completed' || msg === 'logged') && req.path !== '/dashboard') return { href: '/dashboard', label: t('core.next.dashboard') };
   return null;
 }
 
@@ -47,28 +49,30 @@ function flashBanner(flash, req) {
 // becomes a class on <html>, so the very first paint is right with no
 // JavaScript: text-normal | text-large | text-xlarge, then theme-light or
 // theme-dark (no theme class = match the device), then contrast-high.
+// [v2 i18n] `name`, `word` and `legend` are getters, so they are read in the
+// request's language each time a page is drawn. `label` (A, A+, Aa) is a sample.
 export const TEXT_SIZES = [
-  { id: 'normal', label: 'A', name: 'Normal text', word: 'Normal' },
-  { id: 'large', label: 'A+', name: 'Large text', word: 'Large' },
-  { id: 'xlarge', label: 'A++', name: 'Extra large text', word: 'Extra large' },
+  { id: 'normal', label: 'A', get name() { return t('core.a11y.sizeName.normal'); }, get word() { return t('core.a11y.size.normal'); } },
+  { id: 'large', label: 'A+', get name() { return t('core.a11y.sizeName.large'); }, get word() { return t('core.a11y.size.large'); } },
+  { id: 'xlarge', label: 'A++', get name() { return t('core.a11y.sizeName.xlarge'); }, get word() { return t('core.a11y.size.xlarge'); } },
 ];
 export const CONTRASTS = [
-  { id: 'standard', label: 'Aa', word: 'Standard' },
-  { id: 'high', label: 'Aa', word: 'High' },
+  { id: 'standard', label: 'Aa', get word() { return t('core.a11y.contrastWord.standard'); } },
+  { id: 'high', label: 'Aa', get word() { return t('core.a11y.contrastWord.high'); } },
 ];
 export const THEMES = [
-  { id: 'light', icon: 'sun', word: 'Light' },
-  { id: 'dark', icon: 'moon', word: 'Dark' },
-  { id: 'auto', icon: 'device', word: 'Match my device' },
+  { id: 'light', icon: 'sun', get word() { return t('core.a11y.themeWord.light'); } },
+  { id: 'dark', icon: 'moon', get word() { return t('core.a11y.themeWord.dark'); } },
+  { id: 'auto', icon: 'device', get word() { return t('core.a11y.themeWord.auto'); } },
 ];
 
 // One entry per group in the menu. `field` is the buttons' name, `cookie` the
 // cookie it sets, and `fallback` the value when there is no valid cookie.
 // formClass "text-size" is kept from the original A/A+/A++ control.
 export const PREFS = [
-  { key: 'textSize', route: 'text-size', field: 'size', cookie: 'textsize', legend: 'Text size', formClass: 'text-size', options: TEXT_SIZES, fallback: 'normal' },
-  { key: 'contrast', route: 'contrast', field: 'contrast', cookie: 'contrast', legend: 'Contrast', formClass: 'pref-contrast', options: CONTRASTS, fallback: 'standard' },
-  { key: 'theme', route: 'theme', field: 'theme', cookie: 'theme', legend: 'Theme', formClass: 'pref-theme', options: THEMES, fallback: 'auto' },
+  { key: 'textSize', route: 'text-size', field: 'size', cookie: 'textsize', get legend() { return t('core.a11y.textSize'); }, formClass: 'text-size', options: TEXT_SIZES, fallback: 'normal' },
+  { key: 'contrast', route: 'contrast', field: 'contrast', cookie: 'contrast', get legend() { return t('core.a11y.contrast'); }, formClass: 'pref-contrast', options: CONTRASTS, fallback: 'standard' },
+  { key: 'theme', route: 'theme', field: 'theme', cookie: 'theme', get legend() { return t('core.a11y.theme'); }, formClass: 'pref-theme', options: THEMES, fallback: 'auto' },
 ];
 
 // Cookie values are checked against the allow-lists; anything else is ignored.
@@ -174,11 +178,11 @@ function prefForm(pref, current, backPath) {
 function accessibilityMenu(prefs, backPath, warnTyped) {
   return html`
       <details class="a11y-menu">
-        <summary class="a11y-summary">${icon('person', 'a11y-icon')}<span class="a11y-summary-text">Accessibility</span>${icon('chevron', 'a11y-chevron')}</summary>
+        <summary class="a11y-summary">${icon('person', 'a11y-icon')}<span class="a11y-summary-text">${t('core.a11y.summary')}</span>${icon('chevron', 'a11y-chevron')}</summary>
         <div class="a11y-panel">
-          <p class="a11y-intro">Your choices are saved on this device.</p>
+          <p class="a11y-intro">${t('core.a11y.intro')}</p>
           ${warnTyped
-            ? html`<p class="a11y-warning"><span class="a11y-warning-icon" aria-hidden="true">⚠︎</span> <span><strong>Heads up:</strong> a change reloads the page and clears any form you have not saved.</span></p>`
+            ? html`<p class="a11y-warning"><span class="a11y-warning-icon" aria-hidden="true">⚠︎</span> <span><strong>${t('core.a11y.headsUp')}</strong> ${t('core.a11y.warning')}</span></p>`
             : ''}
           ${PREFS.map((pref) => prefForm(pref, prefs[pref.key], backPath))}
         </div>
@@ -204,7 +208,9 @@ function withPrintCopies(body) {
 // link's name is always the full wording and starts with what is on screen.
 function modeBadge(sparkMode) {
   const live = sparkMode.effective === 'live';
-  const [long, short] = live ? ['AI: Live (Claude)', 'AI: Live'] : ['AI: Offline mode', 'AI: Offline'];
+  const [long, short] = live
+    ? [t('core.mode.liveLong'), t('core.mode.liveShort')]
+    : [t('core.mode.offlineLong'), t('core.mode.offlineShort')];
   return html`<a class="mode-badge ${live ? 'mode-live' : 'mode-mock'}" href="/about-ai" title="${sparkMode.reason}"><span class="mode-badge-long">${long}</span><span class="mode-badge-short" aria-hidden="true">${short}</span></a>`;
 }
 
@@ -261,9 +267,9 @@ const brandName = () => html`<span class="brand-name">Porch<span class="brand-na
 function siteMenu(links) {
   return html`
       <details class="site-menu">
-        <summary class="site-menu-summary" aria-controls="site-menu-nav">${icon('menu', 'site-menu-icon')}<span class="site-menu-text">Menu</span></summary>
+        <summary class="site-menu-summary" aria-controls="site-menu-nav">${icon('menu', 'site-menu-icon')}<span class="site-menu-text">${t('core.layout.menu')}</span></summary>
       </details>
-      <nav class="site-nav" id="site-menu-nav" aria-label="Main menu">
+      <nav class="site-nav" id="site-menu-nav" aria-label="${t('core.layout.mainMenu')}">
       ${links}
       </nav>`;
 }
@@ -279,7 +285,7 @@ export function layout({ title, active, body, req, ctx, flash, wide = false, noi
   const signedOut = !req.viewer;
   const links = signedOut
     ? html`<div class="site-nav-row">${navList(siteNavItems(), active)}${accountLinks(active)}</div>`
-    : html`<div class="site-nav-row">${navList(navFor(req.viewer, NAV), active)}</div>`; // [roles]
+    : html`<div class="site-nav-row">${navList(navFor(req.viewer, adminNav()), active)}</div>`; // [roles]
   const signedIn = signedOut ? '' : viewerLine(req.viewer); // [roles]
   return html`<!DOCTYPE html>
 <html lang="${currentLang()}" dir="${dirFor()}" class="${htmlClass(prefs)}">
@@ -288,7 +294,7 @@ export function layout({ title, active, body, req, ctx, flash, wide = false, noi
   <meta name="viewport" content="width=device-width, initial-scale=1">
   ${noindex ? html`<meta name="robots" content="noindex, nofollow">` : ''}
   <title>${title} · PorchLight</title>
-  <meta name="description" content="PorchLight helps older adults in Indiana communities stay connected with volunteer companions. Demo data starts in ${COMMUNITY.town}, ${COMMUNITY.county}.">
+  <meta name="description" content="${t('core.layout.metaDescription', { town: COMMUNITY.town, county: COMMUNITY.county })}">
   <meta name="theme-color" content="${prefs.contrast === 'high' ? '#000000' : '#1d2433'}">
   <meta name="color-scheme" content="${colorScheme}">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -298,7 +304,8 @@ export function layout({ title, active, body, req, ctx, flash, wide = false, noi
   <script src="/app.js" defer></script>
 </head>
 <body>
-  <a class="skip-link" href="#main">Skip to main content</a>
+  <a class="skip-link" href="#main">${t('core.layout.skip')}</a>
+
   <header class="site-header">
     <div class="header-inner">
       <a class="brand" href="/" aria-label="${t('site.brand.home')}">
@@ -313,7 +320,7 @@ export function layout({ title, active, body, req, ctx, flash, wide = false, noi
       ${siteMenu(links)}
     </div>
     ${signedIn}
-    <nav class="site-nav" aria-label="Main">
+    <nav class="site-nav" aria-label="${t('core.layout.mainNav')}">
       ${links}
     </nav>
   </header>

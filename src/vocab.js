@@ -3,58 +3,71 @@
 // ("you both chose Gardening") instead of guessing from free text.
 
 import { localParts, fromLocal } from './tz.js';
+import { t, withLang, DEFAULT_LANG } from './i18n/index.js'; // [v2 i18n]
 
-export const INTERESTS = [
-  { id: 'gardening', label: 'Gardening' },
-  { id: 'baking', label: 'Cooking & baking' },
-  { id: 'music', label: 'Music & singing' },
-  { id: 'faith', label: 'Faith & church' },
-  { id: 'history', label: 'History' },
-  { id: 'travel', label: 'Travel' },
-  { id: 'reading', label: 'Books & reading' },
-  { id: 'crafts', label: 'Crafts & knitting' },
-  { id: 'games', label: 'Cards & board games' },
-  { id: 'puzzles', label: 'Puzzles & trivia' },
-  { id: 'pets', label: 'Pets & animals' },
-  { id: 'birds', label: 'Birdwatching & nature' },
-  { id: 'fishing', label: 'Fishing & the outdoors' },
-  { id: 'basketball', label: 'Basketball' },
-  { id: 'baseball', label: 'Baseball' },
-  { id: 'cars', label: 'Cars & racing' },
-  { id: 'veterans', label: 'Military service' },
-  { id: 'family', label: 'Family & grandkids' },
-  { id: 'movies', label: 'Movies & TV' },
-  { id: 'art', label: 'Art & painting' },
-  { id: 'technology', label: 'Technology & gadgets' },
-];
+// [v2 i18n] Data keeps the ids ('gardening', 'tue-afternoon'). The words live in
+// src/i18n/en/core-features.js (core.interest.*, core.day.*, core.period.*,
+// core.method.*, core.missed.*). `label` is a getter, so it is read in the
+// request's language each time a page is drawn, never when something is saved.
+function labelled(prefix, items) {
+  for (const item of items) {
+    Object.defineProperty(item, 'label', { get: () => t(`${prefix}.${item.id}`), enumerable: true });
+  }
+  return items;
+}
 
-export const DAYS = [
-  { id: 'mon', label: 'Monday' },
-  { id: 'tue', label: 'Tuesday' },
-  { id: 'wed', label: 'Wednesday' },
-  { id: 'thu', label: 'Thursday' },
-  { id: 'fri', label: 'Friday' },
-  { id: 'sat', label: 'Saturday' },
-  { id: 'sun', label: 'Sunday' },
-];
+export const INTERESTS = labelled('core.interest', [
+  { id: 'gardening' },
+  { id: 'baking' },
+  { id: 'music' },
+  { id: 'faith' },
+  { id: 'history' },
+  { id: 'travel' },
+  { id: 'reading' },
+  { id: 'crafts' },
+  { id: 'games' },
+  { id: 'puzzles' },
+  { id: 'pets' },
+  { id: 'birds' },
+  { id: 'fishing' },
+  { id: 'basketball' },
+  { id: 'baseball' },
+  { id: 'cars' },
+  { id: 'veterans' },
+  { id: 'family' },
+  { id: 'movies' },
+  { id: 'art' },
+  { id: 'technology' },
+]);
+
+export const DAYS = labelled('core.day', [
+  { id: 'mon' },
+  { id: 'tue' },
+  { id: 'wed' },
+  { id: 'thu' },
+  { id: 'fri' },
+  { id: 'sat' },
+  { id: 'sun' },
+]);
 
 // Each day is split into three blocks. A "slot" id looks like "tue-afternoon".
 // `suggest` is the hour the call form fills in for that block.
-export const PERIODS = [
-  { id: 'morning', label: 'Morning', hours: '9 AM–noon', start: 9, end: 12, suggest: 10 },
-  { id: 'afternoon', label: 'Afternoon', hours: 'noon–5 PM', start: 12, end: 17, suggest: 16 },
-  { id: 'evening', label: 'Evening', hours: '5–8 PM', start: 17, end: 20, suggest: 18 },
-];
+export const PERIODS = labelled('core.period', [
+  { id: 'morning', start: 9, end: 12, suggest: 10 },
+  { id: 'afternoon', start: 12, end: 17, suggest: 16 },
+  { id: 'evening', start: 17, end: 20, suggest: 18 },
+]);
+for (const p of PERIODS) Object.defineProperty(p, 'hours', { get: () => t(`core.periodHours.${p.id}`), enumerable: true });
 
 export const SLOTS = DAYS.flatMap((d) =>
   PERIODS.map((p) => ({ id: `${d.id}-${p.id}`, day: d, period: p }))
 );
 
-export const CONTACT_METHODS = [
-  { id: 'phone', label: 'Phone call', icon: '☎' },
-  { id: 'video', label: 'Video call', icon: '▶' },
-  { id: 'visit', label: 'In-person visit', icon: '⌂' },
-];
+export const CONTACT_METHODS = labelled('core.method', [
+  { id: 'phone', icon: '☎' },
+  { id: 'video', icon: '▶' },
+  { id: 'visit', icon: '⌂' },
+]);
 
 const interestById = new Map(INTERESTS.map((i) => [i.id, i]));
 const methodById = new Map(CONTACT_METHODS.map((m) => [m.id, m]));
@@ -66,10 +79,17 @@ export const isMethod = (id) => methodById.has(id);
 
 export const interestLabel = (id) => interestById.get(id)?.label ?? id;
 export const methodLabel = (id) => methodById.get(id)?.label ?? id;
+// "Tuesday afternoon": one key per time of day, so a language can order the words its own way.
 export const slotLabel = (id) => {
   const s = slotById.get(id);
-  return s ? `${s.day.label} ${s.period.label.toLowerCase()}` : id;
+  return s ? t(`core.slot.${s.period.id}`, { day: s.day.label }) : id;
 };
+
+// English, whatever the reader's language: for text that is saved (spark
+// "Based on" lines) or sent to the AI as a prompt.
+export const interestLabelEn = (id) => withLang(DEFAULT_LANG, () => interestLabel(id));
+export const methodLabelEn = (id) => withLang(DEFAULT_LANG, () => methodLabel(id));
+
 
 // Which slot does a given date/time fall in? (null = outside 9 AM–8 PM)
 export function slotForDate(date) {
@@ -97,10 +117,10 @@ export function nextSlotTime(slotIds, now = new Date(), { leadMinutes = 60 } = {
 }
 
 // Why a scheduled call was missed. Shown to coordinators; never sent to the AI.
-export const MISSED_REASONS = [
-  { id: 'no_answer', label: 'No answer' },
-  { id: 'senior_unavailable', label: 'Senior was unavailable' },
-  { id: 'volunteer_conflict', label: 'Volunteer had a conflict' },
-  { id: 'other', label: 'Other' },
-];
+export const MISSED_REASONS = labelled('core.missed', [
+  { id: 'no_answer' },
+  { id: 'senior_unavailable' },
+  { id: 'volunteer_conflict' },
+  { id: 'other' },
+]);
 export const isMissedReason = (id) => MISSED_REASONS.some((r) => r.id === id);
