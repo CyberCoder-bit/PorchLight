@@ -29,7 +29,7 @@ export default {
   'auth.signOut.button': 'Sign out',
 
   'auth.demo.title': 'Try a demo account',
-  'auth.demo.intro': 'One click signs you in as a made-up person, so you can see what they see. No password needed.',
+  'auth.demo.intro': "One click signs you in as a made-up person, so you can see what they see. You don't need a password.",
   'auth.demo.senior': 'Hal, a senior',
   'auth.demo.seniorAr': 'Samira, a senior who reads Arabic',
   'auth.demo.volunteer': 'Ethan, a volunteer',

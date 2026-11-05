@@ -107,18 +107,18 @@ Every person in the demo is made up. All demo accounts use one shared demo passw
 `PorchLight-demo-2026`. It is written here and nowhere else: the code stores only a PBKDF2 hash of it.
 This is a demo, so please don't use a real password or real details when you sign up.
 
-**One click, no typing.** On `/sign-in`, under "Try a demo account", each button signs you in as one
-person. There is no button for the coordinator.
+On `/sign-in`, under "Try a demo account", each button signs you in as one person with a single
+click. There is no button for the coordinator.
 
 | Button | Signs you in as | What you see |
 |---|---|---|
 | Hal, a senior | Harold "Hal" Whitaker, 88, Carmel | His own page: his companion's first name, his next visit, his family code |
-| Samira, a senior who reads Arabic | Samira Haddad, 76, Fishers | Her own page, with PorchLight set to Arabic |
+| Samira, a senior who reads Arabic | Samira Haddad, 76, Fishers | Her own page. Her account asks for Arabic, so PorchLight shows Arabic wherever that translation exists |
 | Ethan, a volunteer | Ethan Brooks, Carmel | His week, his senior's first name and interests, his own calls |
 | Jordan, a volunteer who uses translation | Jordan Lee, Fishers | His week with Samira, who speaks Arabic |
-| Mike, Hal's son | Mike Whitaker | Hal's card on the Family Dashboard and Hal's weekly summary, never call notes |
+| Mike, Hal's son | Mike Whitaker | Hal's card on the Family Dashboard and Hal's weekly summary. Call notes stay private |
 
-**Signing in with a password.** Every account below uses the shared demo password.
+To sign in with a password, use any email below with the shared demo password.
 
 | Email | Who |
 |---|---|
@@ -135,7 +135,7 @@ Everyone else follows the pattern `firstname@porchlight.example`: seniors doroth
 thanh, cing, aung, mei, marguerite, helga, walter; volunteers maya, linda, sam, kevin, david, amy,
 olivia; family karen, daniel, grace, omar, linh, ryan, sophie, peter.
 
-**The coordinator's pages** are at `/admin`. Nothing on the public site links there. Sign in as
+The coordinator's pages are at `/admin`. Nothing on the public site links there. Sign in as
 `admin@porchlight.example` to approve Noah and Ellen at `/admin/approvals`. "Reset demo data"
 (`/admin/demo/reset`) brings back the demo story and deletes every new sign-up and session. You
 stay signed in.

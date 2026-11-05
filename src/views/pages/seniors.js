@@ -7,6 +7,7 @@ import {
 } from '../components.js';
 import { placeText, townLabel } from '../../towns/index.js'; // [towns]
 import { townSelectField } from '../../towns/views.js'; // [towns]
+import { t } from '../../i18n/index.js'; // [v2 accounts] the family code line
 import { noPhone } from '../../roles/viewer.js'; // phone numbers are never displayed, even if typed into a name field
 
 export function seniorsListPage({ rows, townFilter = '', townName = null }) { // [towns] townFilter, townName
@@ -87,6 +88,10 @@ export function seniorProfilePage({ senior, assessment, volunteer, match, upcomi
       ${assessment.nextScheduled
         ? html`<p class="big">Your next ${methodLabel(assessment.nextScheduled.type).toLowerCase()}: <strong>${formatDateTime(assessment.nextScheduled.scheduledFor)}</strong>.</p>`
         : html`<p class="big">No call is scheduled yet.</p>`}
+      ${seniorView && senior.familyCode /* [v2 accounts] */
+        ? html`<p>${t('auth.account.familyCodeTitle')}: <strong class="family-code">${senior.familyCode}</strong>. ${t('auth.account.familyCodeText')}</p>
+          <p><a href="/messages">${t('auth.nav.messages')}</a> · <a href="/account">${t('auth.nav.account')}</a></p>`
+        : ''}
     </section>
 
     <div class="two-col">
