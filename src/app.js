@@ -24,6 +24,7 @@ import { registerDesignPages } from './views/pages/extra.js';
 import { registerSite } from './views/site/index.js'; // [v2] public website
 import { checkTown, townFromQuery, rowsInTown } from './towns/index.js'; // [towns]
 import { townFilter } from './towns/views.js'; // [towns]
+import { registerI18n } from './i18n/routes.js'; // [v2 i18n] POST /prefs/language
 import { registerRoles, withoutPrivateNotes, seniorsVisibleTo, callsVisibleTo, seesEverything, isFamilyOrSenior, viewerFromCookie } from './roles/index.js'; // [roles]
 
 // Short messages shown after a form is submitted (?msg=...).
@@ -753,6 +754,7 @@ export function createApp({ store, sparks, now = () => new Date() }) {
   registerIndiana(router, ctx);
   registerDesignPages(router, ctx);
   registerSite(router, ctx); // [v2] public website: /, /how-it-works, ...
+  registerI18n(router, ctx); // [v2 i18n] POST /prefs/language
   registerRoles(router, ctx); // [roles] must be last: adds /sign-in and checks every route on the server
 
   return createHandler({ router, renderError });

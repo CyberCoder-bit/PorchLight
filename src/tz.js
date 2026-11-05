@@ -23,6 +23,8 @@
 // toISOString().slice(0, 10) for calendar dates; use these helpers instead.
 
 import { COMMUNITY } from './community.js';
+import { currentLang } from './i18n/index.js'; // [v2 i18n] display only
+import { localeOf } from './i18n/languages.js'; // [v2 i18n] display only
 
 const MINUTE_MS = 60 * 1000;
 const DAY_MS = 24 * 60 * MINUTE_MS;
@@ -36,7 +38,7 @@ const clocks = new Map();
  * 'America/Chicago'. Throws a RangeError for an unknown zone, so a typo in a
  * community profile fails loudly at startup instead of silently using UTC.
  *
- * Returns { localParts, fromLocal, parseLocalDateTime, formatLocal,
+ * Returns { localParts, fromLocal, parseLocalDateTime, formatLocal, formatIn,
  *           localDateKey, startOfLocalDay, TIME_ZONE }.
  */
 export function createClock(timeZone) {
@@ -108,8 +110,15 @@ export function createClock(timeZone) {
     return real ? when : null;
   }
 
+  // For people to read: words and order follow the reader's language
+  // (currentLang(), e.g. "miércoles, 4 de noviembre" in Spanish), but the
+  // clock is always this zone's. Only display goes through here. Parsing
+  // (localParts above) always reads en-US parts, whatever the language.
+  function formatIn(locale, date, options) {
+    return new Date(date).toLocaleString(locale, { timeZone, ...options });
+  }
   function formatLocal(date, options) {
-    return new Date(date).toLocaleString('en-US', { timeZone, ...options });
+    return formatIn(localeOf(currentLang()), date, options);
   }
 
   // "YYYY-MM-DD" for the local calendar day of `date` (not the UTC day).
@@ -130,6 +139,7 @@ export function createClock(timeZone) {
     fromLocal,
     parseLocalDateTime,
     formatLocal,
+    formatIn,
     localDateKey,
     startOfLocalDay,
     TIME_ZONE: timeZone,
@@ -148,6 +158,7 @@ export const {
   fromLocal,
   parseLocalDateTime,
   formatLocal,
+  formatIn,
   localDateKey,
   startOfLocalDay,
 } = communityClock;

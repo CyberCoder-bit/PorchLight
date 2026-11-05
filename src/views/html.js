@@ -6,6 +6,7 @@
 // Use raw() only for HTML that our own code built.
 
 import { localParts, formatLocal } from '../tz.js';
+import { t } from '../i18n/index.js'; // [v2 i18n] "{date} at {time}" in the reader's language
 
 class SafeHtml {
   constructor(value) {
@@ -76,7 +77,7 @@ export function formatTime(iso) {
 }
 
 export function formatDateTime(iso) {
-  return `${formatLongDate(iso)} at ${formatTime(iso)}`;
+  return t('lang.date.dateAtTime', { date: formatLongDate(iso), time: formatTime(iso) });
 }
 
 export function daysAgoText(days) {
