@@ -62,7 +62,7 @@ test('over HTTP: a stranger gets 403 and nothing is saved; the list shows only m
   assert.equal(app.store.messages.length, before);
   const list = await app.get('/messages', ROSA);
   assert.equal(list.status, 200);
-  assert.match(list.text, /Messages with Linda/);
+  assert.match(list.text, /Mensajes con Linda/); // [v2] Rosa's profile language is Spanish
   assert.doesNotMatch(list.text, /\/messages\/m-harold-ethan/);
   const all = await app.get('/messages'); // demo mode: every pair
   assert.match(all.text, /\/messages\/m-harold-ethan/);
@@ -92,11 +92,11 @@ test('posting: blank and over-500 text is refused; 500 emoji graphemes are fine;
   const start = count();
   const blank = await app.post('/messages/m-rosa-linda', { text: ' ​ ', lang: 'es' }, ROSA);
   assert.equal(blank.status, 200);
-  assert.match(blank.text, /Write a message before you send it/);
+  assert.match(blank.text, /Escriba un mensaje antes de enviarlo/); // Rosa reads Spanish
   const long = await app.post('/messages/m-rosa-linda', { text: 'a'.repeat(501), lang: 'es' }, ROSA);
-  assert.match(long.text, /500 characters or fewer\. This one has 501/);
+  assert.match(long.text, /500 caracteres o menos\. Este tiene 501/);
   const badLang = await app.post('/messages/m-rosa-linda', { text: 'hola', lang: 'xx' }, ROSA);
-  assert.match(badLang.text, /Choose the language/);
+  assert.match(badLang.text, /Elija el idioma/);
   assert.equal(count(), start);
 
   const thumbs = await app.post('/messages/m-rosa-linda', { text: '👍🏽'.repeat(500), lang: 'es' }, ROSA);

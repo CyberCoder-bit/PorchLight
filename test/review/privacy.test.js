@@ -22,6 +22,7 @@ import { createSparkService } from '../../src/sparks/index.js';
 import { loadSdk } from '../../src/sparks/live.js';
 import { buildConfig, ROOT_DIR } from '../../src/config.js';
 import { startOfLocalDay } from '../../src/tz.js';
+import { fetchAs } from '../helpers/server.js'; // [v2 accounts] signed in as the coordinator
 
 const skip = (await loadSdk()) ? false : 'run `npm install` to test LIVE mode (needs @anthropic-ai/sdk)';
 
@@ -29,6 +30,9 @@ let fakeApi;
 let server;
 let base;
 let store;
+// [v2 accounts] Every request is signed in as the coordinator (admin) unless it
+// carries its own session cookie. Signed out, a visitor sees only the public site.
+const fetch = fetchAs(() => store);
 let tmpDir;
 const requests = []; // raw request bodies (strings) received by the fake Claude API
 

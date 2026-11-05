@@ -1,19 +1,17 @@
-// Who is looking? The DEMO sign-in keeps one cookie, `viewer`:
-//   coordinator            sees everything
-//   volunteer:<id>         a volunteer
-//   family:<seniorId>      the family contact saved on that senior's profile
-//   senior:<id>            a senior
-// No cookie means demo mode: everything is visible, exactly as before sign-in
-// existed. A value that no longer matches a real person (for example after a
-// demo reset deleted them) also falls back to demo mode, never to a crash.
+// Who is looking? (v2) Built from the signed-in account (src/auth), never
+// from anything the browser can choose. No account means signed out: the
+// visitor sees only the public website.
 //
-// This is NOT security: there are no passwords, and anyone can pick anyone.
-// A real launch needs real accounts with passwords, which aren't built yet.
+//   viewerFromUser(user, store) ->
+//     { kind, id, name, label, home, person, userId, pending }
+//   kind: 'coordinator' (an admin), 'senior', 'volunteer', or 'family'
+//   id:   the senior's or volunteer's id; for family, their linked senior's id
+//   pending: a volunteer not approved yet, or a family member whose link is
+//            not approved yet. They get the 'pending' role (see ./access.js).
 
-export const VIEWER_COOKIE = 'viewer';
-export const VIEWER_COOKIE_SECONDS = 8 * 60 * 60; // a demo session lasts a working day
+import { t } from '../i18n/index.js';
 
-const firstName = (p) => (p ? p.preferredName || String(p.name || '').split(' ')[0] : '');
+export const firstName = (p) => (p ? p.preferredName || String(p.name || '').split(' ')[0] : '');
 
 // Never show a phone number, even one typed into a name or relationship field.
 const PHONE = /\+?\(?\d[\d\s().-]{5,}\d/g;
@@ -26,62 +24,51 @@ export function relationWord(relationship) {
   return word[0].toLowerCase() + word.slice(1);
 }
 
-const hasFamily = (senior) => Boolean(senior?.caregiver?.name && String(senior.caregiver.name).trim());
+export const PENDING_HOME = '/home';
 
-// Cookie value -> viewer object, or null for demo mode.
-//   { kind, id, value, name, label, home, person }
-export function viewerFromCookie(value, store) {
-  if (typeof value !== 'string' || value.length > 120) return null;
-  if (value === 'coordinator') {
-    return { kind: 'coordinator', id: null, value, name: 'Coordinator', label: 'the coordinator', home: '/attention', person: null };
+export function viewerFromUser(user, store) {
+  if (!user) return null;
+  const base = { userId: user.id, name: noPhone(user.name), pending: false };
+  if (user.role === 'admin') {
+    return { ...base, kind: 'coordinator', id: null, label: t('auth.viewer.coordinator', { name: base.name }), home: '/admin', person: null };
   }
-  const colon = value.indexOf(':');
-  if (colon < 1) return null;
-  const kind = value.slice(0, colon);
-  const id = value.slice(colon + 1);
-  if (!id) return null;
-  if (kind === 'volunteer') {
-    const v = store.volunteer(id);
+  if (user.role === 'volunteer') {
+    const v = store.volunteer(user.volunteerId);
     if (!v) return null;
-    return { kind, id, value, name: noPhone(v.name), label: `${noPhone(v.name)} (volunteer)`, home: `/volunteers/${encodeURIComponent(id)}/week`, person: v };
-  }
-  if (kind === 'family') {
-    const s = store.senior(id);
-    if (!hasFamily(s)) return null;
-    const name = noPhone(s.caregiver.name);
+    const pending = (v.status || 'active') !== 'active';
+    const id = v.id;
     return {
-      kind, id, value, name,
-      label: `${name} (${noPhone(firstName(s))}'s family)`,
-      home: '/dashboard',
-      person: s,
+      ...base, kind: 'volunteer', id, person: v, pending,
+      name: noPhone(v.name),
+      label: t('auth.viewer.volunteer', { name: noPhone(v.name) }),
+      home: pending ? PENDING_HOME : `/volunteers/${encodeURIComponent(id)}/week`,
     };
   }
-  if (kind === 'senior') {
-    const s = store.senior(id);
+  if (user.role === 'family') {
+    const links = store.familyLinksForUser(user.id);
+    const approved = links.find((l) => l.status === 'approved' && store.senior(l.seniorId));
+    const link = approved || links.find((l) => l.status === 'pending') || links[0] || null;
+    const s = link ? store.senior(link.seniorId) : null;
+    const pending = !approved;
+    return {
+      ...base, kind: 'family', id: s ? s.id : null, person: s, pending,
+      label: s
+        ? t('auth.viewer.family', { name: base.name, senior: noPhone(firstName(s)) })
+        : t('auth.viewer.familyNoSenior', { name: base.name }),
+      home: pending ? PENDING_HOME : '/dashboard',
+    };
+  }
+  if (user.role === 'senior') {
+    const s = store.senior(user.seniorId);
     if (!s) return null;
-    return { kind, id, value, name: noPhone(s.name), label: noPhone(s.name), home: `/seniors/${encodeURIComponent(id)}`, person: s };
+    return {
+      ...base, kind: 'senior', id: s.id, person: s,
+      name: noPhone(s.name),
+      label: noPhone(s.name),
+      home: `/seniors/${encodeURIComponent(s.id)}`,
+    };
   }
   return null;
-}
-
-// Everything the sign-in page offers, A to Z. Labels never include phone numbers.
-export function signInChoices(store) {
-  const byLabel = (a, b) => a.label.localeCompare(b.label);
-  return {
-    volunteers: store.volunteers
-      .map((v) => ({ value: `volunteer:${v.id}`, label: noPhone(v.name) }))
-      .sort(byLabel),
-    family: store.seniors
-      .filter(hasFamily)
-      .map((s) => ({
-        value: `family:${s.id}`,
-        label: `${noPhone(s.caregiver.name)} (${noPhone(firstName(s))}'s ${relationWord(s.caregiver.relationship)})`,
-      }))
-      .sort(byLabel),
-    seniors: store.seniors
-      .map((s) => ({ value: `senior:${s.id}`, label: noPhone(s.name) }))
-      .sort(byLabel),
-  };
 }
 
 // The pages a signed-in person can use, for the nav and the "not for you" page.
@@ -89,12 +76,18 @@ export function signInChoices(store) {
 // has two links marked as the current page.
 export function pagesFor(viewer) {
   if (!viewer || viewer.kind === 'coordinator') return null;
+  const account = { href: '/account', label: t('auth.nav.account'), key: 'account' };
+  if (viewer.pending) {
+    return [{ href: PENDING_HOME, label: t('auth.nav.waiting'), key: 'home' }, account, { href: '/help', label: 'Get help', key: 'help' }];
+  }
   const id = encodeURIComponent(viewer.id);
   if (viewer.kind === 'volunteer') {
     return [
       { href: `/volunteers/${id}/week`, label: 'My week', key: 'volunteers' },
       { href: `/volunteers/${id}`, label: 'My profile', key: 'volunteers', nav: false },
       { href: '/contacts', label: 'Calls & Visits', key: 'contacts' },
+      { href: '/messages', label: t('auth.nav.messages'), key: 'messages' },
+      account,
       { href: '/help', label: 'Get help', key: 'help' },
     ];
   }
@@ -104,14 +97,17 @@ export function pagesFor(viewer) {
       { href: '/dashboard', label: 'Family Dashboard', key: 'dashboard' },
       { href: `/seniors/${id}`, label: `${first}'s page`, key: 'seniors' },
       { href: `/seniors/${id}/summary`, label: `${first}'s weekly summary`, key: 'dashboard', nav: false },
+      account,
       { href: '/help', label: 'Get help', key: 'help' },
     ];
   }
   return [
     { href: `/seniors/${id}`, label: 'My page', key: 'seniors' },
+    { href: '/messages', label: t('auth.nav.messages'), key: 'messages' },
+    account,
     { href: '/help', label: 'Get help', key: 'help' },
   ];
 }
 
-// True when the person sees every page and every row (demo mode or coordinator).
-export const seesEverything = (viewer) => !viewer || viewer.kind === 'coordinator';
+// True for the coordinator (an admin), who sees every page and every row.
+export const seesEverything = (viewer) => viewer?.kind === 'coordinator';

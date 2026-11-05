@@ -44,27 +44,29 @@ Otherwise delete this line.]
 Open **http://localhost:3000/tour** (or **Take the 2-minute demo tour** on the home page). These
 are the tour's 8 steps, word for word. Each step on the page has a button that opens it.
 
-1. **Reset the demo data.** What to notice: Start fresh, so every date in the story lines up with
-   today. After the reset, a link brings you back here.
+1. **Sign in as the coordinator, then reset the demo data.** What to notice: Sign in with
+   admin@porchlight.example and the demo password from the README. Then reset, so every date in the
+   story lines up with today. After the reset, a link brings you back here.
 2. **Family Dashboard: Hal is flagged.** What to notice: Harold ("Hal") shows "Isolation risk" and
    "Contact dropping", so his family sees the problem before it becomes a crisis.
 3. **The Needs attention list.** What to notice: A coordinator sees everyone who needs help in one
    list, each with a plain reason and one suggested next step. For Hal, the step is to ask Ethan
    whether yesterday's visit happened.
-4. **Match Gene with a companion.** What to notice: Sam scores highest for Eugene ("Gene"), and every
-   volunteer who is left out is listed with the reason why.
-5. **Ethan's week.** What to notice: A volunteer's calls for the next 7 days, with one click to log a
-   call or mark it missed. Hal's visit yesterday was never marked, so it waits under "Did these calls
-   happen?". Log it, then look at Hal on the Family Dashboard again.
-6. **Conversation sparks on Hal's profile.** What to notice: Press "Get conversation sparks" for
-   three suggested things to talk about, built from Hal's interests and labeled with where they came
-   from.
-7. **See it as Hal's family.** What to notice: Use the demo sign-in (no passwords) as Mike Whitaker,
-   Hal's son. He sees only his dad, never the volunteer's call notes, and other pages tell him they
-   are for coordinators. Sign out to see everything again.
+4. **Match Gene with a companion.** What to notice: Sam scores highest for Eugene ("Gene"), and
+   every volunteer who is left out is listed with the reason why.
+5. **Ethan's week.** What to notice: This button signs you in as Ethan, a volunteer. You see his
+   calls for the next 7 days, with one click to log a call or mark it missed. Hal's visit yesterday
+   was never marked, so it waits under "Did these calls happen?". Log it.
+6. **Conversation sparks on Hal's profile.** What to notice: Still signed in as Ethan, press "Get
+   conversation sparks" for three things to talk about, built from Hal's interests and labeled with
+   where they came from. Ethan sees only what he needs: Hal's first name, interests, languages, and
+   free times.
+7. **See it as Hal's family.** What to notice: This button signs you in as Mike Whitaker, Hal's son.
+   He sees only his dad, never the volunteer's call notes, and other pages tell him they are not for
+   his account.
 8. **Get help in Indiana, and the Accessibility menu.** What to notice: Local help and Indiana 211
-   for this community. Then open Accessibility at the top of any page for bigger text, high contrast,
-   or dark mode. Every page adapts.
+   for this community. Then open Accessibility at the top of any page for bigger text, high
+   contrast, or dark mode. Every page adapts.
 
 ### Rubric map
 
@@ -96,6 +98,47 @@ Measured on November 4, 2026, on the merged `polish` branch:
   that, we measured 100 on the 13 core pages at 1280px and at 375px with A++.
 - **Two runtimes:** Node (`npm start`) and Cloudflare Workers (`npx wrangler dev`) returned identical
   HTML for the demo pages.
+
+---
+
+## Demo accounts
+
+Every person in the demo is made up. All demo accounts use one shared demo password:
+`PorchLight-demo-2026`. It is written here and nowhere else: the code stores only a PBKDF2 hash of it.
+This is a demo, so please don't use a real password or real details when you sign up.
+
+On `/sign-in`, under "Try a demo account", each button signs you in as one person with a single
+click. There is no button for the coordinator.
+
+| Button | Signs you in as | What you see |
+|---|---|---|
+| Hal, a senior | Harold "Hal" Whitaker, 88, Carmel | His own page: his companion's first name, his next visit, his family code |
+| Samira, a senior who reads Arabic | Samira Haddad, 76, Fishers | Her own page. Her account asks for Arabic, so PorchLight shows Arabic wherever that translation exists |
+| Ethan, a volunteer | Ethan Brooks, Carmel | His week, his senior's first name and interests, his own calls |
+| Jordan, a volunteer who uses translation | Jordan Lee, Fishers | His week with Samira, who speaks Arabic |
+| Mike, Hal's son | Mike Whitaker | Hal's card on the Family Dashboard and Hal's weekly summary. Call notes stay private |
+
+To sign in with a password, use any email below with the shared demo password.
+
+| Email | Who |
+|---|---|
+| `admin@porchlight.example` | Casey Reed, the coordinator. Opens everything under `/admin` |
+| `hal@porchlight.example` | Hal, senior |
+| `samira@porchlight.example` | Samira, senior (Arabic) |
+| `ethan@porchlight.example` | Ethan, volunteer |
+| `jordan@porchlight.example` | Jordan, volunteer (uses translate help) |
+| `mike@porchlight.example` | Mike, Hal's son (family) |
+| `noah@porchlight.example` | Noah, a volunteer still waiting for approval |
+| `ellen@porchlight.example` | Ellen, Walter's daughter, whose family link is still waiting |
+
+Everyone else follows the pattern `firstname@porchlight.example`: seniors dorothy, rosa, eugene,
+thanh, cing, aung, mei, marguerite, helga, walter; volunteers maya, linda, sam, kevin, david, amy,
+olivia; family karen, daniel, grace, omar, linh, ryan, sophie, peter.
+
+The coordinator's pages are at `/admin`. Nothing on the public site links there. Sign in as
+`admin@porchlight.example` to approve Noah and Ellen at `/admin/approvals`. "Reset demo data"
+(`/admin/demo/reset`) brings back the demo story and deletes every new sign-up and session. You
+stay signed in.
 
 ---
 

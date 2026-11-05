@@ -66,6 +66,11 @@ export function createNodeServer({ handle, publicDir }) {
       for (const [key, value] of Object.entries(req.headers)) {
         if (key !== 'content-length' && value !== undefined) headers.set(key, Array.isArray(value) ? value.join(', ') : value);
       }
+      // [v2 accounts] The client's address, for rate limits (src/auth/limits.js).
+      // It always comes from the socket: whatever the client sent in these two
+      // headers is thrown away, so nobody can pretend to be someone else.
+      headers.delete('cf-connecting-ip');
+      headers.set('x-porchlight-client-ip', req.socket.remoteAddress || 'unknown');
       const response = await handle(
         new Request(`http://${req.headers.host || 'localhost'}${req.url}`, {
           method: req.method,

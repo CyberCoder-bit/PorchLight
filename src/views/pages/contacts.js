@@ -31,7 +31,7 @@ export function contactsPage({ pairs, form, errors = {}, upcoming, overdue, rece
         <h2 id="form-heading">Schedule or log a call</h2>
         ${errorSummary(errors)}
         ${pairs.length === 0
-          ? emptyState(html`<p><strong>No one is matched yet.</strong> <a href="/match">Match a senior with a companion</a> first, then come back to schedule their first call.</p>`)
+          ? emptyState(html`<p><strong>No one is matched yet.</strong> <a href="/admin/match">Match a senior with a companion</a> first, then come back to schedule their first call.</p>`)
           : html`
           <form method="post" action="/contacts" class="stack-form" novalidate>
             ${selectField({ name: 'matchId', label: 'Who is this for?', options: pairOptions, value: form.matchId, error: errors.matchId, required: true })}

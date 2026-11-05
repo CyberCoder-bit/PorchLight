@@ -18,7 +18,7 @@ export function attentionPage({ items, comingUp, thresholdDays, townFilter = '',
         <section class="panel welcome" aria-labelledby="empty-heading">
           <h2 id="empty-heading"><span aria-hidden="true">✓ </span>Everyone${townName ? ` in ${townName}` : ''} has had a recent check-in.</h2>
           <p>Nobody is at isolation risk, waiting for a companion, dropping off, or missing calls right now.</p>
-          <p><a href="/dashboard">Open the Family Dashboard</a></p>
+          <p><a href="/admin/dashboard">Open the Family Dashboard</a></p>
         </section>`}
 
     ${comingUp.length
@@ -89,16 +89,16 @@ export function rematchPage({ senior, match, volunteer, together, missedWithVolu
   const name = firstName(senior);
   if (!match) {
     return html`
-      <p class="breadcrumb"><a href="/attention">← Back to Needs attention</a></p>
+      <p class="breadcrumb"><a href="/admin/attention">← Back to Needs attention</a></p>
       <h1>${senior.name} has no companion right now</h1>
       <p>There is no match to end. You can choose a companion for ${name} on the Match page.</p>
-      <p class="actions"><a class="button" href="/match?seniorId=${senior.id}">Find a companion for ${name}</a></p>`;
+      <p class="actions"><a class="button" href="/admin/match?seniorId=${senior.id}">Find a companion for ${name}</a></p>`;
   }
   const vName = volunteer ? volunteer.name : 'their current companion';
   const vFirst = volunteer ? firstName(volunteer) : 'them';
   const last = together[0];
   return html`
-    <p class="breadcrumb"><a href="/attention">← Back to Needs attention</a></p>
+    <p class="breadcrumb"><a href="/admin/attention">← Back to Needs attention</a></p>
     <h1>Find a new companion for ${senior.name}?</h1>
 
     <section class="panel notice-panel" aria-labelledby="current-heading">
@@ -121,10 +121,10 @@ export function rematchPage({ senior, match, volunteer, together, missedWithVolu
         <li>You go straight to the Match page to choose ${name}'s new companion. You can pick ${vFirst} again if they are still the best fit.</li>
       </ul>
       <div class="actions">
-        <form method="post" action="/matches/${match.id}/end" class="inline-form">
+        <form method="post" action="/admin/matches/${match.id}/end" class="inline-form">
           <button type="submit" class="button button-danger">End match with ${vName} and choose someone new</button>
         </form>
-        <a class="button button-secondary" href="/attention">Keep ${vFirst} as ${name}'s companion</a>
+        <a class="button button-secondary" href="/admin/attention">Keep ${vFirst} as ${name}'s companion</a>
       </div>
     </section>`;
 }

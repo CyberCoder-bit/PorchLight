@@ -22,6 +22,7 @@ import { scorePair } from '../../src/matching.js';
 import { formatTime, formatDateTime, formatLongDate } from '../../src/views/html.js';
 import { formatLocal, formatIn, TIME_ZONE } from '../../src/tz.js';
 import { withPseudo, unwrappedText } from './pseudo.js';
+import { sessionCookieFor } from '../helpers/server.js'; // [v2 accounts] real sessions
 
 process.env.TZ = 'UTC'; // like Cloudflare Workers: Indiana time must come from src/tz.js, not the machine
 
@@ -104,7 +105,7 @@ test('language order: cookie, then Accept-Language by q, then English', () => {
 // ----- POST /prefs/language -----
 
 test('POST /prefs/language keeps you on the same page and sets lang and dir', async () => {
-  const back = '/match?seniorId=s-eugene';
+  const back = '/how-it-works?from=test'; // a public page, so no session is needed
   const res = await post('/prefs/language', { lang: 'es', back });
   assert.equal(res.status, 303);
   assert.equal(res.headers.get('location'), back);
@@ -113,7 +114,7 @@ test('POST /prefs/language keeps you on the same page and sets lang and dir', as
   const body = await page(back, { cookie: 'lang=es' });
   assert.match(htmlTag(body), /lang="es" dir="ltr"/);
   assert.match(body, /<button type="submit" name="lang" value="es" aria-pressed="true"[^>]*><span class="pref-word" lang="es" dir="ltr">Español<\/span>/);
-  assert.match(body, /<input type="hidden" name="back" value="\/match\?seniorId=s-eugene">/);
+  assert.match(body, /<input type="hidden" name="back" value="\/how-it-works\?from=test">/);
 
   // Case doesn't matter; unknown codes and unsafe "back" values change nothing.
   assert.match((await post('/prefs/language', { lang: 'ES', back: '/' })).headers.get('set-cookie'), /^lang=es;/);
@@ -123,7 +124,7 @@ test('POST /prefs/language keeps you on the same page and sets lang and dir', as
     assert.equal(r.headers.get('set-cookie'), null, JSON.stringify(bad));
   }
   assert.equal((await post('/prefs/language', { lang: 'es', back: '//evil.example' })).headers.get('location'), '/');
-  assert.match(htmlTag(await page('/match', { cookie: 'lang=en' })), /lang="en" dir="ltr"/);
+  assert.match(htmlTag(await page('/how-it-works', { cookie: 'lang=en' })), /lang="en" dir="ltr"/);
 });
 
 test('POST /prefs/language saves uiLanguage on a signed-in person\'s account', () => {
@@ -155,7 +156,7 @@ test('right to left: Arabic is rtl, everything shipped today is ltr', () => {
 });
 
 test('right to left: with the Arabic catalog, pages say <html lang="ar" dir="rtl">', { skip: !isUiLanguage('ar') && 'the Arabic catalog is written after the merge' }, async () => {
-  const body = await page('/match?seniorId=s-eugene', { cookie: 'lang=ar' });
+  const body = await page('/how-it-works', { cookie: 'lang=ar' });
   assert.match(htmlTag(body), /lang="ar" dir="rtl"/);
   assert.match(body, /<span class="pref-word" lang="ar" dir="rtl">العربية<\/span>/);
 });
@@ -249,18 +250,19 @@ test('the language fieldset is labeled, grouped, and keeps what was typed after 
 
 test('the admin senior form saves languages and translate help, and the profile shows them', async () => {
   const before = store.senior('s-rosa');
-  const form = await page('/seniors/s-rosa/edit');
+  const admin = { cookie: await sessionCookieFor(store, 'admin') };
+  const form = await page('/seniors/s-rosa/edit', admin);
   assert.match(form, /id="field-languages"/);
-  const res = await post('/seniors/s-rosa', toForm(before, { lang1: 'es', level1: 'fluent', lang2: 'en', level2: 'learning', lang3: '', level3: '', translateHelp: 'yes' }));
+  const res = await post('/seniors/s-rosa', toForm(before, { lang1: 'es', level1: 'fluent', lang2: 'en', level2: 'learning', lang3: '', level3: '', translateHelp: 'yes' }), admin);
   assert.equal(res.status, 303);
   const after = store.senior('s-rosa');
   assert.deepEqual(after.languages, [{ code: 'es', level: 'fluent' }, { code: 'en', level: 'learning' }]);
   assert.equal(after.translateHelp, true);
-  const profile = await page('/seniors/s-rosa');
+  const profile = await page('/seniors/s-rosa', admin);
   assert.match(profile, /<dt>Languages<\/dt><dd>Spanish \(fluent\), English \(learning\) · Uses translate help<\/dd>/);
 
   // A form with a problem comes back with the error and the choices kept.
-  const bad = await post('/seniors/s-rosa', toForm(before, { lang1: 'es', level1: 'fluent', lang2: 'es', level2: 'native' }));
+  const bad = await post('/seniors/s-rosa', toForm(before, { lang1: 'es', level1: 'fluent', lang2: 'es', level2: 'native' }), admin);
   const text = await bad.text();
   assert.equal(bad.status, 200);
   assert.match(text, /href="#field-languages">Each language can only be listed once\./);

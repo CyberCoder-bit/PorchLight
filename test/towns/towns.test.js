@@ -20,12 +20,16 @@ import {
 } from '../../src/towns/index.js';
 import { scorePair, rankVolunteers } from '../../src/matching.js';
 import { buildSeedData } from '../../src/seed.js';
+import { fetchAs } from '../helpers/server.js'; // [v2 accounts] signed in as the coordinator
 
 process.env.TZ = 'America/Indiana/Indianapolis'; // match test/app.test.js
 
 let server;
 let base;
 let store;
+// [v2 accounts] Every request is signed in as the coordinator (admin) unless it
+// carries its own session cookie. Signed out, a visitor sees only the public site.
+const fetch = fetchAs(() => store);
 let tmpDir;
 
 before(async () => {
@@ -64,7 +68,7 @@ const post = (p, data) =>
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: encode(data),
   });
-const reset = async () => assert.equal((await post('/demo/reset', {})).status, 303);
+const reset = async () => assert.equal((await post('/admin/demo/reset', {})).status, 303);
 const dashCards = (html) => [...html.matchAll(/<h3 class="card-title"><a href="\/seniors\/([^"]+)">/g)].map((m) => m[1]);
 const seniorCards = (html) => [...mainOf(html).matchAll(/<h2 class="card-title"><a href="\/seniors\/([^"]+)">/g)].map((m) => m[1]);
 const volunteerCards = (html) => [...mainOf(html).matchAll(/<h2 class="card-title"><a href="\/volunteers\/([^"]+)">/g)].map((m) => m[1]);
@@ -111,7 +115,7 @@ test('only towns in this deployment\'s time zone are offered', async () => {
   assert.equal(COMMUNITY.timeZone, INDIANA_EASTERN_TIME);
   assert.deepEqual(DEPLOYMENT_TOWNS.map((t) => t.name), eastern);
 
-  for (const p of ['/seniors/new', '/volunteers/new', '/dashboard', '/seniors', '/volunteers', '/attention']) {
+  for (const p of ['/admin/seniors/new', '/admin/volunteers/new', '/dashboard', '/admin/seniors', '/admin/volunteers', '/admin/attention']) {
     const main = mainOf(await page(p));
     assert.match(main, /<option value="Westfield"/, p);
     assert.match(main, /<option value="Indianapolis"/, p);
@@ -120,7 +124,7 @@ test('only towns in this deployment\'s time zone are offered', async () => {
     }
   }
   // The form's select is labeled.
-  const form = await page('/seniors/new');
+  const form = await page('/admin/seniors/new');
   assert.match(form, /<label for="field-town">Town<\/label>/);
   assert.match(form, /<select id="field-town" name="town"/);
 });
@@ -131,7 +135,9 @@ test('town filter: dashboard, seniors, volunteers, and Needs attention', async (
   await reset();
   // All towns (the default): the seeded story, unchanged.
   const all = await page('/dashboard');
-  assert.deepEqual(dashCards(all), ['s-harold', 's-eugene', 's-rosa', 's-dorothy']);
+  // [v2 accounts] The story's four come first; the 8 new seniors (other towns) are all Connected.
+  assert.deepEqual(dashCards(all).slice(0, 3), ['s-harold', 's-eugene', 's-rosa']);
+  assert.deepEqual(dashCards(all).slice(3).sort(), ['s-dorothy', 's-samira', 's-thanh', 's-cing', 's-aung', 's-mei', 's-marguerite', 's-helga', 's-walter'].sort());
   assert.match(all, /<label for="town-filter">Show seniors in<\/label>/);
   assert.match(all, /<option value="" selected>All towns<\/option>/);
   assert.doesNotMatch(all, /town-filter-status/);
@@ -139,7 +145,7 @@ test('town filter: dashboard, seniors, volunteers, and Needs attention', async (
 
   const westfield = await page('/dashboard?town=Westfield');
   assert.deepEqual(dashCards(westfield), ['s-rosa']);
-  assert.match(westfield, /<strong>In Westfield: 1 senior<\/strong> \(4 in all towns\)/);
+  assert.match(westfield, /<strong>In Westfield: 1 senior<\/strong> \(12 in all towns\)/);
   assert.match(westfield, /<option value="Westfield" selected>/);
   assert.match(westfield, /Right now in Westfield, no seniors need attention\./);
   assert.match(westfield, /<p class="tile-value">1<\/p><p class="tile-label"><span aria-hidden="true">◷<\/span> senior to check in with soon/);
@@ -148,22 +154,22 @@ test('town filter: dashboard, seniors, volunteers, and Needs attention', async (
   assert.deepEqual(dashCards(carmel), ['s-harold', 's-eugene', 's-dorothy']);
   assert.match(carmel, /In Carmel: 3 seniors/);
 
-  const fishers = await page('/dashboard?town=Fishers');
-  assert.deepEqual(dashCards(fishers), []);
-  assert.match(fishers, /In Fishers: 0 seniors/);
-  assert.match(fishers, /No seniors in Fishers\./);
+  const muncie = await page('/dashboard?town=Muncie'); // [v2 accounts] Fishers has Samira now
+  assert.deepEqual(dashCards(muncie), []);
+  assert.match(muncie, /In Muncie: 0 seniors/);
+  assert.match(muncie, /No seniors in Muncie\./);
 
-  assert.deepEqual(seniorCards(await page('/seniors?town=Westfield')), ['s-rosa']);
-  assert.match(await page('/seniors?town=Westfield'), /In Westfield: 1 senior<\/strong> \(4 in all towns\)/);
-  assert.deepEqual(volunteerCards(await page('/volunteers?town=Indianapolis')), ['v-linda']);
-  assert.match(await page('/volunteers?town=Indianapolis'), /In Indianapolis: 1 volunteer<\/strong> \(4 in all towns\)/);
-  assert.equal(volunteerCards(await page('/volunteers?town=Carmel')).length, 3);
+  assert.deepEqual(seniorCards(await page('/admin/seniors?town=Westfield')), ['s-rosa']);
+  assert.match(await page('/admin/seniors?town=Westfield'), /In Westfield: 1 senior<\/strong> \(12 in all towns\)/);
+  assert.deepEqual(volunteerCards(await page('/admin/volunteers?town=Indianapolis')), ['v-linda']);
+  assert.match(await page('/admin/volunteers?town=Indianapolis'), /In Indianapolis: 1 volunteer<\/strong> \(10 in all towns\)/);
+  assert.equal(volunteerCards(await page('/admin/volunteers?town=Carmel')).length, 3);
 
-  const queueCarmel = await page('/attention?town=Carmel');
+  const queueCarmel = await page('/admin/attention?town=Carmel');
   assert.match(queueCarmel, /id="senior-s-harold"/);
   assert.match(queueCarmel, /id="senior-s-eugene"/);
   assert.match(queueCarmel, /In Carmel: 2 seniors on the list<\/strong> \(2 in all towns\)/);
-  const queueWestfield = await page('/attention?town=Westfield');
+  const queueWestfield = await page('/admin/attention?town=Westfield');
   assert.doesNotMatch(queueWestfield, /id="senior-s-/);
   assert.match(queueWestfield, /Everyone in Westfield has had a recent check-in\./);
   assert.match(queueWestfield, /Not on the list yet, but due soon[\s\S]*Rosa Delgado/);
@@ -180,11 +186,11 @@ test('per town, the dashboard and Needs attention agree on who needs attention (
   let sum = 0;
   for (const town of ['Carmel', 'Westfield', 'Fishers']) {
     const dash = flaggedOnDashboard(await page(`/dashboard?town=${town}`));
-    const queue = onQueue(await page(`/attention?town=${town}`));
+    const queue = onQueue(await page(`/admin/attention?town=${town}`));
     assert.equal(dash, queue, town);
     sum += queue;
   }
-  assert.equal(sum, onQueue(await page('/attention')), 'the towns add up to the whole list');
+  assert.equal(sum, onQueue(await page('/admin/attention')), 'the towns add up to the whole list');
   assert.equal(flaggedOnDashboard(await page('/dashboard')), sum);
 });
 
@@ -199,7 +205,7 @@ test('an unknown or other-time-zone town is ignored safely', async () => {
     assert.doesNotMatch(body, /<script>alert/);
   }
   // A repeated ?town= uses the last value the URL parser keeps, and is still checked.
-  assert.equal((await get('/seniors?town=Nowhere&town=Westfield')).status, 200);
+  assert.equal((await get('/admin/seniors?town=Nowhere&town=Westfield')).status, 200);
   assert.equal(townFromQuery({ town: ['Westfield', 'Carmel'] }), 'Westfield');
   assert.equal(townFromQuery({ town: 'Gary' }), null);
   assert.equal(townFromQuery({}), null);
@@ -211,16 +217,16 @@ test('town validation: only towns on the list; old forms keep the saved town', a
   const senior = {
     name: 'Town Test', interests: 'gardening', availability: 'mon-morning', contactMethod: 'phone',
   };
-  let res = await post('/seniors', { ...senior, town: 'Evansville' });
+  let res = await post('/admin/seniors', { ...senior, town: 'Evansville' });
   assert.equal(res.status, 200, 'form shown again');
   let body = await res.text();
   assert.match(body, /href="#field-town">Choose a town from the list\./);
   assert.match(body, /<select id="field-town" name="town"[^>]*aria-invalid="true"/);
 
-  res = await post('/seniors', { ...senior, town: '<b>Carmel</b>' });
+  res = await post('/admin/seniors', { ...senior, town: '<b>Carmel</b>' });
   assert.equal(res.status, 200);
 
-  res = await post('/seniors', { ...senior, town: 'fishers' });
+  res = await post('/admin/seniors', { ...senior, town: 'fishers' });
   assert.equal(res.status, 303);
   const id = res.headers.get('location').match(/\/seniors\/([^?]+)/)[1];
   assert.equal(store.senior(id).town, 'Fishers', 'saved with the list spelling');
@@ -234,14 +240,14 @@ test('town validation: only towns on the list; old forms keep the saved town', a
 
   // Volunteers too.
   const volunteer = { name: 'Vol Town', interests: 'reading', availability: 'mon-morning', contactMethods: 'phone', maxSeniors: '1' };
-  res = await post('/volunteers', { ...volunteer, town: 'Gary' });
+  res = await post('/admin/volunteers', { ...volunteer, town: 'Gary' });
   assert.equal(res.status, 200);
   assert.match(await res.text(), /Choose a town from the list\./);
-  res = await post('/volunteers', { ...volunteer, town: 'Noblesville' });
+  res = await post('/admin/volunteers', { ...volunteer, town: 'Noblesville' });
   assert.equal(res.status, 303);
   const vid = res.headers.get('location').match(/\/volunteers\/([^?]+)/)[1];
   assert.equal(store.volunteer(vid).town, 'Noblesville');
-  assert.match(await page('/volunteers'), /Community volunteer · Noblesville \(Hamilton County\)|· Noblesville \(Hamilton County\)/);
+  assert.match(await page('/admin/volunteers'), /Community volunteer · Noblesville \(Hamilton County\)|· Noblesville \(Hamilton County\)/);
 
   // Unit: checkTown never touches values without a town field.
   const values = {};
@@ -260,7 +266,7 @@ test('old data without a town counts as the community town', async () => {
   store.save();
   assert.match(await page('/seniors/s-dorothy'), /<dt>Town<\/dt><dd>Carmel \(Hamilton County\)<\/dd>/);
   assert.ok(dashCards(await page('/dashboard?town=Carmel')).includes('s-dorothy'));
-  assert.ok(volunteerCards(await page('/volunteers?town=Carmel')).includes('v-maya'));
+  assert.ok(volunteerCards(await page('/admin/volunteers?town=Carmel')).includes('v-maya'));
   await reset();
 });
 
@@ -274,21 +280,24 @@ test('seed: everyone has a town, Rosa is in Westfield, and the demo story is unc
   await reset();
   const dash = await page('/dashboard');
   const order = [...dash.matchAll(/class="card dash-card dash-(\w+)"/g)].map((m) => m[1]);
-  assert.deepEqual(order, ['at_risk', 'needs_match', 'due_soon', 'ok']);
+  assert.deepEqual(order, ['at_risk', 'needs_match', 'due_soon', ...Array(9).fill('ok')]); // [v2 accounts] + 8 Connected
   const card = (id) => dash.slice(dash.indexOf(`/seniors/${id}"`) - 200, dash.indexOf(`/seniors/${id}"`) + 600);
   assert.match(card('s-harold'), /Isolation risk[\s\S]*Contact dropping/);
   assert.match(card('s-rosa'), /dash-due_soon/);
   assert.match(card('s-eugene'), /dash-needs_match/);
 
   const gene = db.seniors.find((s) => s.id === 's-eugene');
-  const { eligible, ineligible } = rankVolunteers(gene, db.volunteers, db.matches);
+  // [v2 accounts] Only approved volunteers are ranked; the new ones are all at capacity.
+  const { eligible, ineligible } = rankVolunteers(gene, db.volunteers.filter((v) => v.status === 'active'), db.matches);
   assert.equal(eligible[0].volunteer.id, 'v-sam');
   assert.equal(eligible[0].score, 25); // [v2] 21, plus 4 for a shared language (English)
-  assert.deepEqual(ineligible.map((r) => [r.volunteer.id, r.problems]), [
+  const STORY = ['v-maya', 'v-ethan', 'v-linda', 'v-sam'];
+  assert.ok(ineligible.filter((r) => !STORY.includes(r.volunteer.id)).every((r) => /At capacity/.test(r.problems.join(' '))));
+  assert.deepEqual(ineligible.filter((r) => STORY.includes(r.volunteer.id)).map((r) => [r.volunteer.id, r.problems]), [
     ['v-ethan', ['At capacity (already has 1 of 1 senior)']],
     ['v-linda', ['No overlapping availability']],
   ]);
-  const matchPage = await page('/match?seniorId=s-eugene');
+  const matchPage = await page('/admin/match?seniorId=s-eugene');
   assert.match(matchPage, /At capacity/);
   assert.match(matchPage, /No overlapping availability/);
   assert.ok(matchPage.indexOf('Sam Rivera') < matchPage.indexOf('Maya Patel'));
@@ -315,15 +324,15 @@ test('matching: in-person visits need the same county; phone and video work stat
 
 test('matching: Hal\'s match page explains the county rule, and the server enforces it', async () => {
   await reset();
-  const hal = await page('/match?seniorId=s-harold');
+  const hal = await page('/admin/match?seniorId=s-harold');
   assert.match(hal, /<strong>Linda Okafor<\/strong>: No overlapping availability; Lives in Marion County - too far for in-person visits\./);
   assert.match(hal, /For in-person visits, they also live in the same county/);
 
   // End Hal's match, give Linda Hal's hours: she is still too far for visits.
-  assert.equal((await post('/matches/m-harold-ethan/end', {})).status, 303);
+  assert.equal((await post('/admin/matches/m-harold-ethan/end', {})).status, 303);
   store.volunteer('v-linda').availability.push('tue-afternoon');
   store.save();
-  const res = await post('/matches', { seniorId: 's-harold', volunteerId: 'v-linda' });
+  const res = await post('/admin/matches', { seniorId: 's-harold', volunteerId: 'v-linda' });
   assert.equal(res.status, 409);
   assert.match(await res.text(), /too far for in-person visits/);
   assert.equal(store.activeMatchForSenior('s-harold'), null);

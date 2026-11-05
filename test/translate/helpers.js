@@ -5,6 +5,7 @@ import { BaseStore } from '../../src/store-core.js';
 import { createApp } from '../../src/app.js';
 import { createSparkService } from '../../src/sparks/index.js';
 import { buildConfig } from '../../src/config.js';
+import { sessionCookieFor } from '../helpers/server.js'; // [v2 accounts] real sessions
 
 process.env.TZ = 'America/Indiana/Indianapolis';
 export const NOW = new Date('2026-11-04T12:00:00');
@@ -23,7 +24,9 @@ export function makeApp({ live = false, baseUrl, env = {}, now = NOW } = {}) {
   const handle = createApp({ store, sparks, now: () => now });
   const request = async (method, path, { body, viewer } = {}) => {
     const headers = { 'content-type': 'application/x-www-form-urlencoded' };
-    if (viewer) headers.cookie = `viewer=${encodeURIComponent(viewer)}`;
+    // [v2 accounts] `viewer` is 'coordinator', 'senior:<id>', 'volunteer:<id>',
+    // 'family:<seniorId>', or 'public' (signed out). No viewer means the admin.
+    if (viewer !== 'public') headers.cookie = await sessionCookieFor(store, viewer || 'admin');
     const res = await handle(new Request(`http://porchlight.test${path}`, { method, headers, body: body ? new URLSearchParams(body).toString() : undefined }));
     return { status: res.status, text: await res.text(), location: res.headers.get('location') };
   };

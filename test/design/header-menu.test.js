@@ -13,16 +13,21 @@ import { createApp } from '../../src/app.js';
 import { createNodeServer } from '../../src/node-server.js';
 import { createSparkService } from '../../src/sparks/index.js';
 import { buildConfig, ROOT_DIR } from '../../src/config.js';
+import { fetchAs, sessionCookieFor } from '../helpers/server.js'; // [v2 accounts] signed in as the coordinator
 
 process.env.TZ = 'America/Indiana/Indianapolis'; // match test/app.test.js
 
 let server;
 let base;
 let tmpDir;
+let store;
+// [v2 accounts] Every request is signed in as the coordinator (admin) unless it
+// carries its own session cookie. Signed out, a visitor sees only the public site.
+const fetch = fetchAs(() => store);
 
 before(async () => {
   tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'porchlight-menu-test-'));
-  const store = new Store(path.join(tmpDir, 'db.json'));
+  store = new Store(path.join(tmpDir, 'db.json'));
   store.open();
   const sparks = createSparkService(buildConfig({}), { effective: 'mock', reason: 'test', warning: null });
   server = createNodeServer({ handle: createApp({ store, sparks }), publicDir: path.join(ROOT_DIR, 'public') });
@@ -84,24 +89,24 @@ test('the Menu is a labeled native <details> whose page list comes right after i
 });
 
 test('both navs list the same pages, each with aria-current on the page you are on, and distinct labels', async () => {
-  for (const [url, here] of [['/admin', '/'], ['/dashboard', '/dashboard'], ['/attention', '/attention'], ['/seniors/s-harold', '/seniors'], ['/help', '/help']]) {
-    const body = await page(url, ADMIN);
+  for (const [url, here] of [['/admin', '/admin'], ['/admin/dashboard', '/admin/dashboard'], ['/admin/attention', '/admin/attention'], ['/seniors/s-harold', '/admin/seniors'], ['/help', '/help']]) {
+    const body = await page(url);
     const labels = [...headerOf(body).matchAll(/<nav\b[^>]*aria-label="([^"]+)"/g)].map((m) => m[1]);
     assert.deepEqual(labels, ['Main menu', 'Main'], `${url}: two navs, two different names`);
     assert.equal((body.match(/<nav\b/g) || []).length, 2, `${url}: no other nav`);
     const menu = navNamed(body, 'Main menu');
     const bar = navNamed(body, 'Main');
     assert.deepEqual(links(menu), links(bar), url);
-    assert.equal(links(menu).length, 8, `${url}: the coordinator sees every page`);
+    assert.equal(links(menu).length, 9, `${url}: the coordinator sees every page`);
     assert.deepEqual(current(menu), [here], `${url}: Menu marks ${here}`);
     assert.deepEqual(current(bar), [here], `${url}: the bar marks ${here}`);
   }
 });
 
 test('signed in, the Menu shows only that person\'s pages, still marking the current one', async () => {
-  const fam = await page('/dashboard', 'viewer=family%3As-harold');
+  const fam = await page('/dashboard', await sessionCookieFor(store, 'family:s-harold'));
   const menu = navNamed(fam, 'Main menu');
-  assert.deepEqual(links(menu), ['/dashboard', '/seniors/s-harold', '/help']);
+  assert.deepEqual(links(menu), ['/dashboard', '/seniors/s-harold', '/account', '/help']);
   assert.deepEqual(links(navNamed(fam, 'Main')), links(menu));
   assert.deepEqual(current(menu), ['/dashboard']);
   // The header still says who is signed in, and Sign out is still there.

@@ -144,8 +144,12 @@ function createResponse() {
     header(name, value) {
       headers.set(name, value);
     },
-    setCookie(name, value, maxAgeSeconds = 60 * 60 * 24 * 365) {
-      headers.append('Set-Cookie', `${name}=${encodeURIComponent(value)}; Path=/; Max-Age=${maxAgeSeconds}; SameSite=Lax`);
+    // options: { httpOnly, secure, sameSite } (SameSite is Lax unless you say otherwise).
+    setCookie(name, value, maxAgeSeconds = 60 * 60 * 24 * 365, { httpOnly = false, secure = false, sameSite = 'Lax' } = {}) {
+      const parts = [`${name}=${encodeURIComponent(value)}`, 'Path=/', `Max-Age=${maxAgeSeconds}`, `SameSite=${sameSite}`];
+      if (httpOnly) parts.push('HttpOnly');
+      if (secure) parts.push('Secure');
+      headers.append('Set-Cookie', parts.join('; '));
     },
     // HEAD gets the same status and headers as GET, with no body.
     toResponse({ head = false } = {}) {
@@ -178,6 +182,9 @@ async function handleRequest(request, { router, renderError }) {
     query: Object.fromEntries(url.searchParams),
     cookies: parseCookies(request.headers.get('cookie') || ''),
     headers: request.headers, // [v2] e.g. accept-language, and the client IP header (see src/auth)
+    // [v2] https? Then the session cookie is marked Secure. Behind a proxy the
+    // address says http, so the proxy's x-forwarded-proto counts too.
+    secure: url.protocol === 'https:' || (request.headers.get('x-forwarded-proto') || '').split(',')[0].trim() === 'https',
     body: {},
     params: {},
   };
@@ -185,7 +192,7 @@ async function handleRequest(request, { router, renderError }) {
   try {
     const found = router.match(head ? 'GET' : req.method, url.pathname);
     if (!found) {
-      renderError(req, res, 404, 'We could not find that page.');
+      await renderError(req, res, 404, 'We could not find that page.');
       return res.toResponse({ head });
     }
     req.params = found.params;
@@ -195,7 +202,12 @@ async function handleRequest(request, { router, renderError }) {
     const status = err.status || 500;
     if (status >= 500) console.error(err);
     if (!res.headersSent) {
-      renderError(req, res, status, status === 500 ? 'Something went wrong on our side.' : err.message);
+      try {
+        await renderError(req, res, status, status === 500 ? 'Something went wrong on our side.' : err.message);
+      } catch (inner) {
+        console.error(inner);
+        res.html('Something went wrong on our side.', 500);
+      }
     }
   }
   return res.toResponse({ head });

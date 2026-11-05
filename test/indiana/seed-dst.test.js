@@ -26,7 +26,7 @@ function storyAt(now) {
 }
 
 const EXPECTED = {
-  order: 'at_risk,needs_match,due_soon,ok',
+  order: ['at_risk', 'needs_match', 'due_soon', ...Array(9).fill('ok')].join(','), // [v2 accounts] the 8 new seniors stay Connected too
   hal: ['at_risk', true, 12],
   rosa: ['due_soon', 5],
   eugene: 'needs_match',

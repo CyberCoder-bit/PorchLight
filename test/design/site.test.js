@@ -14,16 +14,18 @@ import { createSparkService } from '../../src/sparks/index.js';
 import { buildConfig, ROOT_DIR } from '../../src/config.js';
 import { EN } from '../../src/i18n/index.js';
 import { SITE_RULES, EVERYONE } from '../../src/views/site/access.js';
+import { sessionCookieFor } from '../helpers/server.js'; // [v2 accounts] real sessions
 
 process.env.TZ = 'America/Indiana/Indianapolis'; // match test/app.test.js
 
 let server;
 let base;
 let tmpDir;
+let store;
 
 before(async () => {
   tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'porchlight-site-test-'));
-  const store = new Store(path.join(tmpDir, 'db.json'));
+  store = new Store(path.join(tmpDir, 'db.json'));
   store.open();
   const sparks = createSparkService(buildConfig({}), { effective: 'mock', reason: 'test', warning: null });
   server = createNodeServer({ handle: createApp({ store, sparks }), publicDir: path.join(ROOT_DIR, 'public') });
@@ -122,8 +124,8 @@ test('/about keeps the team placeholders and only sourced facts', async () => {
 });
 
 test('signed in, the header keeps the person\'s own nav', async () => {
-  const body = await page('/how-it-works', 'viewer=family%3As-harold');
-  assert.deepEqual(links(navNamed(body, 'Main')), ['/dashboard', '/seniors/s-harold', '/help']);
+  const body = await page('/how-it-works', await sessionCookieFor(store, 'family:s-harold'));
+  assert.deepEqual(links(navNamed(body, 'Main')), ['/dashboard', '/seniors/s-harold', '/account', '/help']);
   assert.doesNotMatch(headerOf(body), /nav-cta/);
   assert.match(headerOf(body), /Signed in as/);
 });

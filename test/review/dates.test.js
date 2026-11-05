@@ -15,11 +15,15 @@ import { createSparkService } from '../../src/sparks/index.js';
 import { buildConfig, ROOT_DIR } from '../../src/config.js';
 import { fromLocal, parseLocalDateTime } from '../../src/tz.js';
 import { slotForDate } from '../../src/vocab.js';
+import { fetchAs } from '../helpers/server.js'; // [v2 accounts] signed in as the coordinator
 
 const NOW = fromLocal(2026, 11, 3, 12, 0); // Tuesday, Nov 3, 2026, 12:00 PM in Carmel
 let server;
 let base;
 let store;
+// [v2 accounts] Every request is signed in as the coordinator (admin) unless it
+// carries its own session cookie. Signed out, a visitor sees only the public site.
+const fetch = fetchAs(() => store);
 let tmpDir;
 
 before(async () => {

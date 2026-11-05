@@ -11,10 +11,14 @@ import { createApp } from '../../src/app.js';
 import { createNodeServer } from '../../src/node-server.js';
 import { createSparkService } from '../../src/sparks/index.js';
 import { buildConfig, ROOT_DIR } from '../../src/config.js';
+import { fetchAs } from '../helpers/server.js'; // [v2 accounts] signed in as the coordinator
 
 let server;
 let base;
 let store;
+// [v2 accounts] Every request is signed in as the coordinator (admin) unless it
+// carries its own session cookie. Signed out, a visitor sees only the public site.
+const fetch = fetchAs(() => store);
 let tmpDir;
 
 before(async () => {
@@ -53,19 +57,19 @@ const textSizeBack = (html) => html.match(/<form class="text-size"[\s\S]*?name="
 
 test('B-10: pressing A++ on a form that came back with errors keeps the person on a working page', async () => {
   // Family dashboard: an out-of-range alert setting re-shows the dashboard at URL /settings.
-  let res = await post('/settings', { riskThresholdDays: '0' });
+  let res = await post('/admin/settings', { riskThresholdDays: '0' });
   assert.equal(res.status, 200);
   let back = textSizeBack(await res.text());
   let target = await get(back);
   assert.equal(target.status, 200, `A++ on the dashboard error page goes to ${back}, which is a ${target.status}`);
 
   // Add a senior with a missing name: A++ should keep the form, not jump to the list.
-  res = await post('/seniors', { ...SENIOR, name: '' });
+  res = await post('/admin/seniors', { ...SENIOR, name: '' });
   assert.equal(res.status, 200);
   back = textSizeBack(await res.text());
   target = await get(back);
   assert.equal(target.status, 200);
-  assert.match(await target.text(), /<form method="post" action="\/seniors" class="stack-form"/, `A++ on the "Add a senior" error page goes to ${back}, which has no form`);
+  assert.match(await target.text(), /<form method="post" action="\/admin\/seniors" class="stack-form"/, `A++ on the "Add a senior" error page goes to ${back}, which has no form`);
 });
 
 test('B-06: the family summary prints in full (the copy box is not cut off on paper)', async () => {
@@ -96,30 +100,30 @@ test('B-18: HEAD requests work like GET (link checkers and uptime monitors use t
 });
 
 test('B-19: numbers in hex or exponent form are not accepted as ages or alert days', async () => {
-  let res = await post('/seniors', { ...SENIOR, name: 'Hex Age', age: '0x50' });
+  let res = await post('/admin/seniors', { ...SENIOR, name: 'Hex Age', age: '0x50' });
   assert.equal(res.status, 200, 'age "0x50" was saved as 80');
   for (const v of ['0x7', '1e1']) {
-    res = await post('/settings', { riskThresholdDays: v });
+    res = await post('/admin/settings', { riskThresholdDays: v });
     assert.equal(res.status, 200, `alert days "${v}" was accepted`);
   }
 });
 
 test('B-20: a name made only of invisible characters is rejected', async () => {
   for (const name of ['​', '​‌‍', '⁠﻿']) {
-    const res = await post('/seniors', { ...SENIOR, name });
+    const res = await post('/admin/seniors', { ...SENIOR, name });
     assert.equal(res.status, 200, `invisible name ${JSON.stringify(name)} was saved`);
   }
 });
 
 test('B-21: "About them" counts characters as people do (emoji count once)', async () => {
   const aboutMe = '\u{1F44D}'.repeat(300); // 300 thumbs-up: 300 characters, 600 UTF-16 units
-  const res = await post('/seniors', { ...SENIOR, name: 'Emoji Fan', aboutMe });
+  const res = await post('/admin/seniors', { ...SENIOR, name: 'Emoji Fan', aboutMe });
   assert.equal(res.status, 303, '300 emoji rejected as "more than 500 characters"');
 });
 
 test('B-22: with a 1-day alert setting the dashboard does not say "1 to 1 day"', async () => {
-  const res = await post('/settings', { riskThresholdDays: '1' });
+  const res = await post('/admin/settings', { riskThresholdDays: '1' });
   assert.equal(res.status, 303);
   assert.doesNotMatch(await page('/dashboard'), /Getting close: 1 to 1 day/);
-  await post('/settings', { riskThresholdDays: '7' });
+  await post('/admin/settings', { riskThresholdDays: '7' });
 });

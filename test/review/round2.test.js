@@ -17,10 +17,14 @@ import { buildConfig, ROOT_DIR } from '../../src/config.js';
 import { startOfLocalDay } from '../../src/tz.js';
 import { toDateInput } from '../../src/views/html.js';
 import { TOUR_STEPS } from '../../src/views/pages/extra.js';
+import { fetchAs, sessionCookieFor } from '../helpers/server.js'; // [v2 accounts] signed in as the coordinator
 
 let server;
 let base;
 let store;
+// [v2 accounts] Every request is signed in as the coordinator (admin) unless it
+// carries its own session cookie. Signed out, a visitor sees only the public site.
+const fetch = fetchAs(() => store);
 let tmpDir;
 
 before(async () => {
@@ -45,19 +49,23 @@ const encode = (data) => {
   }
   return params.toString();
 };
-const request = (method, p, { cookie, data } = {}) =>
-  fetch(base + p, {
+// [v2 accounts] `cookie` may name a demo person ('volunteer:v-ethan'), which
+// becomes a real session cookie for them.
+const request = async (method, p, { cookie, data } = {}) => {
+  const c = cookie && !cookie.includes('=') ? await sessionCookieFor(store, cookie) : cookie;
+  return fetch(base + p, {
     method,
     redirect: 'manual',
-    headers: { ...(data ? { 'content-type': 'application/x-www-form-urlencoded' } : {}), ...(cookie ? { cookie } : {}) },
+    headers: { ...(data ? { 'content-type': 'application/x-www-form-urlencoded' } : {}), ...(c ? { cookie: c } : {}) },
     body: data ? encode(data) : undefined,
   });
+};
 const page = async (p, cookie) => (await request('GET', p, { cookie })).text();
 const reset = () => store.reset();
 
-const ETHAN = 'viewer=volunteer:v-ethan';
-const HAL_FAMILY = 'viewer=family:s-harold';
-const HAL = 'viewer=senior:s-harold';
+const ETHAN = 'volunteer:v-ethan';
+const HAL_FAMILY = 'family:s-harold';
+const HAL = 'senior:s-harold';
 const SENIOR = { interests: ['cars'], availability: ['tue-afternoon'], contactMethod: 'phone' };
 
 // ---------- the demo sign-in ----------
@@ -78,7 +86,7 @@ test('B-31: a signed-in person who opens a wrong address still sees their own he
   reset();
   const html = await page('/dashbord', HAL_FAMILY); // a typo: no such page
   assert.match(html, /Signed in as <strong>/, '404 page says "Demo mode: everything is visible" to a signed-in family member');
-  assert.doesNotMatch(html, /<a href="\/attention"/, '404 page offers the coordinator nav to a family member');
+  assert.doesNotMatch(html, /<a href="\/admin\/attention"/, '404 page offers the coordinator nav to a family member');
 });
 
 test('B-32: a phone number typed into the family contact fields is never shown to signed-in people', async () => {
@@ -111,7 +119,7 @@ test('B-33: HEAD / answers like GET / for a signed-in person (a redirect to thei
 test('B-35: after tour step 7 signs in as Hal\'s family, the tour itself still opens', async () => {
   reset();
   // The tour says "Use your browser's Back button to return here after each step."
-  const step = TOUR_STEPS.findIndex((s) => s.href === '/sign-in');
+  const step = TOUR_STEPS.findIndex((s) => s.demo === 'family'); // [v2 accounts] the one-click sign-in as Mike
   assert.ok(step >= 0 && step < TOUR_STEPS.length - 1, 'the sign-in step is not the last step');
   const res = await request('GET', '/tour', { cookie: HAL_FAMILY });
   assert.equal(res.status, 200, 'signed in as Mike (tour step 7), /tour says "This page is for coordinators"');
@@ -152,7 +160,7 @@ test('B-12 (partly fixed): phone numbers written with other dashes or digits are
 test('B-20 (partly fixed): names made of blank-looking letters are rejected', async () => {
   reset();
   for (const name of ['ㅤ', 'ᅟ', '⠀', 'ﾠ', '́']) {
-    const res = await request('POST', '/seniors', { data: { ...SENIOR, name } });
+    const res = await request('POST', '/admin/seniors', { data: { ...SENIOR, name } });
     assert.equal(res.status, 200, `blank-looking name ${JSON.stringify(name)} was saved`);
   }
 });
@@ -163,7 +171,7 @@ test('B-21 (partly fixed): "About them" counts what people see as one character 
     ['300 thumbs-up with a skin tone', '\u{1F44D}\u{1F3FD}'.repeat(300)],
     ['500 accented e typed as e + accent', 'é'.repeat(500)],
   ]) {
-    const res = await request('POST', '/seniors', { data: { ...SENIOR, name: 'Emoji Fan', aboutMe } });
+    const res = await request('POST', '/admin/seniors', { data: { ...SENIOR, name: 'Emoji Fan', aboutMe } });
     assert.equal(res.status, 303, `${label} rejected as more than 500 characters`);
   }
 });

@@ -20,12 +20,17 @@ import { fromLocal, localDateKey } from '../../src/tz.js';
 import { nextSlotTime, slotForDate } from '../../src/vocab.js';
 import { formatLongDate, setDisplayClock } from '../../src/views/html.js';
 import { needsAttention, attentionBreakdown, dashboardSummary } from '../../src/risk.js';
+import { fetchAs } from '../helpers/server.js'; // [v2 accounts] signed in as the coordinator
 
 const NOW = fromLocal(2026, 11, 3, 12, 0); // Tuesday, Nov 3, 2026, 12:00 PM in Carmel
 const servers = [];
 const tmpDirs = [];
 let base;
 let store;
+// [v2 accounts] Every request is signed in as the coordinator (admin) unless it
+// carries its own session cookie. Signed out, a visitor sees only the public site.
+const storesByBase = new Map(); // each test server has its own store, so its own sessions
+const fetch = (url, init) => fetchAs(() => storesByBase.get(new URL(url).origin) || store)(url, init);
 
 async function startApp({ sparks }) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'porchlight-fixes-'));
@@ -35,6 +40,7 @@ async function startApp({ sparks }) {
   const server = createNodeServer({ handle: createApp({ store: s, sparks, now: () => NOW }), publicDir: path.join(ROOT_DIR, 'public') });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   servers.push(server);
+  storesByBase.set(`http://127.0.0.1:${server.address().port}`, s);
   return { store: s, base: `http://127.0.0.1:${server.address().port}` };
 }
 
@@ -73,7 +79,7 @@ const scheduled = (seniorId) => store.contacts.find((c) => c.seniorId === senior
 // ---------- B-03 / B-28: the tour story after a reset ----------
 
 test('after a reset, /attention asks about Hal\'s unmarked visit, and Ethan\'s week can log it', async () => {
-  const hal = card(await page('/attention'), 's-harold');
+  const hal = card(await page('/admin/attention'), 's-harold');
   assert.match(hal, /Suggested next step: Ask Ethan about the last visit/);
   assert.match(hal, /Ethan had an in-person visit with Hal yesterday at 3:30\sPM, and nobody has marked it yet\./);
   assert.doesNotMatch(hal, /Nothing is on the calendar/);
@@ -85,7 +91,7 @@ test('after a reset, /attention asks about Hal\'s unmarked visit, and Ethan\'s w
 
   // The story on the dashboard is unchanged until someone logs it.
   const rows = dashboardSummary(store, NOW);
-  assert.deepEqual(rows.map((r) => r.status), ['at_risk', 'needs_match', 'due_soon', 'ok']);
+  assert.deepEqual(rows.map((r) => r.status), ['at_risk', 'needs_match', 'due_soon', ...Array(9).fill('ok')]); // [v2 accounts] + 8 Connected
 });
 
 test('a call set for right now stays under "Coming up" for an hour, not "Did these happen?" (B-28)', async () => {
@@ -146,7 +152,7 @@ test('a call later today can be logged (counted as now), but not marked missed b
 
 test('ending a match cancels the pair\'s planned calls everywhere, and keeps them in the history', async () => {
   const rosaCall = scheduled('s-rosa');
-  const res = await post('/matches/m-rosa-linda/end');
+  const res = await post('/admin/matches/m-rosa-linda/end');
   assert.equal(res.status, 303);
   const saved = store.contacts.find((c) => c.id === rosaCall.id);
   assert.equal(saved.status, 'cancelled');
@@ -163,7 +169,7 @@ test('ending a match cancels the pair\'s planned calls everywhere, and keeps the
   const rosa = dash.slice(dash.indexOf('href="/seniors/s-rosa"'), dash.indexOf('</dl>', dash.indexOf('href="/seniors/s-rosa"')));
   assert.match(rosa, /Next call or visit<\/dt>\s*<dd><strong>Nothing scheduled<\/strong>/);
   assert.match(await page('/contacts'), /Cancelled \(the match ended\)/);
-  assert.match(await page('/match?seniorId=s-rosa&msg=match_ended'), /Calls they had planned were taken off the calendar\./);
+  assert.match(await page('/admin/match?seniorId=s-rosa&msg=match_ended'), /Calls they had planned were taken off the calendar\./);
 });
 
 // ---------- B-11: a match that no longer fits is never silent ----------
@@ -192,7 +198,7 @@ test('after an edit breaks a match, both profiles explain what no longer fits', 
 // ---------- B-26: the current companion is not "Not suggested" ----------
 
 test('a matched senior\'s own companion is not listed as "At capacity" on the Match page', async () => {
-  const html = await page('/match?seniorId=s-harold');
+  const html = await page('/admin/match?seniorId=s-harold');
   assert.match(html, /Hal is already matched with Ethan Brooks/);
   const lists = html.slice(html.indexOf('id="suggestions-heading"'));
   assert.doesNotMatch(lists, /Ethan Brooks/);
@@ -201,21 +207,21 @@ test('a matched senior\'s own companion is not listed as "At capacity" on the Ma
 // ---------- B-27: error pages say what to do next ----------
 
 test('error pages are not dead ends', async () => {
-  assert.equal((await post('/matches', { seniorId: 's-eugene', volunteerId: 'v-sam' })).status, 303);
-  const res = await post('/matches', { seniorId: 's-eugene', volunteerId: 'v-sam' });
+  assert.equal((await post('/admin/matches', { seniorId: 's-eugene', volunteerId: 'v-sam' })).status, 303);
+  const res = await post('/admin/matches', { seniorId: 's-eugene', volunteerId: 'v-sam' });
   assert.equal(res.status, 409);
   const html = await res.text();
   assert.match(html, /<h1>That didn(&#39;|')t work<\/h1>/);
   assert.match(html, /reload the page to see the latest/);
-  assert.match(html, /href="\/attention"/);
+  assert.match(html, /href="\/admin\/attention"/);
 });
 
 // ---------- B-22 ----------
 
 test('the "Getting close" range reads naturally for small alert settings', async () => {
-  await post('/settings', { riskThresholdDays: '2' });
+  await post('/admin/settings', { riskThresholdDays: '2' });
   assert.match(await page('/dashboard'), /Getting close: 1 to 2 days since the last call or visit/);
-  await post('/settings', { riskThresholdDays: '1' });
+  await post('/admin/settings', { riskThresholdDays: '1' });
   assert.match(await page('/dashboard'), /Getting close: 1 day since the last call or visit/);
 });
 
@@ -232,7 +238,7 @@ test('a senior on the list only for a missed call is counted, in words, on Home 
   assert.equal(attentionBreakdown(dashboardSummary(store, NOW).filter(needsAttention)), words);
   assert.match(await page('/admin'), new RegExp(`<p class="tile-value">3</p>\\s*<p class="tile-label">seniors need attention</p>\\s*<p class="tile-detail">${words}</p>`));
   assert.match(await page('/dashboard'), new RegExp(`Right now, 3 seniors need attention: ${words}\\.`));
-  assert.equal((await page('/attention')).match(/<li class="card dash-card/g).length, 3);
+  assert.equal((await page('/admin/attention')).match(/<li class="card dash-card/g).length, 3);
 });
 
 // ---------- Fact-check #3: no "regularly" next to "Contact dropping" ----------

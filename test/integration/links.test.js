@@ -12,14 +12,19 @@ import { createApp } from '../../src/app.js';
 import { createNodeServer } from '../../src/node-server.js';
 import { createSparkService } from '../../src/sparks/index.js';
 import { buildConfig, ROOT_DIR } from '../../src/config.js';
+import { fetchAs } from '../helpers/server.js'; // [v2 accounts] signed in as the coordinator
 
 let server;
 let base;
 let tmpDir;
+let store;
+// [v2 accounts] Every request is signed in as the coordinator (admin) unless it
+// carries its own session cookie. Signed out, a visitor sees only the public site.
+const fetch = fetchAs(() => store);
 
 before(async () => {
   tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'porchlight-links-'));
-  const store = new Store(path.join(tmpDir, 'db.json'));
+  store = new Store(path.join(tmpDir, 'db.json'));
   store.open();
   const sparks = createSparkService(buildConfig({}), { effective: 'mock', reason: 'test', warning: null });
   server = createNodeServer({ handle: createApp({ store, sparks }), publicDir: path.join(ROOT_DIR, 'public') });
@@ -50,14 +55,17 @@ function internalLinks(htmlText) {
   return out;
 }
 
-test('every internal link works, starting from fresh demo data', async () => {
+// [v2 accounts] Crawl once signed out, once as the coordinator, and once per
+// demo role. `who` is null (signed out) or a name test/helpers/server.js knows.
+async function crawl(who, starts) {
+  const get = who ? fetchAs(() => store, who) : globalThis.fetch;
   const seen = new Map(); // path -> status
-  const queue = ['/', '/tour', '/dashboard', '/attention', '/help'];
+  const queue = [...starts];
   const problems = [];
   while (queue.length && seen.size < 400) {
     const p = queue.shift();
     if (seen.has(p)) continue;
-    const res = await fetch(base + p, { redirect: 'manual' });
+    const res = await get(base + p, { redirect: 'manual' });
     seen.set(p, res.status);
     const type = res.headers.get('content-type') || '';
     if (res.status === 404 && /^\/sign-up(\/|$)/.test(p)) continue; // [v2 brand] /sign-up/* belongs to the accounts module
@@ -73,8 +81,33 @@ test('every internal link works, starting from fresh demo data', async () => {
     }
     for (const link of internalLinks(body)) if (!seen.has(link)) queue.push(link);
   }
+  return { seen, problems };
+}
+
+test('signed out, the crawl never reaches /admin and finds no broken links', async () => {
+  store.reset();
+  const { seen, problems } = await crawl(null, ['/', '/tour', '/help', '/sign-in', '/sign-up', '/about-ai']);
+  assert.deepEqual(problems, [], `Broken pages:\n${problems.join('\n')}`);
+  assert.deepEqual([...seen.keys()].filter((p) => p.startsWith('/admin')), [], 'a public page links to /admin');
+  for (const [p, status] of seen) assert.ok(status === 200 || status === 303, `${p} -> ${status}`);
+  assert.ok(seen.size >= 6, `crawled ${seen.size} pages`);
+});
+
+test('each demo role: every link it is shown works, and none leads to /admin', async () => {
+  store.reset();
+  for (const who of ['senior', 'senior-ar', 'volunteer', 'volunteer-translate', 'family', 'noah@porchlight.example', 'ellen@porchlight.example']) {
+    const { seen, problems } = await crawl(who, ['/', '/home', '/account', '/tour', '/help']);
+    assert.deepEqual(problems, [], `${who}: broken pages:\n${problems.join('\n')}`);
+    assert.deepEqual([...seen.keys()].filter((p) => p.startsWith('/admin')), [], `${who} was shown a link to /admin`);
+    assert.ok(seen.size >= 4, `${who} crawled ${seen.size} pages`);
+  }
+});
+
+test('every internal link works, starting from fresh demo data', async () => {
+  store.reset();
+  const { seen, problems } = await crawl('admin', ['/', '/admin', '/tour', '/admin/dashboard', '/admin/attention', '/admin/approvals', '/help']);
   // Routes the tour depends on must exist.
-  for (const required of ['/', '/dashboard']) assert.equal(seen.get(required), 200, `${required} should load`);
+  for (const required of ['/', '/admin', '/admin/dashboard']) assert.equal(seen.get(required), 200, `${required} should load`);
   assert.deepEqual(problems, [], `Broken pages:\n${problems.join('\n')}`);
   assert.ok(seen.size > 10, `crawled ${seen.size} pages`);
 });

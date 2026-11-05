@@ -14,16 +14,21 @@ import { createNodeServer } from '../../src/node-server.js';
 import { createSparkService } from '../../src/sparks/index.js';
 import { buildConfig, ROOT_DIR } from '../../src/config.js';
 import { COMMUNITY } from '../../src/community.js';
+import { fetchAs } from '../helpers/server.js'; // [v2 accounts] signed in as the coordinator
 
 process.env.TZ = 'America/Indiana/Indianapolis'; // match test/app.test.js
 
 let server;
 let base;
 let tmpDir;
+let store;
+// [v2 accounts] Every request is signed in as the coordinator (admin) unless it
+// carries its own session cookie. Signed out, a visitor sees only the public site.
+const fetch = fetchAs(() => store);
 
 before(async () => {
   tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'porchlight-design-test-'));
-  const store = new Store(path.join(tmpDir, 'db.json'));
+  store = new Store(path.join(tmpDir, 'db.json'));
   store.open();
   const sparks = createSparkService(buildConfig({}), { effective: 'mock', reason: 'test', warning: null });
   server = createNodeServer({ handle: createApp({ store, sparks }), publicDir: path.join(ROOT_DIR, 'public') });
@@ -46,9 +51,9 @@ const mainOf = (body) => body.slice(body.indexOf('<main'), body.indexOf('</main>
 
 // Pages this module's tests may request (all served by src/app.js or extra.js).
 const PAGES = [
-  '/', '/admin', '/tour', '/dashboard', '/seniors', '/seniors/new', '/seniors/s-harold', '/seniors/s-harold/edit',
-  '/volunteers', '/volunteers/new', '/volunteers/v-ethan', '/volunteers/v-ethan/edit',
-  '/match', '/match?seniorId=s-eugene', '/match?seniorId=s-harold', '/contacts', '/about-ai', '/demo/reset',
+  '/', '/admin', '/tour', '/dashboard', '/admin/seniors', '/admin/seniors/new', '/seniors/s-harold', '/seniors/s-harold/edit',
+  '/admin/volunteers', '/admin/volunteers/new', '/volunteers/v-ethan', '/volunteers/v-ethan/edit',
+  '/admin/match', '/admin/match?seniorId=s-eugene', '/admin/match?seniorId=s-harold', '/contacts', '/about-ai', '/admin/demo/reset',
 ];
 
 test('the demo tour renders and links to every fixed route, starting with a reset', async () => {
@@ -56,16 +61,19 @@ test('the demo tour renders and links to every fixed route, starting with a rese
   assert.match(body, /<h1>The 2-minute demo tour<\/h1>/);
   const main = mainOf(body);
   const links = [...main.matchAll(/<a class="button[^"]*" href="([^"]+)"/g)].map((m) => m[1].replace(/&amp;/g, '&'));
+  // [v2 accounts] Step 1 signs in as the coordinator first; steps 5 and 7 are
+  // one-click demo buttons (Ethan, then Mike), not links.
   assert.deepEqual(links, [
-    '/demo/reset',
-    '/dashboard',
-    '/attention',
-    '/match?seniorId=s-eugene',
-    '/volunteers/v-ethan/week',
+    '/sign-in?next=%2Fadmin%2Fdemo%2Freset',
+    '/admin/dashboard',
+    '/admin/attention',
+    '/admin/match?seniorId=s-eugene',
     '/seniors/s-harold#sparks',
-    '/sign-in',
     '/help',
   ]);
+  const demos = [...main.matchAll(/<input type="hidden" name="as" value="([^"]+)">/g)].map((m) => m[1]);
+  assert.deepEqual(demos, ['volunteer', 'family']);
+  assert.equal((main.match(/action="\/sign-in\/demo"/g) || []).length, 2);
   // Numbered steps, each with one "what to notice" sentence.
   assert.equal((main.match(/<h2>Step \d+: /g) || []).length, 8);
   assert.equal((main.match(/What to notice:/g) || []).length, 8);
@@ -86,25 +94,25 @@ test('the coordinator home explains the loop and offers the tour', async () => {
   // Hero copy comes from the community profile.
   assert.match(main, new RegExp(`Built for Indiana communities, starting in ${COMMUNITY.town}, ${COMMUNITY.county}`));
   // The "Needs attention today" panel links to the queue.
-  assert.match(main, /href="\/attention"/);
+  assert.match(main, /href="\/admin\/attention"/);
 });
 
 test('the nav marks the current page with aria-current and includes the new sections', async () => {
   const cases = [
-    ['/admin', '/'],
-    ['/seniors', '/seniors'],
-    ['/seniors/s-harold', '/seniors'],
-    ['/volunteers/v-ethan', '/volunteers'],
-    ['/match?seniorId=s-eugene', '/match'],
+    ['/admin', '/admin'],
+    ['/admin/seniors', '/admin/seniors'],
+    ['/seniors/s-harold', '/admin/seniors'],
+    ['/volunteers/v-ethan', '/admin/volunteers'],
+    ['/admin/match?seniorId=s-eugene', '/admin/match'],
     ['/contacts', '/contacts'],
-    ['/dashboard', '/dashboard'],
+    ['/admin/dashboard', '/admin/dashboard'],
   ];
   for (const [url, current] of cases) {
     const body = await page(url, ADMIN);
     const nav = body.slice(body.indexOf('<nav class="site-nav"'), body.indexOf('</nav>'));
     const marked = [...nav.matchAll(/<a href="([^"]+)" aria-current="page">/g)].map((m) => m[1]);
     assert.deepEqual(marked, [current], `${url} marks ${current}`);
-    assert.match(nav, /<a href="\/attention"[^>]*>Needs attention<\/a>/);
+    assert.match(nav, /<a href="\/admin\/attention"[^>]*>Needs attention<\/a>/);
     assert.match(nav, /<a href="\/help"[^>]*>Get help<\/a>/);
   }
 });
@@ -131,13 +139,13 @@ test('flagged numbers say exactly what they count', async () => {
 
 test('sub-pages have a "Back to" link, and volunteers link to their week', async () => {
   const backs = {
-    '/seniors/s-harold': '/seniors',
-    '/seniors/new': '/seniors',
+    '/seniors/s-harold': '/admin/seniors',
+    '/admin/seniors/new': '/admin/seniors',
     '/seniors/s-harold/edit': '/seniors/s-harold',
-    '/volunteers/v-ethan': '/volunteers',
-    '/volunteers/new': '/volunteers',
+    '/volunteers/v-ethan': '/admin/volunteers',
+    '/admin/volunteers/new': '/admin/volunteers',
     '/volunteers/v-ethan/edit': '/volunteers/v-ethan',
-    '/match?seniorId=s-eugene': '/match',
+    '/admin/match?seniorId=s-eugene': '/admin/match',
     '/about-ai': '/',
     '/tour': '/',
   };

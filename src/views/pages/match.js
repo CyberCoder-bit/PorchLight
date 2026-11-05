@@ -19,10 +19,10 @@ export function matchIndexPage({ unmatched, matched }) {
               <h3 class="card-title">${s.name}</h3>
               <p class="card-meta">Prefers ${methodLabel(s.contactMethod).toLowerCase()}s</p>
               ${chips(s.interests)}
-              <p><a class="button" href="/match?seniorId=${s.id}">Find a companion for ${s.preferredName || s.name.split(' ')[0]}</a></p>
+              <p><a class="button" href="/admin/match?seniorId=${s.id}">Find a companion for ${s.preferredName || s.name.split(' ')[0]}</a></p>
             </li>`
           )}</ul>`
-        : emptyState(html`<p><strong>Everyone has a companion right now.</strong> When you <a href="/seniors/new">add a senior</a>, they will show up here.</p>`)}
+        : emptyState(html`<p><strong>Everyone has a companion right now.</strong> When you <a href="/admin/seniors/new">add a senior</a>, they will show up here.</p>`)}
     </section>
 
     <section class="panel" aria-labelledby="matched-heading">
@@ -30,7 +30,7 @@ export function matchIndexPage({ unmatched, matched }) {
       ${matched.length
         ? html`<ul class="plain-list">
         ${matched.map(
-          ({ senior, volunteer }) => html`<li><a href="/seniors/${senior.id}">${senior.name}</a> with <a href="/volunteers/${volunteer.id}">${volunteer.name}</a> · <a href="/match?seniorId=${senior.id}">review match<span class="visually-hidden"> for ${senior.name}</span></a></li>`
+          ({ senior, volunteer }) => html`<li><a href="/seniors/${senior.id}">${senior.name}</a> with <a href="/volunteers/${volunteer.id}">${volunteer.name}</a> · <a href="/admin/match?seniorId=${senior.id}">review match<span class="visually-hidden"> for ${senior.name}</span></a></li>`
         )}
       </ul>`
         : emptyState(html`<p><strong>No matches yet.</strong> Choose a senior above to find their first companion.</p>`)}
@@ -58,7 +58,7 @@ export function matchSeniorPage({ senior, currentMatch, currentVolunteer, rankin
   const others = (list) => list.filter((r) => !currentVolunteer || r.volunteer.id !== currentVolunteer.id);
   const ranking = { eligible: others(allRanked.eligible), ineligible: others(allRanked.ineligible) };
   return html`
-    ${backLink('/match', 'all matches')}
+    ${backLink('/admin/match', 'all matches')}
     <h1>Find a companion for ${senior.name}</h1>
 
     <section class="panel" aria-labelledby="senior-summary-heading">
@@ -75,7 +75,7 @@ export function matchSeniorPage({ senior, currentMatch, currentVolunteer, rankin
         <section class="panel notice-panel" aria-labelledby="current-heading">
           <h2 id="current-heading">${first} is already matched with ${currentVolunteer.name}</h2>
           <p>To choose someone else, end the current match first. Past calls stay in the history. The suggestions below are for comparison only.</p>
-          <form method="post" action="/matches/${currentMatch.id}/end" class="inline-form">
+          <form method="post" action="/admin/matches/${currentMatch.id}/end" class="inline-form">
             <button type="submit" class="button button-secondary">End match with ${currentVolunteer.name}</button>
           </form>
         </section>`
@@ -103,7 +103,7 @@ export function matchSeniorPage({ senior, currentMatch, currentVolunteer, rankin
               </table>
               ${currentMatch
                 ? ''
-                : html`<form method="post" action="/matches" class="inline-form">
+                : html`<form method="post" action="/admin/matches" class="inline-form">
                     <input type="hidden" name="seniorId" value="${senior.id}">
                     <input type="hidden" name="volunteerId" value="${r.volunteer.id}">
                     <button type="submit" class="button${i === 0 ? '' : ' button-secondary'}">Match ${first} with ${r.volunteer.name.split(' ')[0]}</button>

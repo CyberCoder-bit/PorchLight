@@ -13,10 +13,15 @@ import { createSparkService } from '../../src/sparks/index.js';
 import { buildConfig, ROOT_DIR } from '../../src/config.js';
 import { startOfLocalDay } from '../../src/tz.js';
 import { toDateInput } from '../../src/views/html.js';
+import { fetchAs } from '../helpers/server.js'; // [v2 accounts] signed in as the coordinator
+import { TOUR_STEPS } from '../../src/views/pages/extra.js';
 
 let server;
 let base;
 let store;
+// [v2 accounts] Every request is signed in as the coordinator (admin) unless it
+// carries its own session cookie. Signed out, a visitor sees only the public site.
+const fetch = fetchAs(() => store);
 let tmpDir;
 
 before(async () => {
@@ -50,14 +55,14 @@ const post = (p, data) =>
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: encode(data),
   });
-const reset = async () => assert.equal((await post('/demo/reset', {})).status, 303);
+const reset = async () => assert.equal((await post('/admin/demo/reset', {})).status, 303);
 const tomorrow = () => toDateInput(startOfLocalDay(new Date(), 1));
 
 // "N seniors need attention" on each page.
 async function attentionCounts() {
   const home = await page('/admin'); // [v2] the coordinator home moved from / to /admin
   const dash = await page('/dashboard');
-  const att = await page('/attention');
+  const att = await page('/admin/attention');
   const homeTile = Number(home.match(/<p class="tile-value">(\d+)<\/p>\s*<p class="tile-label">(?:senior needs|seniors need) attention/)[1]);
   const line = dash.match(/<p class="status-line"><strong>Right now, ([^<]*)<\/strong>/)[1];
   const dashboard = /^no seniors/.test(line) ? 0 : Number(line.match(/^(\d+) seniors? needs? attention/)[1]);
@@ -78,7 +83,7 @@ test('B-04: home, dashboard, and /attention agree on how many seniors need atten
   assert.equal(counts.dashboard, counts.attention, `step 5: dashboard says ${counts.dashboard}, /attention lists ${counts.attention}`);
 
   // README step 6: match Gene with Sam.
-  res = await post('/matches', { seniorId: 's-eugene', volunteerId: 'v-sam' });
+  res = await post('/admin/matches', { seniorId: 's-eugene', volunteerId: 'v-sam' });
   assert.equal(res.status, 303);
   counts = await attentionCounts();
   assert.equal(counts.dashboard, counts.attention, `step 6: dashboard says ${counts.dashboard}, /attention lists ${counts.attention}`);
@@ -89,7 +94,9 @@ test('B-03: tour step "Ethan\'s week" shows a call to log right after a reset', 
   const tour = await page('/tour');
   const step = tour.split('<li class="card tour-step">').find((s) => /one click to log a call/.test(s));
   assert.ok(step, 'the tour has a "log a call" step');
-  const href = step.match(/href="([^"]+)"/)[1].replace(/&amp;/g, '&');
+  // [v2 accounts] The step is a one-click demo button (sign in as Ethan); it lands on his week.
+  assert.match(step, /action="\/sign-in\/demo"[\s\S]*name="as" value="volunteer"/);
+  const href = TOUR_STEPS.find((s) => /one click to log a call/.test(s.notice)).href;
   const html = await page(href);
   assert.match(html, /<button type="submit" class="button">Log this (call|visit)/, `${href} has nothing to log after a reset: ${(html.match(/Coming up \(\d+\)/) || [''])[0]}`);
 });
@@ -97,7 +104,7 @@ test('B-03: tour step "Ethan\'s week" shows a call to log right after a reset', 
 test('B-05: ending a match also takes its scheduled calls off the volunteer\'s week and the calls list', async () => {
   await reset();
   assert.ok(store.contacts.some((c) => c.seniorId === 's-rosa' && c.volunteerId === 'v-linda' && c.status === 'scheduled'), 'seed has a scheduled Rosa/Linda call');
-  const res = await post('/matches/m-rosa-linda/end', {});
+  const res = await post('/admin/matches/m-rosa-linda/end', {});
   assert.equal(res.status, 303);
   const week = await page('/volunteers/v-linda/week');
   assert.doesNotMatch(week, /with <a href="\/seniors\/s-rosa">/, "Linda's week still lists a call with Rosa after their match ended");
@@ -108,7 +115,7 @@ test('B-05: ending a match also takes its scheduled calls off the volunteer\'s w
 
 test('B-13: a volunteer\'s capacity can\'t be lowered below the seniors they already have', async () => {
   await reset();
-  let res = await post('/matches', { seniorId: 's-eugene', volunteerId: 'v-maya' }); // Maya: 2 of 2
+  let res = await post('/admin/matches', { seniorId: 's-eugene', volunteerId: 'v-maya' }); // Maya: 2 of 2
   assert.equal(res.status, 303);
   const maya = store.volunteer('v-maya');
   res = await post('/volunteers/v-maya', {
@@ -116,7 +123,7 @@ test('B-13: a volunteer\'s capacity can\'t be lowered below the seniors they alr
     availability: maya.availability, contactMethods: maya.contactMethods, maxSeniors: '1',
   });
   assert.notEqual(res.status, 303, 'saved max 1 senior while Maya has 2');
-  assert.doesNotMatch(await page('/volunteers'), /Companion to 2 of 1 senior/);
+  assert.doesNotMatch(await page('/admin/volunteers'), /Companion to 2 of 1 senior/);
 });
 
 test('B-11: editing a matched volunteer or senior so the pair no longer fits warns the coordinator', async () => {
@@ -149,7 +156,7 @@ test('B-09: a call that has not happened yet is not reported as missed', async (
     const summary = await page('/seniors/s-dorothy/summary');
     const text = summary.match(/<textarea[^>]*>([\s\S]*?)<\/textarea>/)[1];
     assert.match(text, /Missed calls in the last 4 weeks: 0/, `family summary lists a missed call dated in the future:\n${text}`);
-    assert.doesNotMatch(await page('/attention'), /Dorothy couldn(&#39;|')t be reached for the last call/);
+    assert.doesNotMatch(await page('/admin/attention'), /Dorothy couldn(&#39;|')t be reached for the last call/);
   }
 });
 

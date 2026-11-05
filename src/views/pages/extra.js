@@ -1,8 +1,11 @@
 // Extra pages: the 2-minute demo tour for judges.
 // Register routes here; never edit src/app.js. See the ctx contract in app.js.
 //
-// The tour links to the fixed routes from the build plan, including ones other
-// modules add (/attention, /volunteers/:id/week, /help).
+// [v2 accounts] The coordinator's pages are under /admin and need the admin
+// sign-in (README, "Demo accounts"), so step 1 starts at the sign-in page.
+// Steps that show another person's view use the one-click demo buttons
+// (POST /sign-in/demo). `href` is where a step goes; `demo` is the button
+// that signs in first and then lands there.
 
 import { html } from '../html.js';
 import { backLink } from '../components.js';
@@ -11,46 +14,48 @@ import { COMMUNITY } from '../../community.js';
 // Each step: what to open, and one sentence on what to notice there.
 export const TOUR_STEPS = [
   {
-    title: 'Reset the demo data',
-    notice: 'Start fresh, so every date in the story lines up with today. After the reset, a link brings you back here.',
-    href: '/demo/reset',
-    action: 'Reset demo data',
+    title: 'Sign in as the coordinator, then reset the demo data',
+    notice: 'Sign in with admin@porchlight.example and the demo password from the README. Then reset, so every date in the story lines up with today. After the reset, a link brings you back here.',
+    href: '/admin/demo/reset',
+    action: 'Sign in and reset demo data',
   },
   {
     title: 'Family Dashboard: Hal is flagged',
     notice: 'Harold ("Hal") shows "Isolation risk" and "Contact dropping", so his family sees the problem before it becomes a crisis.',
-    href: '/dashboard',
+    href: '/admin/dashboard',
     action: 'Open the Family Dashboard',
   },
   {
     title: 'The Needs attention list',
     notice: "A coordinator sees everyone who needs help in one list, each with a plain reason and one suggested next step. For Hal, the step is to ask Ethan whether yesterday's visit happened.",
-    href: '/attention',
+    href: '/admin/attention',
     action: 'Open Needs attention',
   },
   {
     title: 'Match Gene with a companion',
     notice: 'Sam scores highest for Eugene ("Gene"), and every volunteer who is left out is listed with the reason why.',
-    href: '/match?seniorId=s-eugene',
+    href: '/admin/match?seniorId=s-eugene',
     action: 'Match Gene',
   },
   {
     title: "Ethan's week",
-    notice: "A volunteer's calls for the next 7 days, with one click to log a call or mark it missed. Hal's visit yesterday was never marked, so it waits under \"Did these calls happen?\". Log it, then look at Hal on the Family Dashboard again.",
+    notice: "This button signs you in as Ethan, a volunteer. You see his calls for the next 7 days, with one click to log a call or mark it missed. Hal's visit yesterday was never marked, so it waits under \"Did these calls happen?\". Log it.",
     href: '/volunteers/v-ethan/week',
-    action: "Open Ethan's week",
+    demo: 'volunteer',
+    action: 'Sign in as Ethan, a volunteer',
   },
   {
     title: "Conversation sparks on Hal's profile",
-    notice: 'Press "Get conversation sparks" for three suggested things to talk about, built from Hal\'s interests and labeled with where they came from.',
+    notice: "Still signed in as Ethan, press \"Get conversation sparks\" for three things to talk about, built from Hal's interests and labeled with where they came from. Ethan sees only what he needs: Hal's first name, interests, languages, and free times.",
     href: '/seniors/s-harold#sparks',
     action: "See Hal's sparks",
   },
   {
     title: "See it as Hal's family",
-    notice: "Use the demo sign-in (no passwords) as Mike Whitaker, Hal's son. He sees only his dad, never the volunteer's call notes, and other pages tell him they are for coordinators. Sign out to see everything again.",
-    href: '/sign-in',
-    action: 'Open the demo sign-in',
+    notice: "This button signs you in as Mike Whitaker, Hal's son. He sees only his dad, never the volunteer's call notes, and other pages tell him they are not for his account.",
+    href: '/dashboard',
+    demo: 'family',
+    action: "Sign in as Mike, Hal's son",
   },
   {
     title: 'Get help in Indiana, and the Accessibility menu',
@@ -59,6 +64,9 @@ export const TOUR_STEPS = [
     action: 'Open Get help',
   },
 ];
+
+// Step 1 goes through the sign-in page, which then opens the reset page.
+export const stepHref = (step, i) => (i === 0 ? `/sign-in?next=${encodeURIComponent(step.href)}` : step.href);
 
 export function tourPage({ textSize }) {
   const last = TOUR_STEPS.length;
@@ -75,7 +83,12 @@ export function tourPage({ textSize }) {
           <h2>Step ${i + 1}: ${step.title}</h2>
           <p><strong>What to notice:</strong> ${step.notice}</p>
           <div class="button-row">
-            <a class="button${i === 0 ? '' : ' button-secondary'} print-url" href="${step.href}">${step.action}</a>
+            ${step.demo
+              ? html`<form method="post" action="/sign-in/demo" class="inline-form">
+                  <input type="hidden" name="as" value="${step.demo}">
+                  <button type="submit" class="button button-secondary">${step.action}</button>
+                </form>`
+              : html`<a class="button${i === 0 ? '' : ' button-secondary'} print-url" href="${stepHref(step, i)}">${step.action}</a>`}
             ${i === last - 1
               ? html`<form method="post" action="/prefs/text-size" class="inline-form">
                   <input type="hidden" name="back" value="/tour">

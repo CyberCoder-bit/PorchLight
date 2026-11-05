@@ -16,24 +16,25 @@ import { myWeekPage } from '../views/features/week.js';
 import { familySummaryPage } from '../views/features/summary.js';
 import { townFromQuery, rowsInTown } from '../towns/index.js'; // [towns]
 import { townFilter } from '../towns/views.js'; // [towns]
+import { storeSeenBy, volunteerFirstNameOnly } from '../roles/index.js'; // [v2 accounts] each person sees only what is theirs
 
 export function registerFeatures(router, ctx) {
   const { store, now, render } = ctx;
 
   // ----- Needs attention (coordinator queue) -----
-  router.get('/attention', (req, res) => {
+  router.get('/admin/attention', (req, res) => {
     const queue = buildAttentionQueue(store, now());
     // [towns] ?town=Westfield shows only that town's seniors; unknown towns are ignored.
     const town = townFromQuery(req.query);
     const items = rowsInTown(queue.items, town, (i) => i.senior);
     const filtered = { ...queue, items, comingUp: rowsInTown(queue.comingUp, town, (a) => a.senior), townName: town };
-    filtered.townFilter = townFilter({ action: '/attention', town, asked: req.query.town, shown: items.length, total: queue.items.length, noun: ['senior on the list', 'seniors on the list'] });
+    filtered.townFilter = townFilter({ action: '/admin/attention', town, asked: req.query.town, shown: items.length, total: queue.items.length, noun: ['senior on the list', 'seniors on the list'] });
     render(req, res, { title: 'Needs attention', active: 'attention', body: attentionPage(filtered) });
   });
 
   // Confirm page for ending a match. The button posts to the existing
-  // POST /matches/:id/end, which keeps all history and redirects to
-  // /match?seniorId=...&msg=match_ended.
+  // POST /admin/matches/:id/end, which keeps all history and redirects to
+  // /admin/match?seniorId=...&msg=match_ended.
   router.get('/attention/:seniorId/rematch', (req, res) => {
     const senior = ctx.seniorOr404(req.params.seniorId);
     const match = store.activeMatchForSenior(senior.id);
@@ -59,7 +60,7 @@ export function registerFeatures(router, ctx) {
     render(req, res, {
       title: `My week: ${volunteer.name}`,
       active: 'volunteers',
-      body: myWeekPage(buildWeek(store, volunteer, now()), { busyText }),
+      body: myWeekPage(buildWeek(storeSeenBy(req.viewer, store), volunteer, now()), { busyText }), // [v2] a volunteer sees first names only
     });
   });
 
@@ -70,7 +71,7 @@ export function registerFeatures(router, ctx) {
     const summary = buildFamilySummary({
       senior,
       assessment: ctx.assess(senior),
-      volunteer: match ? store.volunteer(match.volunteerId) : null,
+      volunteer: match ? (req.viewer?.kind === 'family' ? volunteerFirstNameOnly(store.volunteer(match.volunteerId)) : store.volunteer(match.volunteerId)) : null, // [v2] family: first name only
       contacts: store.contactsForSenior(senior.id),
       thresholdDays: store.settings.riskThresholdDays,
       now: now(),

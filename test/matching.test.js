@@ -71,10 +71,11 @@ test('ranking sorts by score, then by lighter load, then by name', () => {
 test('seed data: Sam is the best match for Eugene; Ethan (full) and Linda (no overlap) are excluded', () => {
   const db = buildSeedData(new Date('2026-11-02T12:00:00'));
   const eugene = db.seniors.find((s) => s.id === 's-eugene');
-  const { eligible, ineligible } = rankVolunteers(eugene, db.volunteers, db.matches);
+  const { eligible, ineligible } = rankVolunteers(eugene, db.volunteers.filter((v) => v.status === 'active'), db.matches); // [v2 accounts] only approved volunteers are ranked
   assert.equal(eligible[0].volunteer.id, 'v-sam');
   assert.equal(eligible[0].score, 21 + L); // 21 before v2, plus the shared language
-  assert.deepEqual(ineligible.map((r) => r.volunteer.id).sort(), ['v-ethan', 'v-linda']);
+  // [v2 accounts] The new volunteers are all at capacity; of the story's four, Ethan and Linda are out.
+  assert.deepEqual(ineligible.map((r) => r.volunteer.id).filter((id) => ['v-maya', 'v-ethan', 'v-linda', 'v-sam'].includes(id)).sort(), ['v-ethan', 'v-linda']);
 });
 
 // ----- [v2] languages and approval -----
