@@ -4,7 +4,7 @@
 language, AI conversation starters, translated messages, and an early-warning dashboard for families.
 Built for any Indiana town; the demo data is set in Carmel and nearby Central Indiana towns.**
 
-Prototype for the Nextech CSforGood 2026 competition (grades 9-12). [TEAM: team name, school]
+Prototype for the Nextech CSforGood 2026 competition (grades 9-12). Carmel High School
 
 ![Family dashboard: Hal is flagged for isolation risk and dropping contact, and Gene is waiting for a companion](docs/screenshots/dashboard.png)
 
@@ -834,4 +834,5 @@ the demo.
 
 ## Credits
 
-[TEAM: team member names and roles. See `docs/part2_narrative.md`.]
+Jason Xu
+William Geng
