@@ -1,7 +1,7 @@
 # PorchLight market research
 
 This is the research behind PorchLight: how we chose the problem, the data, what already exists, and
-the gap we're trying to fill. Part 2 of the submission (the narrative) summarizes it.
+the gap we're trying to fill. Part 2 of the submission, the [project narrative](part2_narrative.md), summarizes it.
 
 - **Secondary research (sections 2 and 3)** comes from public sources. Each number below was checked
   against the source page on **November 3, 2026**, and the exact wording is quoted so anyone can check

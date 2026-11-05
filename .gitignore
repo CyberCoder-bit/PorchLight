@@ -5,6 +5,4 @@ data/
 .DS_Store
 .wrangler/
 .dev.vars
-docs/part1_description.md
-docs/part2_narrative.md
 docs/part3_video_script.md
