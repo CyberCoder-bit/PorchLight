@@ -6,7 +6,7 @@
 // in Indiana time (src/tz.js).
 //
 // PLANNED_UI_LANGUAGES is the full list we chose from Census data (see
-// docs/research.md, section 6). UI_LANGUAGES is the part of it that ships:
+// docs/research.md, section 4). UI_LANGUAGES is the part of it that ships:
 // only languages whose catalog file exists, because the catalog test
 // (test/i18n/core.test.js) needs every key in every listed language.
 //

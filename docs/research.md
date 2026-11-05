@@ -6,41 +6,28 @@ the gap we're trying to fill. Part 2 of the submission (the narrative) summarize
 - **Secondary research (sections 2 and 3)** comes from public sources. Each number below was checked
   against the source page on **November 3, 2026**, and the exact wording is quoted so anyone can check
   it. If a number couldn't be confirmed on a page we could open, we left it out.
-- **Primary research (sections 1, 4, and 5)** is what our team did ourselves. Anything marked
-  **[TEAM: ...]** is still to be filled in by the team. Nothing in those sections has been made up:
-  no quotes, results, or names.
+- **Section 1** is how we chose the problem, and **section 4** is how we chose the languages.
 
 ---
 
 ## 1. How we chose this problem
 
-[TEAM: Fill in each step with what actually happened. Keep it short and true. Judges score this
-section on how well the process is explained, so name real steps, dates, and people's roles (not
-private names unless they agree).]
-
-1. **Where the idea came from.** [TEAM: How did the topic come up? For example, a grandparent,
-   neighbor, or family friend; something you noticed while volunteering; a news story; a class. Only
-   write what is true for your team.]
-2. **Other problems we considered.** [TEAM: List the 2-4 other ideas you brainstormed and why you
-   set them aside.]
-3. **Checking that the problem is real and local.** We looked for Indiana data first, then
+1. **Where the idea came from.** We noticed that our own grandparents were often isolated.
+2. **Checking that the problem is real and local.** We looked for Indiana data first, then
    Hamilton County data. We found that the senior population is growing fast statewide, and that
-   Hamilton and Boone counties' senior populations are expected to more than double. Isolation is a
-   recognized health risk, and more than a third of older adults (55+) in Central Indiana live alone
-   (section 2). [TEAM: say who on the team did this and when.]
-4. **Checking what already exists.** Hamilton County already has an Area Agency on Aging (CICOA), a
+   Hamilton and Boone counties' senior populations are expected to more than double. Research
+   studies show isolation is a real health risk, and more than a third of older adults (55+) in
+   Central Indiana live alone (section 2).
+3. **Checking what already exists.** Hamilton County already has an Area Agency on Aging (CICOA), a
    senior center in Carmel (PrimeLife Enrichment), and a volunteer friendly-visitor program
    (Shepherd's Center of Hamilton County). We didn't want to build something that already exists, so
    we looked for what those programs' public pages don't describe (section 3).
-5. **Talking to people.** [TEAM: Who did you talk to (role only, e.g., "a volunteer coordinator at a
-   senior center," "a parent who calls her mother in another state")? How many people? What surprised
-   you? Use the interview guide in section 4 and the sprint in section 5.]
-6. **Choosing the gap.** Two things stood out. Families often can't see whether contact is actually
+4. **Choosing the gap.** Two things stood out. Families often can't see whether contact is actually
    happening, and volunteers, especially teenagers, don't always know what to say. That's where
-   PorchLight focuses. [TEAM: confirm or correct this from your own interviews and survey.]
-7. **Choosing Indiana, starting in Carmel.** The data shows the problem is statewide, so we designed
-   PorchLight so any Indiana town can use it. Carmel is the first community and the setting for our
-   demo data. [TEAM: confirm Carmel is your home community and say why it's the right first one.]
+   PorchLight focuses.
+5. **Choosing Indiana, starting in Carmel.** The data shows the problem is statewide, so we designed
+   PorchLight so any Indiana town can use it. Carmel, where our school is, is the first community
+   and the setting for our demo data.
 
 ---
 
@@ -106,7 +93,7 @@ serve many more people.
 PorchLight has no users yet, so we can't report impact. To show scale only: Hamilton County had
 62,030 residents 65+ in 2025 (D13). If programs using PorchLight reached **1%** of them, that would
 be **about 620 seniors** getting regular calls that their families could see. This is simple
-arithmetic (62,030 x 0.01), not a forecast. [TEAM: use this only if you label it as a projection.]
+arithmetic (62,030 x 0.01), not a forecast.
 
 ---
 
@@ -137,9 +124,7 @@ None of their public pages describe either of these:
    the senior's interests and how long it's been since the last call.
 
 Being fair about it: a website not mentioning a feature doesn't prove the program lacks it. Staff may
-track calls internally or coach volunteers in training. [TEAM: ask about this in your interviews
-(questions A4-A6 below). If a program already does one of these, say so in the narrative and explain
-how PorchLight is different or would help them.]
+track calls internally or coach volunteers in training.
 
 **Also note:** the State of Aging report found that only 14% of older adults (55+) in Central Indiana have
 used a senior center (D11). Many isolated seniors don't come to programs, so programs have to reach
@@ -147,121 +132,7 @@ out to them. That outreach (calls and visits) is the part PorchLight helps keep 
 
 ---
 
-## 4. Interview guide
-
-**Before every interview:** say who you are and why you're asking (a school CS for Good project). Ask
-whether you may take notes, and whether you may quote them by role (for example, "a volunteer
-coordinator"). Don't record audio without clear permission. Never collect a senior's private details.
-Write down answers in their words, and note the date and the person's role.
-
-### A. Senior center or Area Agency on Aging staff member (10 questions, about 15 minutes)
-
-1. How do you find out that an older adult is isolated or lonely?
-2. Which programs here connect volunteers with seniors (calls, visits, rides)? About how many pairs
-   are active?
-3. When a volunteer match stops working, what usually happened? How long before you notice?
-4. How do you track whether calls and visits actually happen? (Paper, spreadsheet, a database, or
-   not at all?)
-5. Do families ever ask how often their parent is hearing from someone? What do you tell them?
-6. What training or help do volunteers get about what to talk about?
-7. How do you decide which volunteer to pair with which senior?
-8. What would make you NOT want to use a tool like this? (Privacy, time, cost, training?)
-9. Look at this screenshot of the dashboard (or the "Needs attention" list). What's confusing? What's
-   missing?
-10. Who else should we talk to?
-
-### B. Volunteer who calls or visits older adults (8 questions, about 10 minutes)
-
-1. How did you start volunteering, and how often do you call or visit?
-2. What was hard about the first call?
-3. Has a call ever felt awkward or run out of things to say? What did you do?
-4. Have you ever stopped calling someone or called less often? What got in the way?
-5. How do you remember when your next call is and what you talked about last time?
-6. Look at these three conversation starters. Would you use them? What would make them better?
-7. Would a one-click "Log this call" button be easy to use right after a call?
-8. What would you want a coordinator to know about you, so they can match you well?
-
-### C. Family caregiver (a grown child or relative of an older adult) (9 questions, about 10 minutes)
-
-1. How often do you talk to your parent or relative, and how?
-2. How do you know whether they've talked to anyone else this week?
-3. Has there been a time you worried they'd gone days without talking to anyone? How did you find out?
-4. If a volunteer called them every week, what would you want to know about those calls?
-5. What would be too much information? (We never share call notes with families.)
-6. Look at this dashboard card. What does "Isolation risk" mean to you? Is the wording clear?
-7. How many days without contact would worry you for your parent?
-8. Would you want a weekly summary you could forward to siblings?
-9. Is there anything about privacy that would make you or your parent uncomfortable?
-
----
-
-## 5. Tonight: a 30-minute research sprint
-
-Offices are closed tonight, so this plan works with people you can reach in the evening, and it sets
-up calls for tomorrow morning. Split it between team members.
-
-### Minutes 0-10: send messages (everyone, at the same time)
-
-1. **Family and friends survey.** Each team member texts or messages the 5-question survey below to
-   at least 5 adults (parents, aunts and uncles, older neighbors, family friends). Aim for 20 or more
-   answers in total. A Google Form or a group text is fine.
-2. **One live conversation.** At least one team member calls a grandparent, older neighbor, or family
-   friend tonight and asks interview C (or A or B, if they volunteer or work in aging services).
-3. **Set up tomorrow.** Send a short email or voicemail asking for a 10-minute phone call tomorrow
-   morning to:
-   - CICOA Aging & In-Home Solutions, Aging & Disability Resource Center: (317) 803-6131 [S13]
-   - Shepherd's Center of Hamilton County: 317-674-8777 (number listed on its website) [S14]
-   - PrimeLife Enrichment, Carmel: 317-815-7000 (number listed on its website) [S16]
-   - [TEAM: a teacher or club sponsor who runs student volunteering at your school]
-
-   Example message: "Hi, I'm [TEAM: name], a student at [TEAM: school]. For a CS for Good project,
-   we're building a tool to help volunteers keep in touch with isolated seniors. Could I ask you 5
-   quick questions by phone tomorrow? It would take about 10 minutes."
-
-### The 5-question survey (for family and friends)
-
-1. Do you have a parent, grandparent, or other older relative or neighbor (65+) who lives alone?
-   (Yes / No)
-2. If yes: how do you usually find out whether they've talked to anyone that week? (I call them
-   myself / Someone else tells me / I don't usually know / Other: ___)
-3. In the past year, has there been a time you worried they'd gone several days without talking to
-   anyone? (Yes / No / Not sure)
-4. If a volunteer called them every week, would you want to see a simple "calls this week" summary?
-   No notes, just whether calls happened. (Yes / Maybe / No)
-5. What would make a weekly call easier, for you or for a volunteer? (Short answer)
-
-### Minutes 10-30: collect and write up
-
-Fill in these tables as answers come in. Report the real number of answers (n). Don't round up, and
-don't drop answers you don't like.
-
-**Survey tally** (n = [TEAM])
-
-| Question | Yes | No | Not sure / Maybe | Other |
-|---|---|---|---|---|
-| Q1: older relative lives alone | [TEAM] | [TEAM] | | |
-| Q2: how they find out | I call: [TEAM] | | Don't know: [TEAM] | [TEAM] |
-| Q3: worried about days without contact | [TEAM] | [TEAM] | [TEAM] | |
-| Q4: want a "calls this week" summary | [TEAM] | [TEAM] | [TEAM] | |
-| Q5: most common idea (short answer) | [TEAM] | | | |
-
-**Conversations and interviews**
-
-| # | Who (role only) | How reached | Date | Most useful thing they said (quote only with permission) | What it changes in PorchLight |
-|---|---|---|---|---|---|
-| 1 | [TEAM] | [TEAM] | [TEAM] | [TEAM] | [TEAM] |
-| 2 | [TEAM] | [TEAM] | [TEAM] | [TEAM] | [TEAM] |
-| 3 | [TEAM] | [TEAM] | [TEAM] | [TEAM] | [TEAM] |
-| 4 | [TEAM] | [TEAM] | [TEAM] | [TEAM] | [TEAM] |
-
-**Write-up for the narrative** (2-3 sentences; copy into the market research section of
-part2_narrative.md):
-
-[TEAM: e.g., "We surveyed N family members and friends; X of N said they don't usually know whether
-an older relative living alone has talked to anyone that week. We also spoke with [role], who told us
-[finding]." Use only your real numbers and real findings.]
-
-## 6. Languages: which ones PorchLight speaks (v2)
+## 4. Languages: which ones PorchLight speaks (v2)
 
 PorchLight v2 lets people use the app in their own language and pairs a senior with a companion
 who speaks a language they share. This section shows where the language list came from. All
@@ -415,7 +286,7 @@ All checked November 3, 2026.
 - **[S20]** State of Indiana, "Indiana Time Zone Information" (12 counties on Central time; daylight
   saving time rules). https://faqs.in.gov/hc/en-us/articles/115005225448-Indiana-Time-Zone-Information
 
-### Languages (section 6), checked November 4, 2026
+### Languages (section 4), checked November 4, 2026
 
 - **[L1]** U.S. Census Bureau, American Community Survey 2024 1-year estimates, table B16001,
   "Language Spoken at Home by Ability to Speak English for the Population 5 Years and Over",
@@ -441,7 +312,7 @@ All checked November 3, 2026.
 ### Checked and left out
 
 - **A Census count for Burmese or Chin.** The ACS puts both inside "Other languages of Asia", so the
-  Burmese and Chin numbers in section 6 come from local sources, not the Census.
+  Burmese and Chin numbers in section 4 come from local sources, not the Census.
 - **U.S. Census QuickFacts and the Census data API.** QuickFacts blocked automated access, and the
   API now requires a key, so we couldn't confirm Hamilton County's 65+ living-alone figure there. We
   used STATS Indiana for population counts, and the State of Aging report for living alone.

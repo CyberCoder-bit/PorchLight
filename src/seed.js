@@ -27,7 +27,7 @@ import { localParts, fromLocal } from './tz.js';
 import { buildDemoMessages } from './translate/demo.js'; // [v2] demo messages in two languages
 
 // [v2 accounts] Every demo account shares one demo password (it is in the
-// README, never in code). This is its stored form, made with
+// README and docs/setup.md, never in code). This is its stored form, made with
 // `node scripts/hash-password.js '<password>'`. To keep the seed short, every
 // account uses the SAME salt, so they all have the same hash. A real launch
 // gives every account its own random salt (hashPassword() does that).

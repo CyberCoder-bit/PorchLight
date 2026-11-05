@@ -2,7 +2,7 @@
 // It is longer than the interface list
 // (./languages.js): a senior can list Hakha Chin, and be paired with a
 // companion who speaks it, even though the app itself doesn't come in Hakha
-// Chin. Why each one is here: docs/research.md, section 6.
+// Chin. Why each one is here: docs/research.md, section 4.
 //
 //   code     what we store on a profile: { code, level }
 //   name     the language's own name, so a reader can find theirs

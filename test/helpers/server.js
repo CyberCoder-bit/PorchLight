@@ -27,7 +27,7 @@ import { DEMO_ACCOUNTS, SEED_ADMIN_EMAIL } from '../../src/auth/routes.js';
 
 process.env.TZ = 'America/Indiana/Indianapolis';
 
-// The demo password lives only in the README ("Demo accounts").
+// The demo password lives only in the docs (README and docs/setup.md), never in code.
 export function demoPassword() {
   const readme = fs.readFileSync(path.join(ROOT_DIR, 'README.md'), 'utf8');
   const m = /shared demo password[^`]*`([^`]+)`/i.exec(readme);

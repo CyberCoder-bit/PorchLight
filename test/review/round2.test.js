@@ -176,9 +176,9 @@ test('B-21 (partly fixed): "About them" counts what people see as one character 
   }
 });
 
-test('B-25: the README demo lists the same steps as /tour', () => {
-  const readme = fs.readFileSync(path.join(ROOT_DIR, 'README.md'), 'utf8');
-  const section = readme.split('### The 2-minute demo')[1].split('\n### ')[0];
+test('B-25: the docs list the same steps as /tour', () => {
+  const doc = fs.readFileSync(path.join(ROOT_DIR, 'docs', 'how-it-works.md'), 'utf8');
+  const section = doc.split('## The 2-minute tour')[1].split('\n## ')[0];
   const listed = [...section.matchAll(/^\d+\. \*\*([^*]+?)\.?\*\*/gm)].map((m) => m[1].trim());
-  assert.deepEqual(listed, TOUR_STEPS.map((s) => s.title), 'README says "These are the tour\'s steps, word for word"');
+  assert.deepEqual(listed, TOUR_STEPS.map((s) => s.title), 'docs/how-it-works.md lists the tour steps');
 });

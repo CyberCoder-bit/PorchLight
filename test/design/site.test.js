@@ -116,9 +116,11 @@ test('/languages lists the real interface languages and is honest about machine 
   assert.match(main, /No native speaker has checked any of our translations yet/); // none have been checked
 });
 
-test('/about keeps the team placeholders and only sourced facts', async () => {
+test('/about names the team and shows only sourced facts', async () => {
   const main = mainOf(await page('/about'));
-  assert.match(main, /\[TEAM: /);
+  assert.match(main, /Jason Xu and William Geng/);
+  assert.match(main, /Carmel High School/);
+  assert.doesNotMatch(main, /\[TEAM/);
   assert.match(main, /grew 40% from 2010 to 2023/);
   assert.match(main, /no partnership/);
 });
