@@ -5,7 +5,7 @@ import { html, raw } from './html.js';
 import { banner } from './components.js';
 import { COMMUNITY } from '../community.js';
 import { navFor, viewerLine } from '../roles/views.js'; // [roles]
-import { currentLang, dirFor } from '../i18n/index.js'; // [v2 i18n]
+import { currentLang, dirFor, t } from '../i18n/index.js'; // [v2 i18n]
 import { languagePicker } from '../i18n/picker.js'; // [v2 i18n]
 
 // Main navigation. `key` matches the `active` value a page passes to render(),
@@ -214,6 +214,38 @@ function navList(items, active) {
       </ul>`;
 }
 
+// [v2 site] Signed-out visitors get the public website's nav instead of the
+// app's: its pages, then Sign in and a "Get started" button. `key` matches the
+// `active` value the site pages pass (src/views/site/index.js).
+const SITE_NAV = [
+  { href: '/how-it-works', key: 'site-how', label: 'site.nav.how' },
+  { href: '/for-seniors', key: 'site-seniors', label: 'site.nav.seniors' },
+  { href: '/for-volunteers', key: 'site-volunteers', label: 'site.nav.volunteers' },
+  { href: '/for-families', key: 'site-families', label: 'site.nav.families' },
+  { href: '/languages', key: 'site-languages', label: 'site.nav.languages' },
+  { href: '/safety', key: 'site-safety', label: 'site.nav.safety' },
+];
+const siteNavItems = () => SITE_NAV.map((item) => ({ ...item, label: t(item.label) }));
+
+function accountLinks(active) {
+  return html`<ul class="nav-account">
+        <li><a href="/sign-in"${active === 'sign-in' ? html` aria-current="page"` : ''}>${t('site.nav.signIn')}</a></li>
+        <li><a class="button nav-cta" href="/sign-up">${t('site.nav.getStarted')}</a></li>
+      </ul>`;
+}
+
+// [v2 brand] The PorchLight mark (public/brand/porchlight-mark.svg), drawn
+// inline so its roofline and step take the text color around it (cream in the
+// header, ink in the footer). Decoration: the link around it has the name.
+const MARK = raw(`<svg class="brand-mark" viewBox="0 0 48 48" width="48" height="48" aria-hidden="true" focusable="false">
+          <path d="M8 22.5 24 9l16 13.5" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M15 41V28.5a9 9 0 0 1 18 0V41z" fill="#f29f22"/>
+          <circle cx="24" cy="29" r="6" fill="#ffd66b"/>
+          <circle cx="24" cy="29" r="3.25" fill="#fffbea"/>
+          <path d="M10.5 41.75h27" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/>
+        </svg>`);
+const brandName = () => html`<span class="brand-name">Porch<span class="brand-name-light">Light</span></span>`;
+
 // Narrow screens (styles.css, "Menu") swap the nav bar for a "Menu" button
 // beside Accessibility. The button is a native <details>, so it opens and
 // closes with a click, Enter, or Space and needs no JavaScript. Its list is the
@@ -239,9 +271,13 @@ export function layout({ title, active, body, req, ctx, flash, wide = false, noi
   // color-scheme tells the browser how to draw native controls (date pickers,
   // scrollbars) to match the theme.
   const colorScheme = { light: 'light', dark: 'dark', auto: 'light dark' }[prefs.theme];
-  const nav = navFor(req.viewer, NAV); // [roles] signed-in people see only their own pages; demo mode gets NAV
-  const links = navList(nav, active);
-  const signedIn = viewerLine(req.viewer); // [roles] "Signed in as ... · Sign out", or the demo-mode line
+  // [v2 site] Signed out: the public website's nav, Sign in, and Get started.
+  // Signed in: only your own pages (navFor), and "Signed in as ... · Sign out".
+  const signedOut = !req.viewer;
+  const links = signedOut
+    ? html`<div class="site-nav-row">${navList(siteNavItems(), active)}${accountLinks(active)}</div>`
+    : html`<div class="site-nav-row">${navList(navFor(req.viewer, NAV), active)}</div>`; // [roles]
+  const signedIn = signedOut ? '' : viewerLine(req.viewer); // [roles]
   return html`<!DOCTYPE html>
 <html lang="${currentLang()}" dir="${dirFor()}" class="${htmlClass(prefs)}">
 <head>
@@ -253,6 +289,8 @@ export function layout({ title, active, body, req, ctx, flash, wide = false, noi
   <meta name="theme-color" content="${prefs.contrast === 'high' ? '#000000' : '#1d2433'}">
   <meta name="color-scheme" content="${colorScheme}">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="preload" href="/fonts/atkinson-hyperlegible-next-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/styles.css">
   <script src="/app.js" defer></script>
 </head>
@@ -260,14 +298,9 @@ export function layout({ title, active, body, req, ctx, flash, wide = false, noi
   <a class="skip-link" href="#main">Skip to main content</a>
   <header class="site-header">
     <div class="header-inner">
-      <a class="brand" href="/" aria-label="PorchLight home">
-        <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
-          <path d="M16 3 6 10h20z" fill="#7a4b00"/>
-          <rect x="9" y="10" width="14" height="16" rx="2" fill="#ffd66b" stroke="#7a4b00" stroke-width="2"/>
-          <path d="M16 14c-2 3-2 6 0 8 2-2 2-5 0-8z" fill="#c2410c"/>
-          <rect x="7" y="26" width="18" height="3" rx="1.5" fill="#7a4b00"/>
-        </svg>
-        <span class="brand-name">PorchLight</span>
+      <a class="brand" href="/" aria-label="${t('site.brand.home')}">
+        ${MARK}
+        ${brandName()}
       </a>
       <div class="header-tools">
         ${modeBadge(ctx.sparks.modeInfo)}
@@ -286,13 +319,17 @@ export function layout({ title, active, body, req, ctx, flash, wide = false, noi
     ${withPrintCopies(body)}
   </main>
   <footer class="site-footer">
-    <p class="footer-note">Built for Indiana communities. Demo data is fictional.</p>
-    <p>A prototype for the Nextech CSforGood 2026 competition. The sign-in is a demo with no passwords. Signed out, you can see every screen: senior, volunteer, family, and coordinator.</p>
-    <ul class="footer-links">
-      <li><a href="/tour">2-minute demo tour</a></li>
-      <li><a href="/about-ai">How the AI works</a></li>
-      <li><a href="/demo/reset">Reset demo data</a></li>
-    </ul>
+    <div class="footer-inner">
+      <p class="footer-brand"><a class="brand brand-footer" href="/" aria-label="${t('site.brand.home')}">${MARK}${brandName()}</a></p>
+      <p class="footer-tagline">${t('site.footer.tagline')}</p>
+      <ul class="footer-links">
+        <li><a href="/safety">${t('site.footer.safety')}</a></li>
+        <li><a href="/about">${t('site.footer.about')}</a></li>
+        <li><a href="/about-ai">${t('site.footer.aboutAi')}</a></li>
+        <li><a href="/tour">${t('site.footer.tour')}</a></li>
+      </ul>
+      <p class="footer-note">${t('site.footer.note')}</p>
+    </div>
   </footer>
 </body>
 </html>`;

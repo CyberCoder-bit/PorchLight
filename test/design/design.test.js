@@ -46,7 +46,7 @@ const mainOf = (body) => body.slice(body.indexOf('<main'), body.indexOf('</main>
 
 // Pages this module's tests may request (all served by src/app.js or extra.js).
 const PAGES = [
-  '/', '/tour', '/dashboard', '/seniors', '/seniors/new', '/seniors/s-harold', '/seniors/s-harold/edit',
+  '/', '/admin', '/tour', '/dashboard', '/seniors', '/seniors/new', '/seniors/s-harold', '/seniors/s-harold/edit',
   '/volunteers', '/volunteers/new', '/volunteers/v-ethan', '/volunteers/v-ethan/edit',
   '/match', '/match?seniorId=s-eugene', '/match?seniorId=s-harold', '/contacts', '/about-ai', '/demo/reset',
 ];
@@ -75,8 +75,11 @@ test('the demo tour renders and links to every fixed route, starting with a rese
   assert.match(main, /name="size" value="xlarge"/);
 });
 
-test('the home page explains the loop and offers the tour', async () => {
-  const body = await page('/');
+// [v2] The coordinator home moved from / to /admin (the public home is in site.test.js).
+const ADMIN = { cookie: 'viewer=coordinator' };
+
+test('the coordinator home explains the loop and offers the tour', async () => {
+  const body = await page('/admin');
   const main = mainOf(body);
   assert.match(main, /href="\/tour"[^>]*>Take the 2-minute demo tour/);
   for (const step of ['Match', 'Connect', 'Spark', 'Watch']) assert.match(main, new RegExp(`</span> ${step}</h3>`));
@@ -88,7 +91,7 @@ test('the home page explains the loop and offers the tour', async () => {
 
 test('the nav marks the current page with aria-current and includes the new sections', async () => {
   const cases = [
-    ['/', '/'],
+    ['/admin', '/'],
     ['/seniors', '/seniors'],
     ['/seniors/s-harold', '/seniors'],
     ['/volunteers/v-ethan', '/volunteers'],
@@ -97,7 +100,7 @@ test('the nav marks the current page with aria-current and includes the new sect
     ['/dashboard', '/dashboard'],
   ];
   for (const [url, current] of cases) {
-    const body = await page(url);
+    const body = await page(url, ADMIN);
     const nav = body.slice(body.indexOf('<nav class="site-nav"'), body.indexOf('</nav>'));
     const marked = [...nav.matchAll(/<a href="([^"]+)" aria-current="page">/g)].map((m) => m[1]);
     assert.deepEqual(marked, [current], `${url} marks ${current}`);
@@ -121,7 +124,7 @@ test('flagged numbers say exactly what they count', async () => {
   assert.match(dash, /2 seniors need attention: 1 at isolation risk, 1 waiting for a companion\./);
   assert.match(dash, /1<\/p><p class="tile-label"><span aria-hidden="true">⚠<\/span> senior at isolation risk/);
 
-  const home = await page('/');
+  const home = await page('/admin');
   assert.doesNotMatch(home, /seniors? flagged/);
   assert.match(home, /seniors need attention<\/p>\s*<p class="tile-detail">1 at isolation risk, 1 waiting for a companion<\/p>/);
 });
@@ -167,7 +170,7 @@ test('feedback banners pair an icon and a word with the color', async () => {
 test('the scrolling data table is a labeled, focusable region, and the footer note is there', async () => {
   const body = await page('/contacts');
   assert.match(body, /<div class="table-wrap" role="region" aria-labelledby="recent-heading" tabindex="0">/);
-  assert.match(body, /Built for Indiana communities\. Demo data is fictional\./);
+  assert.match(body, /A student prototype for Nextech CSforGood 2026\. Everyone in the demo is fictional\./);
 });
 
 test('the stylesheet keeps the design rules: press feedback, reduced motion, contrast, print', async () => {

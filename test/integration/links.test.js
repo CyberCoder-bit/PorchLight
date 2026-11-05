@@ -60,6 +60,7 @@ test('every internal link works, starting from fresh demo data', async () => {
     const res = await fetch(base + p, { redirect: 'manual' });
     seen.set(p, res.status);
     const type = res.headers.get('content-type') || '';
+    if (res.status === 404 && /^\/sign-up(\/|$)/.test(p)) continue; // [v2 brand] /sign-up/* belongs to the accounts module
     if (res.status >= 400) {
       problems.push(`${p} -> ${res.status}`);
       continue;

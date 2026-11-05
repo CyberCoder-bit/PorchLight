@@ -55,7 +55,7 @@ const tomorrow = () => toDateInput(startOfLocalDay(new Date(), 1));
 
 // "N seniors need attention" on each page.
 async function attentionCounts() {
-  const home = await page('/');
+  const home = await page('/admin'); // [v2] the coordinator home moved from / to /admin
   const dash = await page('/dashboard');
   const att = await page('/attention');
   const homeTile = Number(home.match(/<p class="tile-value">(\d+)<\/p>\s*<p class="tile-label">(?:senior needs|seniors need) attention/)[1]);

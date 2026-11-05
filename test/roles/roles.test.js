@@ -72,8 +72,8 @@ async function statuses(viewer, paths) {
 test('no cookie: demo mode, everything visible, nav unchanged', async () => {
   await reset();
   const home = await text('/');
-  assert.deepEqual(navLinks(home), ['/', '/seniors', '/volunteers', '/match', '/contacts', '/dashboard', '/attention', '/help']);
-  assert.match(home, /Demo mode: everything is visible\. <a href="\/sign-in">Try the demo sign-in<\/a>/);
+  // [v2 brand] signed out: the public website's header (its nav, then Sign in)
+  assert.deepEqual(navLinks(home), ['/how-it-works', '/for-seniors', '/for-volunteers', '/for-families', '/languages', '/safety', '/sign-in']);
   assert.doesNotMatch(home, /Signed in as/);
   const all = await statuses(null, ['/', '/dashboard', '/attention', '/match', '/seniors/s-harold', '/seniors/s-harold/edit', '/volunteers/v-maya/week', '/contacts', '/demo/reset', '/tour']);
   for (const [p, status] of Object.entries(all)) assert.equal(status, 200, p);
@@ -341,8 +341,8 @@ test('a stale or unknown cookie falls back to demo mode and is cleared', async (
     assert.equal(res.status, 200, value);
     assert.match(res.headers.get('set-cookie') || '', /^viewer=; Path=\/; Max-Age=0/, `${value} is cleared`);
     const body = await res.text();
-    assert.match(body, /Demo mode: everything is visible/);
-    assert.equal(navLinks(body).length, 8);
+    assert.match(body, /<a href="\/sign-in">Sign in<\/a>/); // [v2 brand] the signed-out header
+    assert.equal(navLinks(body).length, 7);
   }
   // A volunteer added after the last reset is deleted by the next reset.
   const res = await post('/volunteers', { name: 'Temp Vol', interests: 'reading', availability: 'mon-morning', contactMethods: 'phone', maxSeniors: '1' });
