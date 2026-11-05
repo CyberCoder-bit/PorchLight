@@ -16,6 +16,7 @@ import { myWeekPage } from '../views/features/week.js';
 import { familySummaryPage } from '../views/features/summary.js';
 import { townFromQuery, rowsInTown } from '../towns/index.js'; // [towns]
 import { townFilter } from '../towns/views.js'; // [towns]
+import { storeSeenBy, volunteerFirstNameOnly } from '../roles/index.js'; // [v2 accounts] each person sees only what is theirs
 
 export function registerFeatures(router, ctx) {
   const { store, now, render } = ctx;
@@ -59,7 +60,7 @@ export function registerFeatures(router, ctx) {
     render(req, res, {
       title: `My week: ${volunteer.name}`,
       active: 'volunteers',
-      body: myWeekPage(buildWeek(store, volunteer, now()), { busyText }),
+      body: myWeekPage(buildWeek(storeSeenBy(req.viewer, store), volunteer, now()), { busyText }), // [v2] a volunteer sees first names only
     });
   });
 
@@ -70,7 +71,7 @@ export function registerFeatures(router, ctx) {
     const summary = buildFamilySummary({
       senior,
       assessment: ctx.assess(senior),
-      volunteer: match ? store.volunteer(match.volunteerId) : null,
+      volunteer: match ? (req.viewer?.kind === 'family' ? volunteerFirstNameOnly(store.volunteer(match.volunteerId)) : store.volunteer(match.volunteerId)) : null, // [v2] family: first name only
       contacts: store.contactsForSenior(senior.id),
       thresholdDays: store.settings.riskThresholdDays,
       now: now(),

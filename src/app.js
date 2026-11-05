@@ -26,7 +26,7 @@ import { checkTown, townFromQuery, rowsInTown } from './towns/index.js'; // [tow
 import { townFilter } from './towns/views.js'; // [towns]
 import {
   registerRoles, withoutPrivateNotes, seniorsVisibleTo, callsVisibleTo, seesEverything, isFamilyOrSenior, viewerForRequest,
-  OLD_ADMIN_PATHS, seniorForVolunteer, volunteerFirstNameOnly,
+  OLD_ADMIN_PATHS, seniorForVolunteer, volunteerFirstNameOnly, storeSeenBy,
 } from './roles/index.js'; // [roles]
 import { createSession, sessionCookie } from './auth/session.js'; // [v2 accounts]
 import { SEED_ADMIN_EMAIL } from './auth/routes.js'; // [v2 accounts]
@@ -253,7 +253,7 @@ export function createApp({ store, sparks, now = () => new Date() }) {
       thresholdDays: store.settings.riskThresholdDays,
       now: now(),
     });
-  const withPeople = (c) => ({ ...c, senior: store.senior(c.seniorId), volunteer: store.volunteer(c.volunteerId) });
+  const withPeople = (c, seen = store) => ({ ...c, senior: seen.senior(c.seniorId), volunteer: store.volunteer(c.volunteerId) });
   // What no longer fits between a matched pair (no shared time, or a way of
   // connecting the volunteer doesn't offer), using the Match page's own rules.
   // Capacity is left out: the pair already counts toward it.
@@ -455,7 +455,7 @@ export function createApp({ store, sparks, now = () => new Date() }) {
     const assigned = store
       .activeMatchesForVolunteer(volunteer.id)
       .map((match) => {
-        const senior = store.senior(match.seniorId);
+        const senior = storeSeenBy(req.viewer, store).senior(match.seniorId); // [v2] a volunteer sees first names only
         return senior ? { senior, match, assessment: assess(senior), misfit: misfitOf(senior, volunteer) } : null;
       })
       .filter(Boolean);
@@ -561,23 +561,24 @@ export function createApp({ store, sparks, now = () => new Date() }) {
   const contactsView = (req, res, { form, errors = {}, status = 200 }) => {
     const nowDate = now();
     const isMine = callsVisibleTo(req.viewer); // [roles] a volunteer sees only their own pairs and calls
+    const seen = storeSeenBy(req.viewer, store); // [v2] and only their seniors' first names
     const pairs = store.matches
       .filter((m) => m.active)
       .filter(isMine) // [roles]
-      .map((match) => ({ match, senior: store.senior(match.seniorId), volunteer: store.volunteer(match.volunteerId) }))
+      .map((match) => ({ match, senior: seen.senior(match.seniorId), volunteer: store.volunteer(match.volunteerId) }))
       .filter((p) => p.senior && p.volunteer)
       .sort((a, b) => a.senior.name.localeCompare(b.senior.name));
     const scheduled = store.contacts
       .filter((c) => c.status === 'scheduled')
       .filter(isMine) // [roles]
-      .map((c) => ({ ...withPeople(c), canLog: canLogNow(c, nowDate), canMiss: canMarkMissedNow(c, nowDate) }))
+      .map((c) => ({ ...withPeople(c, seen), canLog: canLogNow(c, nowDate), canMiss: canMarkMissedNow(c, nowDate) }))
       .filter((c) => c.senior)
       .sort((a, b) => new Date(a.scheduledFor) - new Date(b.scheduledFor));
     const happenedAt = (c) => new Date(c.completedAt || c.cancelledAt || c.scheduledFor);
     const recent = store.contacts
       .filter((c) => c.status !== 'scheduled')
       .filter(isMine) // [roles]
-      .map(withPeople)
+      .map((c) => withPeople(c, seen))
       .filter((c) => c.senior)
       .sort((a, b) => happenedAt(b) - happenedAt(a))
       .slice(0, 15);

@@ -72,6 +72,15 @@ export function seniorForVolunteer(senior) {
   };
 }
 
+// The store as this person may see it: for a volunteer, store.senior() gives
+// only what seniorForVolunteer() keeps. Everything else reads the real store.
+export function storeSeenBy(viewer, store) {
+  if (viewer?.kind !== 'volunteer') return store;
+  const view = Object.create(store);
+  view.senior = (id) => seniorForVolunteer(store.senior(id));
+  return view;
+}
+
 // What a family member or senior may know about the companion: first name.
 export function volunteerFirstNameOnly(volunteer) {
   if (!volunteer) return volunteer;

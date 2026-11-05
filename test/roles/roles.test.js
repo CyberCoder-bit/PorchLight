@@ -179,6 +179,12 @@ test("volunteer: a senior's page shows only first name, interests, languages, an
   assert.match(page, /Basketball/i);
   // Their own call notes are theirs to see.
   assert.match(page, /Watched the second half of the game together\./);
+  // No last names on their week, their profile, or Calls & Visits either.
+  for (const p of ['/volunteers/v-ethan/week', '/volunteers/v-ethan', '/contacts']) {
+    assert.doesNotMatch(mainOf(await text(p, 'volunteer:v-ethan')), /Whitaker|Phoenix/, p);
+  }
+  // A family member's weekly summary names the companion by first name only.
+  assert.doesNotMatch(mainOf(await text('/seniors/s-harold/summary', 'family:s-harold')), /Brooks/);
 });
 
 // ----- family -----
