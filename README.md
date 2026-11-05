@@ -28,7 +28,8 @@ Indiana community, starting with Carmel.
 
 **The fastest way to see it:**
 
-1. Open the live site: [TEAM: live link, after you deploy v2]. Or run it yourself (below).
+1. Open the live site: https://porchlight.world168158.workers.dev (it shows v2 once the team has
+   deployed it; until then it still runs v1). Or run it yourself (below).
 2. Go to **Sign in** and use a button under **Try a demo account**. One click signs you in as Hal
    (a senior), Samira (a senior who reads Arabic), Ethan (a volunteer), Jordan (a volunteer who uses
    translation), or Mike (Hal's son). You don't need a password.
@@ -106,14 +107,12 @@ The language menu at the top of every page switches between the 8 interface lang
 
 Measured on November 4, 2026, on the `v2` branch:
 
-- **Automated tests:** `npm test` runs 313 tests. At commit `b4e2173`, with the Anthropic SDK
-  installed, 312 passed and 1 failed. At the later `v2` commit `13c83a9`, without `npm install`, 298
-  passed, 14 LIVE-mode tests were skipped because they need the SDK, and the same 1 failed. That
-  test checks that every language file has every English key. It failed because the translations
-  of the core screens were still being written when we measured.
-  [TEAM: run `npm test` on the final `v2` and write the real numbers here.]
-- **Accessibility:** in v2, Google Lighthouse accessibility scored 100 on `/` and `/for-families`
-  (desktop) and on `/safety` (mobile). In v1, it scored 100 in the
+- **Automated tests:** `npm test` ran 316 tests on the final `v2` code, with the Anthropic SDK
+  installed. All 316 passed. Without `npm install`, the LIVE-mode tests are skipped and the rest
+  pass. All 7 translations have every one of the 1,451 English interface strings; a test checks that.
+- **Accessibility:** in v2, Google Lighthouse accessibility scored 100 on `/`, `/for-families`, and
+  `/safety`. It also scored 100 on `/sign-up/senior` (mobile), `/admin` (desktop), and Samira's page
+  in Arabic, right to left (mobile). In v1, it scored 100 in the
   light, dark, and high-contrast themes, on desktop and at 375px wide with A++ text.
 - **Two runtimes:** in v1, Node (`npm start`) and Cloudflare Workers (`npx wrangler dev`) returned
   identical HTML for the demo pages. A v2 review found that the
@@ -695,8 +694,8 @@ TZ=America/Chicago npm test       # same results on a Central-time computer
 TZ=America/Los_Angeles npm test   # same results in any other time zone
 ```
 
-On November 4, 2026, `npm test` ran 313 tests (see [Results](#results-at-the-time-of-writing) for
-how many passed). Without `npm install`, 14 LIVE-mode tests are skipped; after `npm install`, they
+On November 4, 2026, `npm test` ran 316 tests, and all of them passed. Without `npm install`, the
+LIVE-mode tests are skipped; after `npm install`, they
 run against a local fake Claude server. They cover:
 - matching rules and ranking, including language must-haves, the +4 for a shared language, and
   translate help only when both opt in (`test/matching.test.js`);

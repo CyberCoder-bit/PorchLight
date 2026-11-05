@@ -34,7 +34,15 @@ function nextStep(req) {
   if (msg === 'reset' && req.path !== '/tour') return { href: '/tour', label: t('core.next.tour') };
   if (msg === 'matched' && seniorId) return { href: `/contacts?seniorId=${encodeURIComponent(seniorId)}`, label: t('core.next.firstCall') };
   if (msg === 'senior_added' && seniorId) return { href: `/admin/match?seniorId=${encodeURIComponent(seniorId)}`, label: t('core.next.findCompanion') };
-  if ((msg === 'completed' || msg === 'logged') && req.path !== '/dashboard') return { href: '/dashboard', label: t('core.next.dashboard') };
+  // After a call is logged: the coordinator's dashboard for the coordinator, and
+  // the volunteer's own week for a volunteer (they can't open the dashboard).
+  if (msg === 'completed' || msg === 'logged') {
+    if (req.viewer?.kind === 'volunteer') {
+      const week = `/volunteers/${encodeURIComponent(req.viewer.id)}/week`;
+      return req.path === week ? null : { href: week, label: t('auth.nav.myWeek') };
+    }
+    if (req.path !== '/admin/dashboard') return { href: '/admin/dashboard', label: t('core.next.dashboard') };
+  }
   return null;
 }
 
