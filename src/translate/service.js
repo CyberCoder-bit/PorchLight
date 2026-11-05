@@ -69,7 +69,10 @@ export function createTranslateService({ store, live = null, limits = DEFAULT_LI
       return Math.max(0, Math.min(perAccount - (usage.byUser[userKey] || 0), total - usage.total));
     },
 
-    async translate({ text, from, to, userKey = 'demo' }) {
+    // allowAi: false keeps the text away from the AI (only ready-made and cached
+    // translations), e.g. a message written while the form said nothing leaves
+    // PorchLight (V2-B-04), or a person with no companion yet (V2-B-05).
+    async translate({ text, from, to, userKey = 'demo', allowAi = true }) {
       const source = String(text ?? '').trim();
       if (!source || !from || !to || from === to) return { text: source, status: 'same', notice: null };
       try {
@@ -82,7 +85,7 @@ export function createTranslateService({ store, live = null, limits = DEFAULT_LI
         const hit = store.data.translations?.[key];
         if (hit && typeof hit.text === 'string') return { text: hit.text, status: 'cached', notice: null };
 
-        if (!live) return offline(input, 'needsAi');
+        if (!live || !allowAi) return offline(input, 'needsAi');
 
         const usage = usageToday();
         if ((usage.byUser[userKey] || 0) >= perAccount || usage.total >= total) return offline(input, 'limit');

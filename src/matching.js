@@ -83,19 +83,19 @@ export function scorePair(senior, volunteer, currentLoad = 0) {
 
   const problems = [];
   if (currentLoad >= volunteer.maxSeniors) {
-    problems.push(`At capacity (already has ${currentLoad} of ${volunteer.maxSeniors} senior${volunteer.maxSeniors === 1 ? '' : 's'})`);
+    problems.push(t(volunteer.maxSeniors === 1 ? 'core.match.atCapacity.one' : 'core.match.atCapacity.other', { count: currentLoad, max: volunteer.maxSeniors }));
   }
   if (sharedSlots.length === 0) {
-    problems.push('No overlapping availability');
+    problems.push(t('core.match.noOverlap'));
   }
   if (!offersMethod) {
-    problems.push(`Does not offer ${methodLabel(senior.contactMethod).toLowerCase()}s`);
+    problems.push(t(`core.match.noMethod.${['phone', 'video', 'visit'].includes(senior.contactMethod) ? senior.contactMethod : 'phone'}`));
   }
   // [towns] rule d: in-person visits need the same county (unknown towns are not judged).
   const seniorCounty = countyOfPerson(senior);
   const volunteerCounty = countyOfPerson(volunteer);
   if (offersMethod && senior.contactMethod === 'visit' && seniorCounty && volunteerCounty && seniorCounty !== volunteerCounty) {
-    problems.push(`Lives in ${volunteerCounty} - too far for in-person visits`);
+    problems.push(t('core.match.tooFar', { county: volunteerCounty }));
   }
   // [v2] rule e: only approved volunteers.
   if (volunteer.status === 'pending') problems.push(t('lang.match.pending'));
@@ -107,15 +107,15 @@ export function scorePair(senior, volunteer, currentLoad = 0) {
   const countedSlots = Math.min(sharedSlots.length, WEIGHTS.maxCountedSlots);
   const breakdown = [
     {
-      label: `${sharedInterests.length} shared interest${sharedInterests.length === 1 ? '' : 's'}`,
-      detail: sharedInterests.map(interestLabel).join(', ') || 'none',
+      label: t(sharedInterests.length === 1 ? 'core.match.interests.one' : 'core.match.interests.other', { count: sharedInterests.length }),
+      detail: sharedInterests.map(interestLabel).join(', ') || t('core.match.none'),
       points: sharedInterests.length * WEIGHTS.perSharedInterest,
     },
     {
-      label: `${sharedSlots.length} shared time slot${sharedSlots.length === 1 ? '' : 's'}`,
+      label: t(sharedSlots.length === 1 ? 'core.match.slots.one' : 'core.match.slots.other', { count: sharedSlots.length }),
       detail:
         sharedSlots.map(slotLabel).join(', ') +
-        (sharedSlots.length > WEIGHTS.maxCountedSlots ? ` (only ${WEIGHTS.maxCountedSlots} count toward the score)` : ''),
+        (sharedSlots.length > WEIGHTS.maxCountedSlots ? ` ${t('core.match.onlyCount', { max: WEIGHTS.maxCountedSlots })}` : ''),
       points: countedSlots * WEIGHTS.perSharedSlot,
     },
   ];
@@ -136,7 +136,7 @@ export function scorePair(senior, volunteer, currentLoad = 0) {
     breakdown.push({ label: t('lang.match.translateHelp'), detail: '', points: 0, kind: 'translateHelp' });
   }
   if (currentLoad === 0) {
-    breakdown.push({ label: 'New volunteer bonus', detail: 'No seniors assigned yet', points: WEIGHTS.newVolunteerBonus });
+    breakdown.push({ label: t('core.match.newBonus'), detail: t('core.match.newBonusDetail'), points: WEIGHTS.newVolunteerBonus });
   }
 
   return {

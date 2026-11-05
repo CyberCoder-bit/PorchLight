@@ -106,7 +106,7 @@ export function registerTranslate(router, ctx) {
         const showingOriginal = original === message.id && message.lang !== reader;
         const display = showingOriginal
           ? { text: message.text, status: 'same', notice: null }
-          : await service.translate({ text: message.text, from: message.lang, to: reader, userKey });
+          : await service.translate({ text: message.text, from: message.lang, to: reader, userKey, allowAi: message.aiOk === true });
         return { message, author: authorName(message, match), display, showingOriginal };
       })
     );
@@ -156,6 +156,9 @@ export function registerTranslate(router, ctx) {
       ...(viewer?.userId ? { fromUserId: viewer.userId } : {}),
       text: values.text,
       lang: values.lang,
+      // The writer saw "this will be sent to Claude to translate" only when AI
+      // translation was on. Messages written without that notice never go to the AI (V2-B-04).
+      aiOk: service.mode === 'live',
       createdAt: now().toISOString(),
     });
     store.save();
@@ -185,14 +188,21 @@ export function registerTranslate(router, ctx) {
     render(req, res, { title: t('translate.helper.title'), active: 'translate', body: helperPage({ sides: helperSides(req.query), mode: service.mode }) });
   });
 
+  // Only the coordinator and people in an active pair may spend AI
+  // translations: a brand-new account with no companion can't (V2-B-05).
+  const mayUseAi = (viewer) =>
+    viewer?.kind === 'coordinator' ||
+    (!viewer?.pending && store.matches.some((m) => m.active && canUseThread(viewer, m)));
+
   router.post('/translate', async (req, res) => {
     const sides = helperSides(req.body);
     const userKey = usageKeyFor(req.viewer);
+    const allowAi = mayUseAi(req.viewer);
     for (const side of [sides.mine, sides.theirs]) {
       if (chars(side.text) > MAX_MESSAGE_CHARS) side.error = t('translate.error.tooLong', { max: MAX_MESSAGE_CHARS, count: chars(side.text) });
     }
     const run = (side, to) =>
-      side.text && !side.error && !isInvisible(side.text) ? service.translate({ text: side.text, from: side.lang, to, userKey }) : null;
+      side.text && !side.error && !isInvisible(side.text) ? service.translate({ text: side.text, from: side.lang, to, userKey, allowAi }) : null;
     const [forThem, forMe] = await Promise.all([run(sides.mine, sides.theirs.lang), run(sides.theirs, sides.mine.lang)]);
     const failed = sides.mine.error || sides.theirs.error;
     render(req, res, {

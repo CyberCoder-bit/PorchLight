@@ -16,7 +16,7 @@ import { createApp } from '../../src/app.js';
 import { createSparkService } from '../../src/sparks/index.js';
 import { buildConfig } from '../../src/config.js';
 import { INTERESTS, DAYS, PERIODS, CONTACT_METHODS, MISSED_REASONS } from '../../src/vocab.js';
-import { STATUS_INFO, ATTENTION_REASON_WORDS } from '../../src/risk.js';
+import { STATUS_INFO } from '../../src/risk.js';
 import { COMMUNITY } from '../../src/community.js';
 import { TOWNS } from '../../src/towns/index.js';
 import { townSelectField, townFilter } from '../../src/towns/views.js';
@@ -86,7 +86,6 @@ function ignoreList() {
     ...CONTACT_METHODS.flatMap((m) => [m.label, m.label.toLowerCase()]),
     ...MISSED_REASONS.map((r) => r.label),
     ...Object.values(STATUS_INFO).flatMap((s) => [s.label, s.advice]),
-    ...Object.values(ATTENTION_REASON_WORDS),
     ...visibleText(townSelectField({}, undefined)),
     ...visibleText(townFilter({ action: '/admin/seniors', town: null, shown: 1, total: 1 })),
     ...visibleText(townFilter({ action: '/admin/volunteers', town: null, shown: 1, total: 1, noun: ['volunteer', 'volunteers'], label: 'Show volunteers in' })),

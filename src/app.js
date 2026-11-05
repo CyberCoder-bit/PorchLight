@@ -642,7 +642,9 @@ export function createApp({ store, sparks, now = () => new Date() }) {
     // Pre-fill the form when coming from a senior or volunteer page.
     let matchId = req.query.matchId || '';
     if (!matchId && req.query.seniorId) matchId = store.activeMatchForSenior(req.query.seniorId)?.id || '';
-    const match = store.matches.find((m) => m.id === matchId && m.active);
+    // [v2] A volunteer can only pre-fill one of their own pairs (V2-B-06).
+    const mine = callsVisibleTo(req.viewer);
+    const match = store.matches.find((m) => m.id === matchId && m.active && mine(m));
     const senior = match ? store.senior(match.seniorId) : null;
     const volunteer = match ? store.volunteer(match.volunteerId) : null;
     // Suggest the pair's next shared free time (at least an hour from now).

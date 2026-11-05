@@ -167,4 +167,5 @@ export default {
   'auth.nav.seniorPage': "{name}'s page",
   'auth.nav.seniorSummary': "{name}'s weekly summary",
   'auth.nav.myPage': 'My page',
+  'auth.errors.crossSite': 'That form came from another website, so PorchLight did not use it. Please use the form on this site.',
 };

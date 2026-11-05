@@ -10,7 +10,7 @@
 //   - cookies                     req.cookies
 //   - response helpers            res.html(), res.redirect(), res.json(), res.setCookie()
 
-import { withLang } from './i18n/index.js';
+import { withLang, t } from './i18n/index.js';
 import { languageFromRequest } from './i18n/negotiate.js';
 
 export const MAX_BODY_BYTES = 100 * 1024; // forms are tiny; reject anything larger
@@ -196,6 +196,14 @@ async function handleRequest(request, { router, renderError }) {
       return res.toResponse({ head });
     }
     req.params = found.params;
+    // A form on another website can't post here, not even to sign someone in
+    // (login CSRF, V2-B-10). Browsers say where a form came from; requests with
+    // neither header (curl, tests, old browsers) still work, and the session
+    // cookie is SameSite=Lax as well.
+    if (req.method === 'POST' && isCrossSite(request, url)) {
+      renderError(req, res, 403, t('auth.errors.crossSite'));
+      return res.toResponse({ head });
+    }
     if (req.method === 'POST') req.body = parseForm(await readBody(request));
     await found.handler(req, res);
   } catch (err) {
@@ -211,6 +219,17 @@ async function handleRequest(request, { router, renderError }) {
     }
   }
   return res.toResponse({ head });
+}
+
+function isCrossSite(request, url) {
+  if (request.headers.get('sec-fetch-site') === 'cross-site') return true;
+  const origin = request.headers.get('origin');
+  if (!origin || origin === 'null') return origin === 'null';
+  try {
+    return new URL(origin).host !== url.host;
+  } catch {
+    return true;
+  }
 }
 
 // Throw this from a handler to show a friendly error page.
