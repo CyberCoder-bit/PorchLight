@@ -5,7 +5,10 @@
 import { html, formatDateTime } from '../views/html.js';
 import { banner, backLink, emptyState, errorSummary, selectField } from '../views/components.js';
 import { t, tIn, currentLang } from '../i18n/index.js';
-import { TRANSLATE_LANGUAGES, languageLabel, dirOf, PHRASE_KEYS, phraseIn, hasPhrases } from './phrases.js';
+import { TRANSLATE_LANGUAGES, languageLabel, dirOf, PHRASE_KEYS, hasPhrases } from './phrases.js';
+import { sparkTextIn } from './mock.js';
+import { languagesOf } from '../i18n/fields.js';
+import { COMMUNITY } from '../community.js';
 
 export const MAX_MESSAGE_CHARS = 500;
 
@@ -197,4 +200,29 @@ export function sparkSecondLanguage(lang, text) {
   return text
     ? html`<p class="spark-text" lang="${lang}" dir="${dirOf(lang)}"><span class="visually-hidden">${t('translate.spark.inLanguage', { language: languageLabel(lang) })} </span>${text}</p>`
     : html`<p class="spark-basis">${t('translate.spark.notReady', { language: languageLabel(lang) })}</p>`;
+}
+
+const mainLanguage = (person) => languagesOf(person)[0]?.code || 'en';
+
+// The languages a spark should also be shown in: when the senior's main
+// language differs from the volunteer's, both of them (sparks are written in
+// English, so English itself needs nothing extra).
+export function sparkLanguages(senior, volunteer) {
+  if (!senior || !volunteer) return [];
+  const seniorLang = mainLanguage(senior);
+  const volunteerLang = mainLanguage(volunteer);
+  if (seniorLang === volunteerLang) return [];
+  return [...new Set([volunteerLang, seniorLang])].filter((code) => code !== 'en');
+}
+
+// The extra lines under one spark (empty when both speak the same language).
+export function bilingualSpark(spark, { senior, volunteer, sparkSet }) {
+  const langs = sparkLanguages(senior, volunteer);
+  if (!langs.length) return '';
+  const vars = {
+    name: senior.preferredName || String(senior.name || '').split(' ')[0],
+    town: COMMUNITY.town,
+    daysSince: sparkSet?.inputs?.daysSince ?? null,
+  };
+  return langs.map((lang) => sparkSecondLanguage(lang, sparkTextIn(spark, lang, vars)));
 }

@@ -8,11 +8,14 @@
 // preferred first name, interest labels, their "about me" text, days since
 // last contact, and today's date and season. We never send caregiver
 // details or volunteer call notes, and phone numbers or emails typed into
-// "about me" are removed first (redactContactDetails below).
+// "about me" are removed first (redactContactDetails below). [v2] When the
+// senior's main language is not English, its name is sent too, so each
+// starter also comes in that language.
 
 import { interestLabel, methodLabel } from '../vocab.js';
 import { formatLocal } from '../tz.js';
 import { COMMUNITY } from '../community.js';
+import { englishName } from '../translate/phrases.js'; // [v2 translate] sparks in the senior's language
 
 // The system prompt names the community's town and state (src/community.js).
 // Only the place name changes from town to town; nothing about the senior is
@@ -53,6 +56,39 @@ export const SPARK_SCHEMA = {
   required: ['sparks'],
   additionalProperties: false,
 };
+
+// [v2 translate] When the senior's main language is not English, each starter
+// also comes in that language. The English fields stay the same as above.
+export const BILINGUAL_SPARK_SCHEMA = {
+  type: 'object',
+  properties: {
+    sparks: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          text: { type: 'string' },
+          based_on: { type: 'string' },
+          text_senior_language: { type: 'string' },
+        },
+        required: ['text', 'based_on', 'text_senior_language'],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ['sparks'],
+  additionalProperties: false,
+};
+
+// The senior's main language as an English name, or null when it is English.
+export function secondLanguageOf(input) {
+  const code = input?.seniorLanguage;
+  return code && code !== 'en' ? { code, name: englishName(code) } : null;
+}
+
+export function bilingualInstruction(languageName) {
+  return `\n\nThe senior's main language is ${languageName}. Write "text" in English for the volunteer, and put the same starter in ${languageName} in "text_senior_language", so the volunteer can show or read it to the senior. Keep "based_on" in English.`;
+}
 
 export class LiveSparkError extends Error {
   constructor(reason, cause) {
@@ -134,14 +170,15 @@ export async function generateLiveSparks(input, { apiKey, model, baseURL, timeou
   if (!Anthropic) throw new LiveSparkError('the @anthropic-ai/sdk package is not installed (run npm install)');
 
   const client = new Anthropic({ apiKey, baseURL, timeout: timeoutMs, maxRetries: 1 });
+  const second = secondLanguageOf(input); // [v2 translate]
   try {
     const response = await client.messages.create({
       model,
       max_tokens: 4000,
-      system: SYSTEM_PROMPT,
+      system: second ? SYSTEM_PROMPT + bilingualInstruction(second.name) : SYSTEM_PROMPT,
       // Short creative writing: low effort keeps it fast and cheap.
       // Structured outputs guarantee JSON that matches SPARK_SCHEMA.
-      output_config: { effort: 'low', format: { type: 'json_schema', schema: SPARK_SCHEMA } },
+      output_config: { effort: 'low', format: { type: 'json_schema', schema: second ? BILINGUAL_SPARK_SCHEMA : SPARK_SCHEMA } },
       messages: [{ role: 'user', content: buildUserMessage(input) }],
     });
 
@@ -161,7 +198,11 @@ export async function generateLiveSparks(input, { apiKey, model, baseURL, timeou
     const sparks = (parsed.sparks || [])
       .filter((s) => s && typeof s.text === 'string' && s.text.trim())
       .slice(0, 3)
-      .map((s) => ({ text: s.text.trim(), basedOn: String(s.based_on || '').trim() || 'Claude' }));
+      .map((s) => {
+        const spark = { text: s.text.trim(), basedOn: String(s.based_on || '').trim() || 'Claude' };
+        const other = second && typeof s.text_senior_language === 'string' ? s.text_senior_language.trim() : '';
+        return other ? { ...spark, translations: { [second.code]: other } } : spark;
+      });
     if (sparks.length < 3) throw new LiveSparkError('the response had fewer than 3 starters');
 
     return { sparks, model: response.model || model };

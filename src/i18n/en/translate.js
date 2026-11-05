@@ -1,7 +1,15 @@
 // English text, "translate" namespace (v2). Keys start with "translate.".
 // See src/i18n/index.js for the rules (plain text, {variables}).
+//
+// The conversation-spark templates (translate.spark.opener.*, .interest.*,
+// .general.*, .indiana.*, .tip.*, .gap.*) are added from src/sparks/templates.js,
+// where their English text lives. Print the list with:
+//   node -e "import('./src/sparks/templates.js').then(m => console.log(m.sparkCatalog()))"
+
+import { sparkCatalog } from '../../sparks/templates.js';
 
 export default {
+  ...sparkCatalog(),
   // ----- shown with every translation, and before anything is sent -----
   'translate.disclaimer': "Machine translation, may contain mistakes. Don't use it for medical or money decisions.",
   'translate.notice.word': 'Before you write',

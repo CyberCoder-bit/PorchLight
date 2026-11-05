@@ -8,6 +8,7 @@ import {
 import { placeText, townLabel } from '../../towns/index.js'; // [towns]
 import { townSelectField } from '../../towns/views.js'; // [towns]
 import { t } from '../../i18n/index.js'; // [v2 translate] the Messages link
+import { bilingualSpark } from '../../translate/views.js'; // [v2 translate] sparks in both languages
 import { noPhone } from '../../roles/viewer.js'; // phone numbers are never displayed, even if typed into a name field
 
 export function seniorsListPage({ rows, townFilter = '', townName = null }) { // [towns] townFilter, townName
@@ -40,7 +41,7 @@ export function seniorsListPage({ rows, townFilter = '', townName = null }) { //
           <p><a href="/seniors/new">Add a senior</a></p>`)}`;
 }
 
-function sparkPanel({ senior, sparkSet, sparkMode, hideNotice = false }) {
+function sparkPanel({ senior, volunteer = null, sparkSet, sparkMode, hideNotice = false }) {
   const name = senior.preferredName || senior.name.split(' ')[0];
   const nextVariant = sparkSet ? (sparkSet.variant || 0) + 1 : 0;
   return html`
@@ -52,7 +53,7 @@ function sparkPanel({ senior, sparkSet, sparkMode, hideNotice = false }) {
           ${sparkSet.notice && !hideNotice ? banner({ kind: 'status', text: sparkSet.notice }) : ''}
           <ol class="sparks">
             ${sparkSet.sparks.map(
-              (s) => html`<li><p class="spark-text">${s.text}</p><p class="spark-basis">Based on: ${s.basedOn}</p></li>`
+              (s) => html`<li><p class="spark-text">${s.text}</p>${bilingualSpark(s, { senior, volunteer, sparkSet })}<p class="spark-basis">Based on: ${s.basedOn}</p></li>`
             )}
           </ol>
           ${sparkSet.tip ? html`<p class="tip"><strong>Volunteer tip:</strong> ${sparkSet.tip}</p>` : ''}
@@ -93,7 +94,7 @@ export function seniorProfilePage({ senior, assessment, volunteer, match, upcomi
 
     <div class="two-col">
       <div>
-        ${hideSparks ? '' : sparkPanel({ senior, sparkSet, sparkMode, hideNotice })}
+        ${hideSparks ? '' : sparkPanel({ senior, volunteer, sparkSet, sparkMode, hideNotice })}
 
         <section class="panel" aria-labelledby="contacts-heading">
           <h2 id="contacts-heading">Calls and visits</h2>

@@ -9,6 +9,7 @@ import { generateMockSparks, pickTip, seasonOf } from './mock.js';
 import { generateLiveSparks, loadSdk } from './live.js';
 import { lastCompletedContact, calendarDaysBetween } from '../risk.js';
 import { localDateKey } from '../tz.js';
+import { languagesOf } from '../i18n/fields.js'; // [v2 translate]
 
 export async function resolveSparkMode(config) {
   const sdkInstalled = Boolean(await loadSdk());
@@ -44,6 +45,7 @@ export function buildSparkInput(senior, contacts, now = new Date()) {
     lastContactType: last ? last.type : null,
     season: seasonOf(now),
     now,
+    seniorLanguage: languagesOf(senior)[0]?.code || 'en', // [v2 translate] LIVE sparks also come in this language
   };
 }
 
