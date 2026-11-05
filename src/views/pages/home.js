@@ -1,17 +1,18 @@
 // Home, "How the AI works", demo reset, and error pages.
 
-import { html, plural } from '../html.js';
-import { statusBadge, trendBadge, banner, backLink, emptyState } from '../components.js';
+import { html } from '../html.js';
+import { statusBadge, trendBadge, banner, backLink, emptyState, tx, many } from '../components.js';
 import { COMMUNITY } from '../../community.js';
 import { attentionBreakdown, attentionReason } from '../../risk.js';
+import { t } from '../../i18n/index.js'; // [v2 i18n]
 
 // One short reason per senior on the Needs attention list (the same rule as /attention).
 function attentionRowText(r) {
   switch (attentionReason(r)) {
-    case 'needs_match': return 'waiting for a companion';
-    case 'at_risk': return `no call or visit in ${plural(r.daysSince, 'day')}`;
-    case 'dropping': return `fewer calls lately (${r.trend.recent} in the last 4 weeks, down from ${r.trend.previous})`;
-    default: return `${plural(r.missedRecently, 'missed call')} in the last 2 weeks`;
+    case 'needs_match': return t('core.home.row.needsMatch');
+    case 'at_risk': return t(many(r.daysSince, 'core.home.row.atRisk'), { n: r.daysSince });
+    case 'dropping': return t('core.home.row.dropping', { recent: r.trend.recent, previous: r.trend.previous });
+    default: return t(many(r.missedRecently, 'core.home.row.missed'), { n: r.missedRecently });
   }
 }
 
@@ -21,46 +22,49 @@ export function homePage({ stats, attention }) {
   const breakdown = attentionBreakdown(attention);
   return html`
     <section class="hero" aria-labelledby="hero-heading">
-      <p class="eyebrow">Built for Indiana communities, starting in ${town}, ${county}</p>
-      <h1 id="hero-heading">Leave the porch light on for older neighbors.</h1>
-      <p class="lead">PorchLight pairs older adults with volunteer companions for weekly calls and visits. It gives volunteers easy things to talk about, and it shows families early when the calls start to fade.</p>
-      <p class="hero-fact">Why it matters: by 2040, about one in five Hoosiers will be 65 or older (<a href="https://www.incontext.indiana.edu/2024/nov-dec/article1.asp">Indiana Business Research Center</a>), and being cut off from other people carries a health risk the U.S. Surgeon General compares to smoking up to 15 cigarettes a day (<a href="https://www.hhs.gov/sites/default/files/surgeon-general-social-connection-advisory.pdf">2023 advisory</a>).</p>
+      <p class="eyebrow">${tx('core.home.eyebrow', { town, county })}</p>
+      <h1 id="hero-heading">${tx('core.home.title')}</h1>
+      <p class="lead">${tx('core.home.lead')}</p>
+      <p class="hero-fact">${tx('core.home.fact', {
+        source: html`<a href="https://www.incontext.indiana.edu/2024/nov-dec/article1.asp">${tx('core.home.factSource')}</a>`,
+        advisory: html`<a href="https://www.hhs.gov/sites/default/files/surgeon-general-social-connection-advisory.pdf">${tx('core.home.factAdvisory')}</a>`,
+      })}</p>
       <p class="button-row">
-        <a class="button" href="/tour">Take the 2-minute demo tour <span aria-hidden="true">→</span></a>
-        <a class="button button-secondary" href="/admin/dashboard">Open the Family Dashboard</a>
+        <a class="button" href="/tour">${tx('core.home.tourButton')} <span aria-hidden="true">→</span></a>
+        <a class="button button-secondary" href="/admin/dashboard">${tx('core.home.openDashboard')}</a>
       </p>
     </section>
 
     <section aria-labelledby="loop-heading">
-      <h2 id="loop-heading">How PorchLight works, in 4 steps</h2>
+      <h2 id="loop-heading">${tx('core.home.loop.heading')}</h2>
       <ol class="loop" role="list">
         <li class="loop-step">
-          <h3><span class="loop-number" aria-hidden="true">1</span> Match</h3>
-          <p>A coordinator pairs each senior with a volunteer who shares their interests and free time.</p>
+          <h3><span class="loop-number" aria-hidden="true">1</span> ${tx('core.home.loop.match')}</h3>
+          <p>${tx('core.home.loop.matchText')}</p>
         </li>
         <li class="loop-step">
-          <h3><span class="loop-number" aria-hidden="true">2</span> Connect</h3>
-          <p>The volunteer schedules a call or visit every week and writes down each one.</p>
+          <h3><span class="loop-number" aria-hidden="true">2</span> ${tx('core.home.loop.connect')}</h3>
+          <p>${tx('core.home.loop.connectText')}</p>
         </li>
         <li class="loop-step">
-          <h3><span class="loop-number" aria-hidden="true">3</span> Spark</h3>
-          <p>Before each call, PorchLight suggests three friendly things to talk about.</p>
+          <h3><span class="loop-number" aria-hidden="true">3</span> ${tx('core.home.loop.spark')}</h3>
+          <p>${tx('core.home.loop.sparkText')}</p>
         </li>
         <li class="loop-step">
-          <h3><span class="loop-number" aria-hidden="true">4</span> Watch</h3>
-          <p>The Family Dashboard raises a flag when calls drop off, so someone reaches out early.</p>
+          <h3><span class="loop-number" aria-hidden="true">4</span> ${tx('core.home.loop.watch')}</h3>
+          <p>${tx('core.home.loop.watchText')}</p>
         </li>
       </ol>
     </section>
 
-    <h2 class="section-heading" id="today-heading">Today in the demo</h2>
+    <h2 class="section-heading" id="today-heading">${tx('core.home.today')}</h2>
     <section class="summary-tiles" aria-labelledby="today-heading">
-      <div class="tile"><p class="tile-value">${stats.seniors}</p><p class="tile-label">${stats.seniors === 1 ? 'senior' : 'seniors'} in the program</p></div>
-      <div class="tile"><p class="tile-value">${stats.activeMatches}</p><p class="tile-label">${stats.activeMatches === 1 ? 'senior has' : 'seniors have'} a companion</p></div>
-      <div class="tile"><p class="tile-value">${stats.checkInsThisWeek}</p><p class="tile-label">${stats.checkInsThisWeek === 1 ? 'call or visit' : 'calls and visits'} in the last 7 days</p></div>
+      <div class="tile"><p class="tile-value">${stats.seniors}</p><p class="tile-label">${tx(many(stats.seniors, 'core.home.tile.seniors'))}</p></div>
+      <div class="tile"><p class="tile-value">${stats.activeMatches}</p><p class="tile-label">${tx(many(stats.activeMatches, 'core.home.tile.matched'))}</p></div>
+      <div class="tile"><p class="tile-value">${stats.checkInsThisWeek}</p><p class="tile-label">${tx(many(stats.checkInsThisWeek, 'core.home.tile.checkIns'))}</p></div>
       <div class="tile${stats.flagged ? ' tile-at_risk' : ''}">
         <p class="tile-value">${stats.flagged}</p>
-        <p class="tile-label">${stats.flagged === 1 ? 'senior needs' : 'seniors need'} attention</p>
+        <p class="tile-label">${tx(many(stats.flagged, 'core.home.tile.flagged'))}</p>
         ${breakdown ? html`<p class="tile-detail">${breakdown}</p>` : ''}
       </div>
     </section>
@@ -68,7 +72,7 @@ export function homePage({ stats, attention }) {
     ${attention.length
       ? html`
       <section class="panel notice-panel" aria-labelledby="attention-heading">
-        <h2 id="attention-heading">Needs attention today: ${plural(attention.length, 'senior')}</h2>
+        <h2 id="attention-heading">${tx(many(attention.length, 'core.home.attention.count'), { n: attention.length })}</h2>
         <p>${breakdown}.</p>
         <ul class="plain-list">
           ${attention.map(
@@ -76,38 +80,38 @@ export function homePage({ stats, attention }) {
           )}
         </ul>
         <p class="button-row">
-          <a class="button button-secondary print-url" href="/admin/attention">Open the Needs attention list</a>
-          <a class="button button-secondary" href="/admin/dashboard">Open the Family Dashboard</a>
+          <a class="button button-secondary print-url" href="/admin/attention">${tx('core.home.attention.open')}</a>
+          <a class="button button-secondary" href="/admin/dashboard">${tx('core.home.openDashboard')}</a>
         </p>
       </section>`
       : html`
       <section class="panel" aria-labelledby="attention-heading">
-        <h2 id="attention-heading">Needs attention today</h2>
-        ${emptyState(html`<p><strong>Nobody needs attention right now.</strong> Every senior has a companion, recent calls or visits, and no missed calls lately.</p>
-          <p><a href="/admin/dashboard">See how everyone is doing on the Family Dashboard</a></p>`)}
+        <h2 id="attention-heading">${tx('core.home.attention.heading')}</h2>
+        ${emptyState(html`<p><strong>${tx('core.home.attention.noneTitle')}</strong> ${tx('core.home.attention.noneText')}</p>
+          <p><a href="/admin/dashboard">${tx('core.home.attention.seeDashboard')}</a></p>`)}
       </section>`}
 
-    <h2 class="section-heading">Who are you?</h2>
+    <h2 class="section-heading">${tx('core.home.roles.heading')}</h2>
     <ul class="role-grid">
       <li class="card role-card">
-        <h3 class="card-title">I'm a senior</h3>
-        <p>See your companion and your next call in big, clear text.</p>
-        <p><a class="button button-secondary" href="/sign-in#as-senior-heading">Find my page</a></p>
+        <h3 class="card-title">${tx('core.home.roles.senior')}</h3>
+        <p>${tx('core.home.roles.seniorText')}</p>
+        <p><a class="button button-secondary" href="/sign-in#as-senior-heading">${tx('core.home.roles.seniorButton')}</a></p>
       </li>
       <li class="card role-card">
-        <h3 class="card-title">I'm a volunteer</h3>
-        <p>See your seniors and your week, get things to talk about, and write down your calls.</p>
-        <p><a class="button button-secondary" href="/admin/volunteers">Go to volunteers</a></p>
+        <h3 class="card-title">${tx('core.home.roles.volunteer')}</h3>
+        <p>${tx('core.home.roles.volunteerText')}</p>
+        <p><a class="button button-secondary" href="/admin/volunteers">${tx('core.home.roles.volunteerButton')}</a></p>
       </li>
       <li class="card role-card">
-        <h3 class="card-title">I'm family or a caregiver</h3>
-        <p>See how often your loved one is getting calls and visits.</p>
-        <p><a class="button button-secondary" href="/admin/dashboard">Open the dashboard</a></p>
+        <h3 class="card-title">${tx('core.home.roles.family')}</h3>
+        <p>${tx('core.home.roles.familyText')}</p>
+        <p><a class="button button-secondary" href="/admin/dashboard">${tx('core.home.roles.familyButton')}</a></p>
       </li>
       <li class="card role-card">
-        <h3 class="card-title">I'm a coordinator</h3>
-        <p>See who needs help today, and pair new seniors with the volunteer who fits best.</p>
-        <p><a class="button button-secondary" href="/admin/match">Match seniors</a></p>
+        <h3 class="card-title">${tx('core.home.roles.coordinator')}</h3>
+        <p>${tx('core.home.roles.coordinatorText')}</p>
+        <p><a class="button button-secondary" href="/admin/match">${tx('core.home.roles.coordinatorButton')}</a></p>
       </li>
     </ul>`;
 }
@@ -119,63 +123,63 @@ export function aboutAiPage({ modeInfo, model, lastFallback = null }) {
   const live = modeInfo.effective === 'live';
   const fellBack = live && lastFallback;
   return html`
-    ${backLink('/', 'home')}
-    <h1>How the AI works</h1>
-    <p class="lead">PorchLight uses AI for one small job: suggesting three things a volunteer could talk about on the next call. People make every other decision.</p>
+    ${backLink('/', t('core.back.home'))}
+    <h1>${tx('core.about.title')}</h1>
+    <p class="lead">${tx('core.about.lead')}</p>
     <section class="panel ${live && !fellBack ? 'mode-panel-live' : 'mode-panel-mock'}" aria-labelledby="mode-heading">
-      <h2 id="mode-heading">Right now: ${fellBack ? 'Offline ideas (live AI is set up but was unavailable)' : live ? 'Live AI (Claude)' : 'Offline mode (built-in templates)'}</h2>
+      <h2 id="mode-heading">${tx('core.about.rightNow', { mode: t(fellBack ? 'core.about.mode.fellBack' : live ? 'core.about.mode.live' : 'core.about.mode.offline') })}</h2>
       ${fellBack
-        ? html`<p>The last request to Claude didn't work (${lastFallback.reason}), so PorchLight used the built-in ideas instead. It tries Claude again the next time someone asks for sparks.</p>`
+        ? html`<p>${tx('core.about.fellBack', { reason: lastFallback.reason })}</p>`
         : ''}
-      <p class="muted">Technical detail: ${modeInfo.reason}.</p>
+      <p class="muted">${tx('core.about.technical', { reason: modeInfo.reason })}</p>
       ${modeInfo.warning ? banner({ kind: 'warning', text: modeInfo.warning }) : ''}
     </section>
     <section class="panel" aria-labelledby="what-heading">
-      <h2 id="what-heading">What "conversation sparks" are</h2>
-      <p>Many volunteers are teenagers. Starting a conversation with someone 60 years older can feel awkward, and awkward calls are calls that stop happening. Sparks give the volunteer three warm, personal openers built from the senior's own interests and the time since their last talk. After a long gap, the first spark is a warm reconnect, like "I've missed our chats!", where the volunteer owns the gap, so the senior never feels guilty.</p>
-      <p>Sparks are always labeled as suggestions, with where they came from.</p>
-      <h3>Offline mode (the default, no internet needed)</h3>
-      <p>Sparks come from a hand-written set of ideas for each interest, with seasonal touches and local touches for ${COMMUNITY.town}. The same details always give the same sparks, and "Show different sparks" picks a new set. No internet or API key is needed. (In the code this is called MOCK mode.)</p>
-      <h3>Live mode (with a Claude API key)</h3>
-      <p>Sparks are written by Claude (${model}) through Anthropic's official software kit. If Claude can't be reached, PorchLight uses the offline ideas instead, so a volunteer is never left empty-handed. The page says so with a short note, and those sparks are labeled "live AI was unavailable". The README explains how to turn this on. (In the code this is called LIVE mode.)</p>
-      <h3>What the AI never sees</h3>
-      <p>Only the senior's preferred first name, interests, "about me" text, days since the last contact, and today's date are sent to the AI. Family contacts, call notes, and reasons for missed calls are never sent. If someone types a phone number or email address into "about me", PorchLight removes it before the text is sent.</p>
-      <h3>What the AI never decides</h3>
-      <p>Matching, the isolation-risk flags, the Needs attention list, and local help are plain rules you can read in the code. AI plays no part in them.</p>
+      <h2 id="what-heading">${tx('core.about.what.heading')}</h2>
+      <p>${tx('core.about.what.why')}</p>
+      <p>${tx('core.about.what.labeled')}</p>
+      <h3>${tx('core.about.offline.heading')}</h3>
+      <p>${tx('core.about.offline.text', { town: COMMUNITY.town })}</p>
+      <h3>${tx('core.about.live.heading')}</h3>
+      <p>${tx('core.about.live.text', { model })}</p>
+      <h3>${tx('core.about.neverSees.heading')}</h3>
+      <p>${tx('core.about.neverSees.text')}</p>
+      <h3>${tx('core.about.neverDecides.heading')}</h3>
+      <p>${tx('core.about.neverDecides.text')}</p>
     </section>`;
 }
 
 export function resetConfirmPage() {
   return html`
-    ${backLink('/tour', 'the demo tour')}
-    <h1>Reset demo data?</h1>
-    <p class="lead">This puts back the original made-up seniors, volunteers, matches, and calls, with dates moved so the story starts today. Use it before recording or judging a demo.</p>
-    ${banner({ kind: 'warning', text: 'This erases every change made since the last reset. It cannot be undone.' })}
+    ${backLink('/tour', t('core.back.tour'))}
+    <h1>${tx('core.reset.title')}</h1>
+    <p class="lead">${tx('core.reset.lead')}</p>
+    ${banner({ kind: 'warning', text: t('core.reset.warning') })}
     <form method="post" action="/admin/demo/reset" class="button-row">
-      <button type="submit" class="button button-danger">Yes, reset the demo data</button>
-      <a class="button button-secondary" href="/">No, go back home</a>
+      <button type="submit" class="button button-danger">${tx('core.reset.confirm')}</button>
+      <a class="button button-secondary" href="/">${tx('core.reset.cancel')}</a>
     </form>`;
 }
 
 // What to do next, by kind of error, so an error page is never a dead end.
-const BACK = "your browser's Back button";
+// [v2 i18n] Catalog keys, read when the page is drawn.
 const ERROR_HELP = {
-  400: { title: "That didn't work", help: `Go back to the form (${BACK}), fix the choice, and try again.` },
-  404: { title: 'Page not found', help: 'The link may be old, for example from before the demo data was reset. Start again from one of these pages.' },
-  409: { title: "That didn't work", help: `The page you came from may be out of date. Go back (${BACK}), reload the page to see the latest, and try again.` },
-  413: { title: 'That was too much to save', help: `Go back (${BACK}), shorten the longest text box, and try again.` },
+  400: { title: 'core.error.didNotWork', help: 'core.error.help400' },
+  404: { title: 'core.error.notFound', help: 'core.error.help404' },
+  409: { title: 'core.error.didNotWork', help: 'core.error.help409' },
+  413: { title: 'core.error.tooMuch', help: 'core.error.help413' },
 };
 
 export function errorPage({ status, message }) {
-  const spec = ERROR_HELP[status] || { title: 'Something went wrong', help: 'Please try again in a minute. If it keeps happening, start again from one of these pages.' };
+  const spec = ERROR_HELP[status] || { title: 'core.error.wentWrong', help: 'core.error.helpOther' };
   return html`
-    <h1>${spec.title}</h1>
+    <h1>${t(spec.title)}</h1>
     ${banner({ kind: 'error', text: message, role: 'alert' })}
-    <p>${spec.help}</p>
+    <p>${t(spec.help)}</p>
     <p class="button-row">
-      <a class="button" href="/">Go to the home page</a>
-      <a class="button button-secondary" href="/admin/attention">Open Needs attention</a>
-      <a class="button button-secondary" href="/contacts">Open Calls &amp; Visits</a>
-      <a class="button button-secondary" href="/tour">Open the demo tour</a>
+      <a class="button" href="/">${tx('core.error.goHome')}</a>
+      <a class="button button-secondary" href="/admin/attention">${tx('core.error.openAttention')}</a>
+      <a class="button button-secondary" href="/contacts">${tx('core.error.openContacts')}</a>
+      <a class="button button-secondary" href="/tour">${tx('core.error.openTour')}</a>
     </p>`;
 }

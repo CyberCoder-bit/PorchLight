@@ -81,9 +81,9 @@ export function formatDateTime(iso) {
 }
 
 export function daysAgoText(days) {
-  if (days === 0) return 'today';
-  if (days === 1) return 'yesterday';
-  return `${days} days ago`;
+  if (days === 0) return t('core.date.today');
+  if (days === 1) return t('core.date.yesterday');
+  return t('core.date.daysAgo', { n: days });
 }
 
 export function plural(n, word, pluralWord = `${word}s`) {
