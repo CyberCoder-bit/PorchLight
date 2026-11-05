@@ -170,7 +170,7 @@ test('the AI badge shortens on narrow screens but screen readers still hear all 
 
 test('app.js extends Escape, click-outside, and focus-out closing to the Menu, one menu open at a time', async () => {
   const js = await (await fetch(`${base}/app.js`)).text();
-  assert.match(js, /querySelectorAll\('\.a11y-menu, \.site-menu'\)/);
+  assert.match(js, /querySelectorAll\('\.a11y-menu, \.lang-menu, \.site-menu'\)/); // Accessibility, Language, and Menu
   assert.match(js, /getAttribute\('aria-controls'\)/, "the Menu's list counts as part of the Menu");
   assert.match(js, /addEventListener\('toggle'/, 'opening one closes the other');
   assert.match(js, /event\.key !== 'Escape'/);
