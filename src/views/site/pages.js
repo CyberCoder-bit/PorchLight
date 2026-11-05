@@ -53,28 +53,28 @@ const HERO_ART = raw(`<svg class="hero-art" viewBox="0 0 320 260" aria-hidden="t
 const sourceLink = (href, label) =>
   html`<p class="fact-source"><span class="visually-hidden">${t('site.sourceLabel')} </span><a href="${href}">${label}</a></p>`;
 
-// The three sign-up paths (the accounts module builds /sign-up/*).
-function signUpLinks() {
+// The three sign-up paths (the accounts module builds /sign-up/*). On a page
+// for one role, that role's button is the primary one and the others step back.
+const SIGN_UP = [['senior', 'site.cta.senior'], ['volunteer', 'site.cta.volunteer'], ['family', 'site.cta.family']];
+function signUpLinks(focus) {
   return html`
     <ul class="cta-links" role="list">
-      <li><a class="button" href="/sign-up/senior">${t('site.cta.senior')}</a></li>
-      <li><a class="button" href="/sign-up/volunteer">${t('site.cta.volunteer')}</a></li>
-      <li><a class="button" href="/sign-up/family">${t('site.cta.family')}</a></li>
+      ${SIGN_UP.map(([role, key]) => html`<li><a class="button${focus && focus !== role ? ' button-secondary' : ''}" href="/sign-up/${role}">${t(key)}</a></li>`)}
     </ul>`;
 }
 
-function ctaBand() {
+function ctaBand(focus) {
   return html`
     <section class="cta-band" aria-labelledby="cta-heading">
       <h2 id="cta-heading">${t('site.cta.heading')}</h2>
       <p>${t('site.cta.body')}</p>
-      ${signUpLinks()}
+      ${signUpLinks(focus)}
       <p class="cta-more"><a href="/sign-in">${t('site.cta.signIn')}</a> · <a href="/tour">${t('site.cta.tour')}</a></p>
     </section>`;
 }
 
 // A plain page: the title and a lead, then sections, then the sign-up band.
-function sitePage({ title, lead, body, cta = true }) {
+function sitePage({ title, lead, body, cta = true, focus }) {
   return html`
     <div class="site-page">
       <header class="page-intro">
@@ -82,7 +82,7 @@ function sitePage({ title, lead, body, cta = true }) {
         <p class="lead">${lead}</p>
       </header>
       ${body}
-      ${cta ? ctaBand() : ''}
+      ${cta ? ctaBand(focus) : ''}
     </div>`;
 }
 
@@ -210,6 +210,7 @@ export function howItWorksPage() {
 export function forSeniorsPage() {
   return sitePage({
     title: t('site.seniors.title'),
+    focus: 'senior',
     lead: t('site.seniors.lead'),
     body: html`
       <div class="split">
@@ -233,6 +234,7 @@ export function forSeniorsPage() {
 export function forVolunteersPage() {
   return sitePage({
     title: t('site.volunteers.title'),
+    focus: 'volunteer',
     lead: t('site.volunteers.lead'),
     body: html`
       <div class="split">
@@ -260,6 +262,7 @@ export function forVolunteersPage() {
 export function forFamiliesPage() {
   return sitePage({
     title: t('site.families.title'),
+    focus: 'family',
     lead: t('site.families.lead'),
     body: html`
       <div class="split">

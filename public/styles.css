@@ -653,8 +653,8 @@ main:focus, section:focus, fieldset:focus { outline: none; box-shadow: none; }
   }
   .header-inner > .site-nav .site-nav-row { display: block; padding: 0; }
   .header-inner > .site-nav ul { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; padding: var(--space-1) 0; }
-  .header-inner > .site-nav .nav-account { border-top: 1px solid var(--header-line); padding: var(--space-2) var(--space-2) var(--space-3); gap: var(--space-2); }
-  .header-inner > .site-nav .nav-cta { justify-content: center; margin: 0; }
+  .header-inner > .site-nav .nav-account { border-top: 1px solid var(--header-line); padding: var(--space-1) 0 var(--space-3); gap: var(--space-2); }
+  .header-inner > .site-nav .nav-cta { justify-content: center; margin: 0 var(--space-2); }
   .header-inner > .site-nav a {
     min-height: var(--target-min); padding: var(--space-2) var(--space-3);
     border-bottom: 0; border-inline-start: 4px solid transparent; line-height: 1.25;
@@ -1144,7 +1144,7 @@ fieldset { border: 0; padding: 0; margin: 0 0 var(--space-5); min-width: 0; }
 .site-hero .lead { font-size: 1.2rem; line-height: 1.5; max-width: 32rem; margin-bottom: var(--space-6); }
 .site-hero .button-row { margin: 0; }
 .hero-art { display: block; width: 100%; height: auto; max-width: 24rem; justify-self: center; }
-@media (max-width: 40em) { .hero-art { max-width: 15rem; } .site-hero { gap: var(--space-6); padding-bottom: var(--space-8); } }
+@media (max-width: 40em) { .hero-art { max-width: 12rem; } .site-hero { gap: var(--space-6); padding-bottom: var(--space-8); } }
 
 /* Who is it for: three cards, each with its own sign-up button. */
 .role-cards { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-5); grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); }

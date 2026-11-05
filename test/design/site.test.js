@@ -90,7 +90,12 @@ test('each public page marks itself in the nav and ends with a way to sign up', 
     const body = await page(p);
     assert.deepEqual(current(navNamed(body, 'Main')), [here], p);
     assert.deepEqual(current(navNamed(body, 'Main menu')), [here], p);
-    assert.match(mainOf(body), /<a class="button" href="\/sign-up\/senior">/, `${p} ends with the sign-up band`);
+    assert.match(mainOf(body), /<a class="button[^"]*" href="\/sign-up\/senior">/, `${p} ends with the sign-up band`);
+  }
+  // A page for one role makes that role's button the primary one.
+  for (const [p, role] of [['/for-seniors', 'senior'], ['/for-volunteers', 'volunteer'], ['/for-families', 'family']]) {
+    const main = mainOf(await page(p));
+    assert.deepEqual(main.match(/<a class="button" href="\/sign-up\/[a-z]+">/g), [`<a class="button" href="/sign-up/${role}">`], p);
   }
 });
 
