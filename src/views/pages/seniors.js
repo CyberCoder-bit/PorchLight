@@ -82,7 +82,7 @@ export function seniorProfilePage({ senior, assessment, volunteer, match, upcomi
     ${seniorView ? '' : html`<p class="badges">${statusBadge(assessment.status, assessment.info)} ${trendBadge(assessment.trend)}</p>`}
     ${volunteer && misfit.length ? misfitNote({ senior, volunteer, misfit }) : ''}
 
-    <section class="panel welcome" aria-labelledby="welcome-heading">
+    ${seniorView ? html`<section class="panel welcome" aria-labelledby="welcome-heading">
       <h2 id="welcome-heading">${tx('core.senior.welcome.heading', { name })}</h2>
       ${volunteer
         ? html`<p class="big">${tx('core.senior.welcome.companion', { name: html`<strong>${volunteer.name}</strong>` })}</p>`
@@ -95,7 +95,7 @@ export function seniorProfilePage({ senior, assessment, volunteer, match, upcomi
         ? html`<p>${t('auth.account.familyCodeTitle')}: <strong class="family-code">${senior.familyCode}</strong>. ${t('auth.account.familyCodeText')}</p>
           <p><a href="/messages">${t('auth.nav.messages')}</a> · <a href="/account">${t('auth.nav.account')}</a></p>`
         : ''}
-    </section>
+    </section>` : '' /* "Hi Hal!" is for Hal only, not for staff or family */}
 
     <div class="two-col">
       <div>

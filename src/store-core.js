@@ -6,9 +6,10 @@
 
 import { buildSeedData } from './seed.js';
 
-// v2 (accounts, languages, messages) changed the shape, so data saved by v1
-// is replaced with fresh demo data the first time v2 starts.
-export const SCHEMA_VERSION = 2;
+// v2 (accounts, languages, messages) changed the shape, so data saved by v1,
+// or by an early v2 build (version 2), is replaced with fresh demo data the
+// first time this version starts.
+export const SCHEMA_VERSION = 3;
 
 // Collections added in v2. open() makes sure each exists.
 //   users[]        { id, email (lowercase), name, role: 'admin'|'senior'|'volunteer'|'family',
@@ -31,7 +32,10 @@ export class BaseStore {
   // Load saved data, or create demo data on first run.
   open(now = new Date()) {
     const saved = this.backend.read();
-    if (saved && saved.meta && saved.meta.schemaVersion === SCHEMA_VERSION) {
+    // A file with no accounts can't be signed in to (not even to reset it), so
+    // it gets fresh demo data too (for example, a data file from an earlier build).
+    const hasAccounts = Array.isArray(saved?.users) && saved.users.some((u) => u.role === 'admin');
+    if (saved && saved.meta && saved.meta.schemaVersion === SCHEMA_VERSION && hasAccounts) {
       this.data = saved;
       this.fillDefaults();
       return { seeded: false };

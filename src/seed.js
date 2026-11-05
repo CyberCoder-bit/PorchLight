@@ -607,7 +607,7 @@ export function buildSeedData(now = new Date(), { riskThresholdDays = 7 } = {}) 
   ];
 
   return {
-    meta: { schemaVersion: 2, seededAt: now.toISOString(), note: 'All people in this demo data are fictional.' },
+    meta: { schemaVersion: 3, seededAt: now.toISOString(), note: 'All people in this demo data are fictional.' },
     settings: { riskThresholdDays },
     seniors,
     volunteers,
