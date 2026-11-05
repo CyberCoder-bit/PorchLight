@@ -158,4 +158,13 @@ export default {
   'auth.errors.nothingWaiting': 'That one is no longer waiting. Someone may have decided already.',
 
   // ----- the placeholder public home (before the public website) -----
+  // Role navigation (src/roles/viewer.js)
+  'auth.nav.help': 'Get help',
+  'auth.nav.myWeek': 'My week',
+  'auth.nav.myProfile': 'My profile',
+  'auth.nav.calls': 'Calls & Visits',
+  'auth.nav.familyDashboard': 'Family Dashboard',
+  'auth.nav.seniorPage': "{name}'s page",
+  'auth.nav.seniorSummary': "{name}'s weekly summary",
+  'auth.nav.myPage': 'My page',
 };

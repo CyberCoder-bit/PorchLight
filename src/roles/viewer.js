@@ -78,34 +78,34 @@ export function pagesFor(viewer) {
   if (!viewer || viewer.kind === 'coordinator') return null;
   const account = { href: '/account', label: t('auth.nav.account'), key: 'account' };
   if (viewer.pending) {
-    return [{ href: PENDING_HOME, label: t('auth.nav.waiting'), key: 'home' }, account, { href: '/help', label: 'Get help', key: 'help' }];
+    return [{ href: PENDING_HOME, label: t('auth.nav.waiting'), key: 'home' }, account, { href: '/help', label: t('auth.nav.help'), key: 'help' }];
   }
   const id = encodeURIComponent(viewer.id);
   if (viewer.kind === 'volunteer') {
     return [
-      { href: `/volunteers/${id}/week`, label: 'My week', key: 'volunteers' },
-      { href: `/volunteers/${id}`, label: 'My profile', key: 'volunteers', nav: false },
-      { href: '/contacts', label: 'Calls & Visits', key: 'contacts' },
+      { href: `/volunteers/${id}/week`, label: t('auth.nav.myWeek'), key: 'volunteers' },
+      { href: `/volunteers/${id}`, label: t('auth.nav.myProfile'), key: 'volunteers', nav: false },
+      { href: '/contacts', label: t('auth.nav.calls'), key: 'contacts' },
       { href: '/messages', label: t('auth.nav.messages'), key: 'messages' },
       account,
-      { href: '/help', label: 'Get help', key: 'help' },
+      { href: '/help', label: t('auth.nav.help'), key: 'help' },
     ];
   }
   const first = noPhone(firstName(viewer.person));
   if (viewer.kind === 'family') {
     return [
-      { href: '/dashboard', label: 'Family Dashboard', key: 'dashboard' },
-      { href: `/seniors/${id}`, label: `${first}'s page`, key: 'seniors' },
-      { href: `/seniors/${id}/summary`, label: `${first}'s weekly summary`, key: 'dashboard', nav: false },
+      { href: '/dashboard', label: t('auth.nav.familyDashboard'), key: 'dashboard' },
+      { href: `/seniors/${id}`, label: t('auth.nav.seniorPage', { name: first }), key: 'seniors' },
+      { href: `/seniors/${id}/summary`, label: t('auth.nav.seniorSummary', { name: first }), key: 'dashboard', nav: false },
       account,
-      { href: '/help', label: 'Get help', key: 'help' },
+      { href: '/help', label: t('auth.nav.help'), key: 'help' },
     ];
   }
   return [
-    { href: `/seniors/${id}`, label: 'My page', key: 'seniors' },
+    { href: `/seniors/${id}`, label: t('auth.nav.myPage'), key: 'seniors' },
     { href: '/messages', label: t('auth.nav.messages'), key: 'messages' },
     account,
-    { href: '/help', label: 'Get help', key: 'help' },
+    { href: '/help', label: t('auth.nav.help'), key: 'help' },
   ];
 }
 
