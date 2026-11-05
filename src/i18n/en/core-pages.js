@@ -539,4 +539,6 @@ export default {
   'core.match.onlyCount': '(only {max} count toward the score)',
   'core.match.newBonus': 'New volunteer bonus',
   'core.match.newBonusDetail': 'No seniors assigned yet',
+  'core.http.notFound': 'We could not find that page.',
+  'core.http.serverError': 'Something went wrong on our side.',
 };

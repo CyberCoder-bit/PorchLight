@@ -1521,4 +1521,6 @@ export default {
   'core.title.dashboard': 'Familien-Übersicht',
   'core.title.reset': 'Demo-Daten zurücksetzen',
   'core.title.tour': '2-Minuten-Demo-Rundgang',
+  'core.http.notFound': 'Wir konnten diese Seite nicht finden.',
+  'core.http.serverError': 'Bei uns ist etwas schiefgelaufen.',
 };

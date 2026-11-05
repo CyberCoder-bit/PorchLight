@@ -1511,4 +1511,6 @@ export default {
   'core.match.newBonus': 'مكافأة المتطوع الجديد',
   'core.match.newBonusDetail': 'لم يُكلَّف بمرافقة أحد بعد',
   'auth.errors.crossSite': 'جاء هذا النموذج من موقع إلكتروني آخر، لذلك لم يستخدمه PorchLight. يُرجى استخدام النموذج الموجود في هذا الموقع.',
+  'core.http.notFound': 'لم نتمكن من العثور على تلك الصفحة.',
+  'core.http.serverError': 'حدث خطأ من جهتنا.',
 };

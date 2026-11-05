@@ -1485,4 +1485,6 @@ export default {
   'lang.match.howPoints': 'ဘာသာစကား တူပြီး နှစ်ဦးစလုံး အဲဒီဘာသာနဲ့ အနည်းဆုံး စကားပြောနိုင်ရင် +{points}။',
 
   'lang.date.dateAtTime': '{date}၊ {time}',
+  'core.http.notFound': 'ထိုစာမျက်နှာကို ရှာမတွေ့ပါ။',
+  'core.http.serverError': 'ကျွန်ုပ်တို့ဘက်တွင် တစ်ခုခု မှားယွင်းသွားပါသည်။',
 };

@@ -1558,4 +1558,6 @@ export default {
   'core.match.newBonusDetail': 'Todavía no tiene personas mayores asignadas',
 
   'auth.errors.crossSite': 'Ese formulario venía de otro sitio web, así que PorchLight no lo usó. Por favor, use el formulario de este sitio.',
+  'core.http.notFound': 'No pudimos encontrar esa página.',
+  'core.http.serverError': 'Algo salió mal de nuestro lado.',
 };

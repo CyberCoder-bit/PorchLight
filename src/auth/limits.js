@@ -53,5 +53,19 @@ export function createLimits() {
 export function clientIp(req) {
   const h = req.headers;
   const get = (name) => (h && typeof h.get === 'function' ? h.get(name) : null);
-  return (get('cf-connecting-ip') || get('x-porchlight-client-ip') || 'unknown').trim().slice(0, 64);
+  return limitBucket((get('cf-connecting-ip') || get('x-porchlight-client-ip') || 'unknown').trim().slice(0, 64));
+}
+
+// One home internet connection gets a whole IPv6 /64 (2^64 addresses), so the
+// limits count by /64, not by single address (V2-B-12). IPv4, and IPv4 written
+// as IPv6 (::ffff:1.2.3.4), count by the plain address.
+export function limitBucket(ip) {
+  const value = String(ip).toLowerCase();
+  if (!value.includes(':')) return value;
+  if (value.includes('.')) return value.slice(value.lastIndexOf(':') + 1);
+  const [head, tail] = value.split('::');
+  const front = head ? head.split(':') : [];
+  const back = tail ? tail.split(':') : [];
+  const groups = value.includes('::') ? [...front, ...Array(Math.max(0, 8 - front.length - back.length)).fill('0'), ...back] : front;
+  return `${groups.slice(0, 4).map((g) => g.replace(/^0+(?=.)/, '')).join(':')}::/64`;
 }

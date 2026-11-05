@@ -1462,4 +1462,6 @@ export default {
   'core.match.newBonus': 'Bonis pou nouvo volontè',
   'core.match.newBonusDetail': 'Li poko gen granmoun',
   'auth.errors.crossSite': 'Fòm sa a soti nan yon lòt sit entènèt, kidonk PorchLight pa t sèvi avè l. Tanpri sèvi ak fòm ki sou sit sa a.',
+  'core.http.notFound': 'Nou pa t ka jwenn paj sa a.',
+  'core.http.serverError': 'Gen yon bagay ki pa mache bò kote pa nou.',
 };

@@ -211,7 +211,7 @@ function modeBadge(sparkMode) {
   const [long, short] = live
     ? [t('core.mode.liveLong'), t('core.mode.liveShort')]
     : [t('core.mode.offlineLong'), t('core.mode.offlineShort')];
-  return html`<a class="mode-badge ${live ? 'mode-live' : 'mode-mock'}" href="/about-ai" title="${sparkMode.reason}"><span class="mode-badge-long">${long}</span><span class="mode-badge-short" aria-hidden="true">${short}</span></a>`;
+  return html`<a class="mode-badge ${live ? 'mode-live' : 'mode-mock'}" href="/about-ai"><span class="mode-badge-long">${long}</span><span class="mode-badge-short" aria-hidden="true">${short}</span></a>`;
 }
 
 // The main nav's list. It is drawn twice (see siteMenu below), the same both times.

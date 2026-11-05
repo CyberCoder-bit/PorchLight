@@ -192,7 +192,7 @@ async function handleRequest(request, { router, renderError }) {
   try {
     const found = router.match(head ? 'GET' : req.method, url.pathname);
     if (!found) {
-      await renderError(req, res, 404, 'We could not find that page.');
+      await renderError(req, res, 404, t('core.http.notFound'));
       return res.toResponse({ head });
     }
     req.params = found.params;
@@ -201,7 +201,7 @@ async function handleRequest(request, { router, renderError }) {
     // neither header (curl, tests, old browsers) still work, and the session
     // cookie is SameSite=Lax as well.
     if (req.method === 'POST' && isCrossSite(request, url)) {
-      renderError(req, res, 403, t('auth.errors.crossSite'));
+      await renderError(req, res, 403, t('auth.errors.crossSite')); // V2-B-11: wait for the page
       return res.toResponse({ head });
     }
     if (req.method === 'POST') req.body = parseForm(await readBody(request));
@@ -211,7 +211,7 @@ async function handleRequest(request, { router, renderError }) {
     if (status >= 500) console.error(err);
     if (!res.headersSent) {
       try {
-        await renderError(req, res, status, status === 500 ? 'Something went wrong on our side.' : err.message);
+        await renderError(req, res, status, status === 500 ? t('core.http.serverError') : err.message);
       } catch (inner) {
         console.error(inner);
         res.html('Something went wrong on our side.', 500);

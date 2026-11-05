@@ -155,7 +155,7 @@ test('the AI badge shortens on narrow screens but screen readers still hear all 
   const header = headerOf(await page('/'));
   assert.match(
     header,
-    /<a class="mode-badge mode-mock" href="\/about-ai" title="[^"]*"><span class="mode-badge-long">AI: Offline mode<\/span><span class="mode-badge-short" aria-hidden="true">AI: Offline<\/span><\/a>/
+    /<a class="mode-badge mode-mock" href="\/about-ai"><span class="mode-badge-long">AI: Offline mode<\/span><span class="mode-badge-short" aria-hidden="true">AI: Offline<\/span><\/a>/
   );
   const css = stripComments(await (await fetch(`${base}/styles.css`)).text());
   assert.match(css.replace(cssBlock(css, NARROW), ''), /\.mode-badge-short \{ display: none; \}/);

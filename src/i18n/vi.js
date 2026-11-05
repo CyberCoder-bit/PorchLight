@@ -1502,4 +1502,6 @@ export default {
   'lang.match.howPoints': '+{points} nếu hai người có chung một ngôn ngữ và cả hai ít nhất có thể trò chuyện bằng ngôn ngữ đó.',
 
   'lang.date.dateAtTime': '{date} lúc {time}',
+  'core.http.notFound': 'Chúng tôi không tìm thấy trang đó.',
+  'core.http.serverError': 'Đã có lỗi xảy ra từ phía chúng tôi.',
 };

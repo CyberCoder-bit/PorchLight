@@ -1565,4 +1565,6 @@ export default {
   'core.title.dashboard': '家人面板',
   'core.title.reset': '重置演示数据',
   'core.title.tour': '2 分钟演示导览',
+  'core.http.notFound': '我们找不到该页面。',
+  'core.http.serverError': '我们这边出了问题。',
 };
