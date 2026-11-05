@@ -23,6 +23,8 @@
 
 import { AsyncLocalStorage } from 'node:async_hooks';
 import core from './en/core.js';
+import corePages from './en/core-pages.js';
+import coreFeatures from './en/core-features.js';
 import auth from './en/auth.js';
 import site from './en/site.js';
 import translate from './en/translate.js';
@@ -33,7 +35,7 @@ export const DEFAULT_LANG = 'en';
 
 // English is the full set of keys. Every other catalog must have the same keys
 // (test/i18n/catalogs.test.js fails on any missing one).
-export const EN = Object.freeze({ ...core, ...auth, ...site, ...translate, ...lang });
+export const EN = Object.freeze({ ...core, ...corePages, ...coreFeatures, ...auth, ...site, ...translate, ...lang });
 
 const storage = new AsyncLocalStorage();
 
