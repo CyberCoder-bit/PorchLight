@@ -95,7 +95,8 @@ test('language order: cookie, then Accept-Language by q, then English', () => {
   assert.equal(languageFromRequest({ acceptLanguage: 'es-MX,es;q=0.9,en;q=0.8' }), 'es');
   assert.equal(languageFromRequest({ acceptLanguage: 'en;q=0.5, es;q=0.9' }), 'es');
   assert.equal(languageFromRequest({ acceptLanguage: 'es;q=0, en' }), 'en');
-  assert.equal(languageFromRequest({ acceptLanguage: 'fr-CA, de;q=0.5' }), 'en', 'not shipped: English');
+  assert.equal(languageFromRequest({ acceptLanguage: 'fr-CA, de;q=0.5' }), 'de', 'French is not a UI language, German is');
+  assert.equal(languageFromRequest({ acceptLanguage: 'fr-CA, ja;q=0.5' }), 'en', 'not shipped: English');
   assert.equal(languageFromRequest({ acceptLanguage: 'zh-TW' }), 'en', 'Traditional Chinese never gets Simplified');
   assert.equal(languageFromRequest({ cookies: { lang: 'zz' }, acceptLanguage: '*' }), 'en');
 });
