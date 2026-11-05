@@ -27,13 +27,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 4. The header's two menus: Accessibility, and Menu (the nav on narrow
   //    screens). Both are native <details>, so they already open and close
-  //    with Enter, Space, or a click. Here we add: only one is open at a time;
+  //    with Enter, Space, or a click (Accessibility, Language, and Menu). Here we add: only one is open at a time;
   //    Escape closes the open one and puts focus back on its button; a click
   //    outside closes it; and tabbing out closes it, so focus never lands on
   //    something hidden under a panel. Menu's page list is the <nav> right
   //    after its <details> (styles.css shows it while Menu is open; the
   //    summary's aria-controls names it), so that nav counts as part of Menu.
-  const menus = [...document.querySelectorAll('.a11y-menu, .site-menu')].map((details) => {
+  const menus = [...document.querySelectorAll('.a11y-menu, .lang-menu, .site-menu')].map((details) => {
     const toggle = details.querySelector('summary');
     const panel = document.getElementById(toggle.getAttribute('aria-controls') || '');
     return { details, toggle, parts: panel ? [details, panel] : [details] };
