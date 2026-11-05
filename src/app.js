@@ -33,32 +33,48 @@ import {
 } from './roles/index.js'; // [roles]
 import { createSession, sessionCookie } from './auth/session.js'; // [v2 accounts]
 import { SEED_ADMIN_EMAIL } from './auth/routes.js'; // [v2 accounts]
+import { t } from './i18n/index.js'; // [v2 i18n]
 
 // [v2 accounts] Only approved volunteers can be matched.
 const isActiveVolunteer = (v) => (v.status || 'active') === 'active';
 
 // Short messages shown after a form is submitted (?msg=...).
-const FLASH = {
-  senior_added: 'Senior added. Next step: find them a companion.',
-  senior_saved: 'Profile saved.',
-  volunteer_added: 'Volunteer added. They can now be matched with a senior.',
-  volunteer_saved: 'Profile saved.',
-  matched: 'Match confirmed! Next step: schedule the first call.',
-  match_ended: 'Match ended. You can now choose a new companion. Calls they had planned were taken off the calendar.',
-  duplicate: 'That call was already saved, so it was not added twice.',
-  scheduled: 'Call scheduled.',
-  logged: 'Call logged. The dashboard is updated.',
-  completed: 'Marked as completed. The dashboard is updated.',
-  missed: 'Marked as missed. Next step: pick a new time for the call.',
-  sparks: 'New conversation sparks are ready.',
-  threshold: 'Alert setting updated.',
-  reset: 'Demo data reset. Dates now start from today.',
+// [v2 i18n] Each value is read in the reader's language (catalog keys
+// core.flash.* and core.warn.*). Modules may still add plain keys:
+// ctx.flashMessages.my_key = 'Text' (or a getter, as src/auth does).
+const translated = (table) => {
+  const out = {};
+  for (const [name, key] of Object.entries(table)) {
+    Object.defineProperty(out, name, {
+      get: () => t(key),
+      set: (value) => Object.defineProperty(out, name, { value, writable: true, enumerable: true, configurable: true }),
+      enumerable: true,
+      configurable: true,
+    });
+  }
+  return out;
 };
-const WARN = {
-  outside_hours: "Heads up: that time is outside the pair's usual shared availability. Double-check it works for both of them.",
-  live_fallback: 'Live AI was unavailable, so these sparks came from the built-in ideas.',
-  match_misfit: 'Saved, but the current match no longer fits. The note on this page says why and what to do.',
-};
+const FLASH = translated({
+  senior_added: 'core.flash.seniorAdded',
+  senior_saved: 'core.flash.seniorSaved',
+  volunteer_added: 'core.flash.volunteerAdded',
+  volunteer_saved: 'core.flash.volunteerSaved',
+  matched: 'core.flash.matched',
+  match_ended: 'core.flash.matchEnded',
+  duplicate: 'core.flash.duplicate',
+  scheduled: 'core.flash.scheduled',
+  logged: 'core.flash.logged',
+  completed: 'core.flash.completed',
+  missed: 'core.flash.missed',
+  sparks: 'core.flash.sparks',
+  threshold: 'core.flash.threshold',
+  reset: 'core.flash.reset',
+});
+const WARN = translated({
+  outside_hours: 'core.warn.outsideHours',
+  live_fallback: 'core.warn.liveFallback',
+  match_misfit: 'core.warn.matchMisfit',
+});
 
 const toArray = (v) => (v === undefined ? [] : Array.isArray(v) ? v : [v]);
 const str = (v) => (typeof v === 'string' ? v.trim() : Array.isArray(v) ? String(v[0] ?? '').trim() : '');
@@ -126,23 +142,23 @@ function validateSenior(body) {
     caregiver: { name: str(body.caregiverName), relationship: str(body.caregiverRelationship) },
   };
   if (isInvisible(values.preferredName)) values.preferredName = '';
-  if (isInvisible(values.name)) errors.name = 'Enter the senior’s full name.';
-  else if (chars(values.name) > 80) errors.name = 'Name must be 80 characters or fewer.';
-  if (chars(values.preferredName) > 40) errors.preferredName = 'Preferred name must be 40 characters or fewer.';
+  if (isInvisible(values.name)) errors.name = t('core.validate.seniorName');
+  else if (chars(values.name) > 80) errors.name = t('core.validate.nameLength');
+  if (chars(values.preferredName) > 40) errors.preferredName = t('core.validate.preferredNameLength');
   if (values.age) {
     const n = wholeNumber(values.age);
-    if (!Number.isInteger(n) || n < 50 || n > 120) errors.age = 'Age must be a whole number between 50 and 120, or left blank.';
+    if (!Number.isInteger(n) || n < 50 || n > 120) errors.age = t('core.validate.age');
     else values.age = n;
   } else {
     values.age = null;
   }
-  if (chars(values.neighborhood) > 80) errors.neighborhood = 'Neighborhood must be 80 characters or fewer.';
-  if (!values.interests.length) errors.interests = 'Choose at least one interest.';
-  if (chars(values.aboutMe) > 500) errors.aboutMe = `“About them” must be 500 characters or fewer (now ${chars(values.aboutMe)}).`;
-  if (!values.availability.length) errors.availability = 'Choose at least one time block.';
-  if (!isMethod(values.contactMethod)) errors.contactMethod = 'Choose how they prefer to connect.';
-  if (chars(values.caregiver.name) > 80) errors.caregiverName = 'Name must be 80 characters or fewer.';
-  if (chars(values.caregiver.relationship) > 80) errors.caregiverRelationship = 'Relationship must be 80 characters or fewer.';
+  if (chars(values.neighborhood) > 80) errors.neighborhood = t('core.validate.neighborhoodLength');
+  if (!values.interests.length) errors.interests = t('core.validate.interests');
+  if (chars(values.aboutMe) > 500) errors.aboutMe = t('core.validate.aboutMeLength', { n: chars(values.aboutMe) });
+  if (!values.availability.length) errors.availability = t('core.validate.availability');
+  if (!isMethod(values.contactMethod)) errors.contactMethod = t('core.validate.contactMethod');
+  if (chars(values.caregiver.name) > 80) errors.caregiverName = t('core.validate.nameLength');
+  if (chars(values.caregiver.relationship) > 80) errors.caregiverRelationship = t('core.validate.relationshipLength');
   checkTown(body, values, errors); // [towns] only towns on this deployment's list
   addLanguages(body, values, errors); // [v2 i18n]
   return { values, errors };
@@ -158,14 +174,14 @@ function validateVolunteer(body) {
     contactMethods: toArray(body.contactMethods).filter(isMethod),
     maxSeniors: wholeNumber(str(body.maxSeniors) || '1'),
   };
-  if (isInvisible(values.name)) errors.name = 'Enter the volunteer’s full name.';
-  else if (chars(values.name) > 80) errors.name = 'Name must be 80 characters or fewer.';
-  if (chars(values.affiliation) > 100) errors.affiliation = 'This must be 100 characters or fewer.';
-  if (!values.interests.length) errors.interests = 'Choose at least one interest.';
-  if (!values.availability.length) errors.availability = 'Choose at least one time block.';
-  if (!values.contactMethods.length) errors.contactMethods = 'Choose at least one way to connect.';
+  if (isInvisible(values.name)) errors.name = t('core.validate.volunteerName');
+  else if (chars(values.name) > 80) errors.name = t('core.validate.nameLength');
+  if (chars(values.affiliation) > 100) errors.affiliation = t('core.validate.affiliationLength');
+  if (!values.interests.length) errors.interests = t('core.validate.interests');
+  if (!values.availability.length) errors.availability = t('core.validate.availability');
+  if (!values.contactMethods.length) errors.contactMethods = t('core.validate.contactMethods');
   if (!Number.isInteger(values.maxSeniors) || values.maxSeniors < 1 || values.maxSeniors > 5) {
-    errors.maxSeniors = 'Choose between 1 and 5 seniors.';
+    errors.maxSeniors = t('core.validate.maxSeniors');
   }
   checkTown(body, values, errors); // [towns] only towns on this deployment's list
   addLanguages(body, values, errors); // [v2 i18n]
@@ -184,37 +200,37 @@ function validateContact(body, store, now) {
     notes: str(body.notes),
   };
   const match = store.matches.find((m) => m.id === form.matchId && m.active);
-  if (!match) errors.matchId = 'Choose who this call is for.';
-  if (!isMethod(form.type)) errors.type = 'Choose phone, video, or visit.';
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(form.date)) errors.date = 'Enter a date.';
-  if (!/^\d{2}:\d{2}$/.test(form.time)) errors.time = 'Enter a time.';
+  if (!match) errors.matchId = t('core.validate.matchId');
+  if (!isMethod(form.type)) errors.type = t('core.validate.type');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(form.date)) errors.date = t('core.validate.date');
+  if (!/^\d{2}:\d{2}$/.test(form.time)) errors.time = t('core.validate.time');
   let when = null;
   if (!errors.date && !errors.time) {
     when = parseLocalDateTime(form.date, form.time); // Carmel time, even on a UTC server
     const [hour, minute] = form.time.split(':').map(Number);
     if (!when && !parseLocalDateTime(form.date, '12:00')) {
-      errors.date = 'Enter a real date.';
+      errors.date = t('core.validate.realDate');
     } else if (!when && (hour > 23 || minute > 59)) {
-      errors.time = 'Enter a real time, from 00:00 to 23:59.';
+      errors.time = t('core.validate.realTime');
     } else if (!when) {
       // The date is real, so the time was skipped when the clocks sprang forward.
-      errors.time = 'That time didn’t exist that day: the clocks jumped from 2:00 AM to 3:00 AM. Choose 3:00 AM or later.';
+      errors.time = t('core.validate.skippedTime');
     } else if (form.action === 'schedule' && when < new Date(now.getTime() - 5 * 60 * 1000)) {
-      errors.date = 'A scheduled call must be in the future. To record a past call, choose “Log one that already happened.”';
+      errors.date = t('core.validate.scheduleInPast');
     } else if (form.action === 'log' && when > new Date(now.getTime() + 5 * 60 * 1000)) {
-      errors.date = 'A logged call can’t be in the future. To plan ahead, choose “Schedule a future call or visit.”';
+      errors.date = t('core.validate.logInFuture');
     } else if (Math.abs(calendarDaysBetween(when, now)) > 366) {
-      errors.date = 'Choose a date within the next or past year.';
+      errors.date = t('core.validate.dateRange');
     }
   }
   let duration = null;
   if (form.durationMinutes) {
     duration = wholeNumber(form.durationMinutes);
     if (!Number.isInteger(duration) || duration < 1 || duration > 480) {
-      errors.durationMinutes = 'Length must be a whole number of minutes from 1 to 480, or left blank.';
+      errors.durationMinutes = t('core.validate.duration');
     }
   }
-  if (chars(form.notes) > 500) errors.notes = 'Notes must be 500 characters or fewer.';
+  if (chars(form.notes) > 500) errors.notes = t('core.validate.notesLength');
   return { form, errors, match, when, duration };
 }
 
@@ -243,22 +259,22 @@ export function createApp({ store, sparks, now = () => new Date() }) {
   };
   const renderErrorPage = (req, res, status, message) =>
     render(req, res, {
-      title: status === 404 ? 'Not found' : 'Error',
+      title: t(status === 404 ? 'core.title.notFound' : 'core.title.error'),
       body: errorPage({
         status,
-        message: status === 413 ? 'That form had more text than PorchLight can save at once.' : message,
+        message: status === 413 ? t('core.http.tooLarge') : message,
       }),
       status,
     });
 
   const seniorOr404 = (id) => {
     const s = store.senior(id);
-    if (!s) throw httpError(404, 'We could not find that senior.');
+    if (!s) throw httpError(404, t('core.http.noSenior'));
     return s;
   };
   const volunteerOr404 = (id) => {
     const v = store.volunteer(id);
-    if (!v) throw httpError(404, 'We could not find that volunteer.');
+    if (!v) throw httpError(404, t('core.http.noVolunteer'));
     return v;
   };
   const assess = (senior) =>
@@ -287,7 +303,7 @@ export function createApp({ store, sparks, now = () => new Date() }) {
       flagged: summary.filter(needsAttention).length,
     };
     const attention = summary.filter(needsAttention); // the same list as /admin/attention
-    render(req, res, { title: 'Home', active: 'home', body: homePage({ stats, attention }) });
+    render(req, res, { title: t('core.title.home'), active: 'home', body: homePage({ stats, attention }) });
   };
   router.get('/admin', coordinatorHome);
 
@@ -304,7 +320,7 @@ export function createApp({ store, sparks, now = () => new Date() }) {
 
   router.get('/about-ai', (req, res) => {
     render(req, res, {
-      title: 'How the AI works',
+      title: t('core.title.aboutAi'),
       body: aboutAiPage({ modeInfo: sparks.modeInfo, model: sparks.model, lastFallback: sparks.lastFallback || null }),
     });
   });
@@ -322,18 +338,18 @@ export function createApp({ store, sparks, now = () => new Date() }) {
         return { senior, assessment: assess(senior), volunteer: m ? store.volunteer(m.volunteerId) : null };
       });
     const filter = townFilter({ action: '/admin/seniors', town, asked: req.query.town, shown: rows.length, total: all.length }); // [towns]
-    render(req, res, { title: 'Seniors', active: 'seniors', body: seniorsListPage({ rows, townFilter: filter, townName: town }) }); // [towns]
+    render(req, res, { title: t('core.title.seniors'), active: 'seniors', body: seniorsListPage({ rows, townFilter: filter, townName: town }) }); // [towns]
   });
 
   router.get('/admin/seniors/new', (req, res) => {
-    render(req, res, { title: 'Add a senior', active: 'seniors', body: seniorFormPage({ isNew: true }) });
+    render(req, res, { title: t('core.title.addSenior'), active: 'seniors', body: seniorFormPage({ isNew: true }) });
   });
 
   router.post('/admin/seniors', (req, res) => {
     const { values, errors } = validateSenior(req.body);
     if (Object.keys(errors).length) {
       return render(req, res, {
-        title: 'Fix the form: Add a senior', active: 'seniors', status: 200,
+        title: t('core.title.fixForm', { title: t('core.title.addSenior') }), active: 'seniors', status: 200,
         body: seniorFormPage({ senior: values, errors, isNew: true }), flash: false,
       });
     }
@@ -384,7 +400,7 @@ export function createApp({ store, sparks, now = () => new Date() }) {
 
   router.get('/seniors/:id/edit', (req, res) => {
     const senior = seniorOr404(req.params.id);
-    render(req, res, { title: `Edit ${senior.name}`, active: 'seniors', body: seniorFormPage({ senior, isNew: false }) });
+    render(req, res, { title: t('core.title.edit', { name: senior.name }), active: 'seniors', body: seniorFormPage({ senior, isNew: false }) });
   });
 
   router.post('/seniors/:id', (req, res) => {
@@ -392,7 +408,7 @@ export function createApp({ store, sparks, now = () => new Date() }) {
     const { values, errors } = validateSenior(req.body);
     if (Object.keys(errors).length) {
       return render(req, res, {
-        title: `Fix the form: Edit ${senior.name}`, active: 'seniors', status: 200,
+        title: t('core.title.fixForm', { title: t('core.title.edit', { name: senior.name }) }), active: 'seniors', status: 200,
         body: seniorFormPage({ senior: { ...values, id: senior.id }, errors, isNew: false }), flash: false,
       });
     }
@@ -444,18 +460,18 @@ export function createApp({ store, sparks, now = () => new Date() }) {
         seniors: store.activeMatchesForVolunteer(volunteer.id).map((m) => store.senior(m.seniorId)).filter(Boolean),
       }));
     const filter = townFilter({ action: '/admin/volunteers', town, asked: req.query.town, shown: rows.length, total: store.volunteers.length, noun: ['volunteer', 'volunteers'], label: 'Show volunteers in' }); // [towns]
-    render(req, res, { title: 'Volunteers', active: 'volunteers', body: volunteersListPage({ rows, townFilter: filter, townName: town }) }); // [towns]
+    render(req, res, { title: t('core.title.volunteers'), active: 'volunteers', body: volunteersListPage({ rows, townFilter: filter, townName: town }) }); // [towns]
   });
 
   router.get('/admin/volunteers/new', (req, res) => {
-    render(req, res, { title: 'Add a volunteer', active: 'volunteers', body: volunteerFormPage({ isNew: true }) });
+    render(req, res, { title: t('core.title.addVolunteer'), active: 'volunteers', body: volunteerFormPage({ isNew: true }) });
   });
 
   router.post('/admin/volunteers', (req, res) => {
     const { values, errors } = validateVolunteer(req.body);
     if (Object.keys(errors).length) {
       return render(req, res, {
-        title: 'Fix the form: Add a volunteer', active: 'volunteers', status: 200,
+        title: t('core.title.fixForm', { title: t('core.title.addVolunteer') }), active: 'volunteers', status: 200,
         body: volunteerFormPage({ volunteer: values, errors, isNew: true }), flash: false,
       });
     }
@@ -479,7 +495,7 @@ export function createApp({ store, sparks, now = () => new Date() }) {
 
   router.get('/volunteers/:id/edit', (req, res) => {
     const volunteer = volunteerOr404(req.params.id);
-    render(req, res, { title: `Edit ${volunteer.name}`, active: 'volunteers', body: volunteerFormPage({ volunteer, isNew: false }) });
+    render(req, res, { title: t('core.title.edit', { name: volunteer.name }), active: 'volunteers', body: volunteerFormPage({ volunteer, isNew: false }) });
   });
 
   router.post('/volunteers/:id', (req, res) => {
@@ -488,11 +504,11 @@ export function createApp({ store, sparks, now = () => new Date() }) {
     const current = store.activeMatchesForVolunteer(volunteer.id).length;
     if (!errors.maxSeniors && values.maxSeniors < current) {
       const first = volunteer.name.split(' ')[0];
-      errors.maxSeniors = `${first} is companion to ${current} seniors right now. To lower this below ${current}, end one of ${first}’s matches first.`;
+      errors.maxSeniors = t('core.validate.belowCurrent', { name: first, n: current });
     }
     if (Object.keys(errors).length) {
       return render(req, res, {
-        title: `Fix the form: Edit ${volunteer.name}`, active: 'volunteers', status: 200,
+        title: t('core.title.fixForm', { title: t('core.title.edit', { name: volunteer.name }) }), active: 'volunteers', status: 200,
         body: volunteerFormPage({ volunteer: { ...values, id: volunteer.id }, errors, isNew: false }), flash: false,
       });
     }
@@ -512,7 +528,7 @@ export function createApp({ store, sparks, now = () => new Date() }) {
       const currentMatch = store.activeMatchForSenior(senior.id);
       const ranking = rankVolunteers(senior, store.volunteers.filter(isActiveVolunteer), store.matches); // [v2] pending volunteers can't be matched
       return render(req, res, {
-        title: `Match ${senior.name}`, active: 'match',
+        title: t('core.title.matchSenior', { name: senior.name }), active: 'match',
         body: matchSeniorPage({
           senior,
           currentMatch,
@@ -526,18 +542,18 @@ export function createApp({ store, sparks, now = () => new Date() }) {
       .filter((m) => m.active)
       .map((m) => ({ senior: store.senior(m.seniorId), volunteer: store.volunteer(m.volunteerId) }))
       .filter((p) => p.senior && p.volunteer);
-    render(req, res, { title: 'Match', active: 'match', body: matchIndexPage({ unmatched, matched }) });
+    render(req, res, { title: t('core.title.match'), active: 'match', body: matchIndexPage({ unmatched, matched }) });
   });
 
   router.post('/admin/matches', (req, res) => {
     const senior = seniorOr404(str(req.body.seniorId));
     const volunteer = volunteerOr404(str(req.body.volunteerId));
-    if (store.activeMatchForSenior(senior.id)) throw httpError(409, `${senior.name} already has a companion. End that match first.`);
-    if (!isActiveVolunteer(volunteer)) throw httpError(409, `${volunteer.name} is not approved yet, so they can't be matched.`); // [v2]
+    if (store.activeMatchForSenior(senior.id)) throw httpError(409, t('core.http.alreadyMatched', { name: senior.name }));
+    if (!isActiveVolunteer(volunteer)) throw httpError(409, t('core.http.notApproved', { name: volunteer.name })); // [v2]
     // Re-check the rules on the server. Never trust that the form was up to date.
     const result = rankVolunteers(senior, [volunteer], store.matches);
     if (!result.eligible.length) {
-      throw httpError(409, `${volunteer.name} can't be matched with ${senior.name}: ${result.ineligible[0].problems.join('; ')}.`);
+      throw httpError(409, t('core.http.cannotMatch', { volunteer: volunteer.name, senior: senior.name, problems: result.ineligible[0].problems.join('; ') }));
     }
     store.matches.push({
       id: store.newId('m'),
@@ -554,7 +570,7 @@ export function createApp({ store, sparks, now = () => new Date() }) {
 
   router.post('/admin/matches/:id/end', (req, res) => {
     const match = store.matches.find((m) => m.id === req.params.id && m.active);
-    if (!match) throw httpError(404, 'We could not find that match.');
+    if (!match) throw httpError(404, t('core.http.noMatch'));
     const nowDate = now();
     match.active = false;
     match.endedAt = nowDate.toISOString();
@@ -598,7 +614,7 @@ export function createApp({ store, sparks, now = () => new Date() }) {
       .sort((a, b) => happenedAt(b) - happenedAt(a))
       .slice(0, 15);
     render(req, res, {
-      title: Object.keys(errors).length ? 'Fix the form: Calls & visits' : 'Calls & visits',
+      title: Object.keys(errors).length ? t('core.title.fixForm', { title: t('core.title.contacts') }) : t('core.title.contacts'),
       active: 'contacts',
       status,
       wide: true,
@@ -679,11 +695,11 @@ export function createApp({ store, sparks, now = () => new Date() }) {
 
   const markContact = (status) => (req, res) => {
     const contact = store.contacts.find((c) => c.id === req.params.id);
-    if (!contact) throw httpError(404, 'We could not find that call.');
+    if (!contact) throw httpError(404, t('core.http.noCall'));
     if (contact.status === 'cancelled') {
-      throw httpError(409, 'That call was cancelled when the match ended, so it can’t be logged or marked missed.');
+      throw httpError(409, t('core.http.cancelled'));
     }
-    if (contact.status !== 'scheduled') throw httpError(409, 'That call was already marked.');
+    if (contact.status !== 'scheduled') throw httpError(409, t('core.http.alreadyMarked'));
     const nowDate = now();
     const noun = contact.type === 'visit' ? 'visit' : 'call';
     let reason = null;
@@ -692,15 +708,15 @@ export function createApp({ store, sparks, now = () => new Date() }) {
       // Optional reason. Old forms without one still work.
       reason = str(req.body.reason);
       reasonNote = str(req.body.reasonNote);
-      if (reason && !isMissedReason(reason)) throw httpError(400, 'Choose a reason from the list.');
-      if (chars(reasonNote) > 200) throw httpError(400, 'The note about the missed call must be 200 characters or fewer.');
+      if (reason && !isMissedReason(reason)) throw httpError(400, t('core.http.reason'));
+      if (chars(reasonNote) > 200) throw httpError(400, t('core.http.reasonNote'));
       // A call that hasn't started yet can't have been missed.
       if (!canMarkMissedNow(contact, nowDate)) {
-        throw httpError(409, `That ${noun} is set for ${formatDateTime(contact.scheduledFor)}, so it hasn’t been missed yet. You can mark it missed once that time has passed.`);
+        throw httpError(409, t(`core.http.notMissedYet.${noun}`, { when: formatDateTime(contact.scheduledFor) }));
       }
     } else if (!canLogNow(contact, nowDate)) {
       // Only on its day or later (Carmel calendar): a Thursday visit can't be logged on Tuesday.
-      throw httpError(409, `That ${noun} is set for ${formatLongDate(contact.scheduledFor)} at ${formatTime(contact.scheduledFor)}. You can mark it done on that day, once it has happened.`);
+      throw httpError(409, t(`core.http.notDoneYet.${noun}`, { date: formatLongDate(contact.scheduledFor), time: formatTime(contact.scheduledFor) }));
     }
     if (status === 'missed') {
       contact.missedReason = reason || null;
@@ -726,7 +742,7 @@ export function createApp({ store, sparks, now = () => new Date() }) {
     const everyone = seniorsVisibleTo(req.viewer, dashboardSummary(store, now())); // [roles] family: only their senior
     const summary = rowsInTown(everyone, town, (r) => r.senior); // [towns]
     render(req, res, {
-      title: Object.keys(errors).length ? 'Fix the form: Family dashboard' : 'Family dashboard',
+      title: Object.keys(errors).length ? t('core.title.fixForm', { title: t('core.title.dashboard') }) : t('core.title.dashboard'),
       active: 'dashboard',
       status,
       wide: true,
@@ -751,7 +767,7 @@ export function createApp({ store, sparks, now = () => new Date() }) {
     const n = wholeNumber(raw);
     if (!Number.isInteger(n) || n < 1 || n > 60) {
       return dashboardView(req, res, {
-        errors: { riskThresholdDays: 'Enter a whole number of days from 1 to 60.' },
+        errors: { riskThresholdDays: t('core.validate.threshold') },
         thresholdInput: raw,
         status: 200,
       });
@@ -775,7 +791,7 @@ export function createApp({ store, sparks, now = () => new Date() }) {
   }
 
   router.get('/admin/demo/reset', (req, res) => {
-    render(req, res, { title: 'Reset demo data', body: resetConfirmPage() });
+    render(req, res, { title: t('core.title.reset'), body: resetConfirmPage() });
   });
 
   // [v2] A reset re-seeds everything, which wipes sign-ups and sessions. The
