@@ -18,35 +18,28 @@
 // "Days since" uses calendar days ("yesterday" = 1), the way people talk.
 
 import { startOfLocalDay } from './tz.js';
+import { t } from './i18n/index.js'; // [v2 i18n]
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+// [v2 i18n] `label` and `advice` are getters (core.status.<id>.label/.advice in
+// src/i18n/en/core-features.js), read in the reader's language when a page is
+// drawn. Saved data only ever holds the id ('at_risk').
+const statusInfo = (id, icon, severity, adviceKey = `core.status.${id}.advice`) => ({
+  get label() { return t(`core.status.${id}.label`); },
+  icon,
+  severity,
+  get advice() { return t(adviceKey); },
+});
+
 export const STATUS_INFO = {
-  at_risk: {
-    label: 'Isolation risk',
-    icon: '⚠',
-    severity: 4,
-    advice: 'No recent contact. Reach out to the senior and their companion today.',
-  },
-  needs_match: {
-    label: 'Needs a companion',
-    icon: '✚',
-    severity: 3,
-    advice: 'Not matched with a volunteer yet. Use the Match page to find a companion.',
-  },
-  due_soon: {
-    label: 'Check in soon',
-    icon: '◷',
-    severity: 2,
-    advice: 'Getting close to the contact threshold. A call in the next day or two keeps things on track.',
-  },
-  ok: {
-    label: 'Connected',
-    icon: '✓',
-    severity: 1,
-    advice: 'Regular contact is happening.',
-  },
+  at_risk: statusInfo('at_risk', '⚠', 4),
+  needs_match: statusInfo('needs_match', '✚', 3),
+  due_soon: statusInfo('due_soon', '◷', 2),
+  ok: statusInfo('ok', '✓', 1),
 };
+// "Check in soon", with the advice for a new match whose first call is still to come.
+const NEWLY_MATCHED = statusInfo('due_soon', '◷', 2, 'core.status.due_soon.adviceNew');
 
 // Local midnight (Carmel time for the demo) on the same calendar day.
 export function startOfDay(date) {
@@ -124,7 +117,7 @@ export function assessSenior(senior, { contacts, activeMatch, thresholdDays, now
   const status = riskStatus({ hasCompanion: Boolean(activeMatch), daysSince, thresholdDays, firstCallPending });
   const info =
     firstCallPending && status === 'due_soon'
-      ? { ...STATUS_INFO.due_soon, advice: 'Newly matched! Schedule the first call soon.' }
+      ? NEWLY_MATCHED
       : STATUS_INFO[status];
 
   const upcoming = contacts
@@ -173,12 +166,8 @@ export function attentionReason(a) {
   return null;
 }
 
-export const ATTENTION_REASON_WORDS = {
-  at_risk: 'at isolation risk',
-  needs_match: 'waiting for a companion',
-  dropping: 'with contact dropping',
-  missed: 'with a recent missed call',
-};
+// [v2 i18n] Each reason is a whole phrase with its number: core.attentionReason.<id>.
+export const ATTENTION_REASONS = ['at_risk', 'needs_match', 'dropping', 'missed'];
 
 // "1 at isolation risk, 1 waiting for a companion": every number says what it counts.
 export function attentionBreakdown(assessments) {
@@ -187,10 +176,11 @@ export function attentionBreakdown(assessments) {
     const reason = attentionReason(a);
     if (reason) counts.set(reason, (counts.get(reason) || 0) + 1);
   }
-  return Object.keys(ATTENTION_REASON_WORDS)
+  return ATTENTION_REASONS
     .filter((k) => counts.has(k))
-    .map((k) => `${counts.get(k)} ${ATTENTION_REASON_WORDS[k]}`)
-    .join(', ');
+    .map((k) => t(`core.attentionReason.${k}`, { count: counts.get(k) }))
+    .join(t('core.words.listSeparator'));
+
 }
 
 // ----- when a scheduled call can be marked -----

@@ -1,15 +1,21 @@
 // The weekly family summary: counts and dates only. Volunteer call notes and
 // missed-call notes are never included, on the page or in the copy text.
+//
+// [v2 i18n] The page is in the reader's language (t() in the view). The
+// "Message to copy" text is written in English on purpose, like the .ics file:
+// it is a message the family pastes and sends on, so it stays as it was, and
+// its labels are read in English (withLang) instead of the reader's language.
 
 import { methodLabel } from '../vocab.js';
 import { formatLongDate, formatDateTime, daysAgoText } from '../views/html.js';
 import { firstName, missedCallsWithin, missedReasonLabel, statusSentence } from './words.js';
+import { withLang, DEFAULT_LANG } from '../i18n/index.js';
 
 const FOUR_WEEKS_LAST_DAY = 27; // "last 4 weeks" = today and the 27 days before (as in risk.js)
 
 export function buildFamilySummary({ senior, assessment: a, volunteer, contacts, thresholdDays, now }) {
-  const name = firstName(senior);
-  const missed = missedCallsWithin(contacts, now, FOUR_WEEKS_LAST_DAY).map((c) => ({
+  const missedContacts = missedCallsWithin(contacts, now, FOUR_WEEKS_LAST_DAY);
+  const missed = missedContacts.map((c) => ({
     date: c.scheduledFor,
     type: c.type,
     reason: missedReasonLabel(c.missedReason),
@@ -23,6 +29,15 @@ export function buildFamilySummary({ senior, assessment: a, volunteer, contacts,
     companion: volunteer ? volunteer.name : null,
   };
   const sentence = statusSentence(a, thresholdDays);
+  const text = withLang(DEFAULT_LANG, () => messageText({ senior, a, facts, missedContacts, thresholdDays, now }));
+  return { senior, assessment: a, sentence, facts, missed, now, text };
+}
+
+// The plain-text message (English; see the note at the top).
+function messageText({ senior, a, facts, missedContacts, thresholdDays, now }) {
+  const name = firstName(senior);
+  const sentence = statusSentence(a, thresholdDays);
+  const missed = missedContacts.map((c) => ({ date: c.scheduledFor, type: c.type, reason: missedReasonLabel(c.missedReason) }));
   const labels = [a.info.label, a.trend.dropping ? 'Contact dropping' : null].filter(Boolean).join(', ');
   const fullName = name === senior.name.split(' ')[0] ? senior.name : `${name} (${senior.name})`;
 
@@ -45,6 +60,5 @@ export function buildFamilySummary({ senior, assessment: a, volunteer, contacts,
     '',
     'Counts and dates only. Call notes stay private.',
   ];
-
-  return { senior, assessment: a, sentence, facts, missed, now, text: lines.join('\n') };
+  return lines.join('\n');
 }

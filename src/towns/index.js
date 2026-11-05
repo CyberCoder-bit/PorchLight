@@ -32,6 +32,7 @@
 //   can't verify. No AI is involved: this is fixed data.
 
 import { COMMUNITY, timeZoneForCounty } from '../community.js';
+import { t } from '../i18n/index.js'; // [v2 i18n]
 
 export const TOWNS_CHECKED = '2026-11-04';
 export const TOWN_SOURCES = Object.freeze({
@@ -187,7 +188,7 @@ export function checkTown(body, values, errors) {
   if (!raw) return;
   const town = deploymentTownByName(raw);
   if (town) values.town = town.name;
-  else errors.town = 'Choose a town from the list.';
+  else errors.town = t('core.towns.chooseFromList');
 }
 
 // ?town=Westfield -> 'Westfield'. Anything not on this deployment's list is

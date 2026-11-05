@@ -17,6 +17,7 @@ import { familySummaryPage } from '../views/features/summary.js';
 import { townFromQuery, rowsInTown } from '../towns/index.js'; // [towns]
 import { townFilter } from '../towns/views.js'; // [towns]
 import { storeSeenBy, volunteerFirstNameOnly } from '../roles/index.js'; // [v2 accounts] each person sees only what is theirs
+import { t } from '../i18n/index.js'; // [v2 i18n]
 
 export function registerFeatures(router, ctx) {
   const { store, now, render } = ctx;
@@ -28,8 +29,8 @@ export function registerFeatures(router, ctx) {
     const town = townFromQuery(req.query);
     const items = rowsInTown(queue.items, town, (i) => i.senior);
     const filtered = { ...queue, items, comingUp: rowsInTown(queue.comingUp, town, (a) => a.senior), townName: town };
-    filtered.townFilter = townFilter({ action: '/admin/attention', town, asked: req.query.town, shown: items.length, total: queue.items.length, noun: ['senior on the list', 'seniors on the list'] });
-    render(req, res, { title: 'Needs attention', active: 'attention', body: attentionPage(filtered) });
+    filtered.townFilter = townFilter({ action: '/admin/attention', town, asked: req.query.town, shown: items.length, total: queue.items.length, noun: 'core.towns.count.onList' });
+    render(req, res, { title: t('core.attention.title'), active: 'attention', body: attentionPage(filtered) });
   });
 
   // Confirm page for ending a match. The button posts to the existing
@@ -41,7 +42,7 @@ export function registerFeatures(router, ctx) {
     const volunteer = match ? store.volunteer(match.volunteerId) : null;
     const contacts = store.contactsForSenior(senior.id).filter((c) => match && c.volunteerId === match.volunteerId);
     render(req, res, {
-      title: match ? `Find a new companion for ${senior.name}` : `${senior.name} has no companion`,
+      title: match ? t('core.rematch.pageTitle', { name: senior.name }) : t('core.rematch.pageTitleNone', { name: senior.name }),
       active: 'attention',
       body: rematchPage({
         senior,
@@ -56,9 +57,9 @@ export function registerFeatures(router, ctx) {
   // ----- My week (volunteer) -----
   router.get('/volunteers/:id/week', (req, res) => {
     const volunteer = ctx.volunteerOr404(req.params.id);
-    const busyText = ctx.sparks.modeInfo.effective === 'live' ? 'Asking Claude…' : 'Working…';
+    const busyText = ctx.sparks.modeInfo.effective === 'live' ? t('core.week.askingClaude') : t('core.week.working');
     render(req, res, {
-      title: `My week: ${volunteer.name}`,
+      title: t('core.week.title', { name: volunteer.name }),
       active: 'volunteers',
       body: myWeekPage(buildWeek(storeSeenBy(req.viewer, store), volunteer, now()), { busyText }), // [v2] a volunteer sees first names only
     });
@@ -76,16 +77,16 @@ export function registerFeatures(router, ctx) {
       thresholdDays: store.settings.riskThresholdDays,
       now: now(),
     });
-    render(req, res, { title: `Weekly summary: ${senior.name}`, active: 'dashboard', body: familySummaryPage(summary) });
+    render(req, res, { title: t('core.summary.title', { name: senior.name }), active: 'dashboard', body: familySummaryPage(summary) });
   });
 
   // ----- Add to calendar (.ics) for a scheduled call -----
   router.get('/contacts/:id/calendar.ics', (req, res) => {
     const contact = store.contacts.find((c) => c.id === req.params.id);
     const senior = contact ? store.senior(contact.seniorId) : null;
-    if (!contact || !senior) throw ctx.httpError(404, 'We could not find that call.');
-    if (contact.status === 'cancelled') throw ctx.httpError(409, 'That call was cancelled when the match ended, so there is nothing to add to a calendar.');
-    if (contact.status !== 'scheduled') throw ctx.httpError(409, 'That call was already marked, so there is nothing to add to a calendar.');
+    if (!contact || !senior) throw ctx.httpError(404, t('core.calendar.notFound'));
+    if (contact.status === 'cancelled') throw ctx.httpError(409, t('core.calendar.cancelled'));
+    if (contact.status !== 'scheduled') throw ctx.httpError(409, t('core.calendar.marked'));
     const { body, filename } = buildCallIcs({ contact, senior, volunteer: store.volunteer(contact.volunteerId), now: now() });
     sendDownload(res, { body, contentType: 'text/calendar; charset=utf-8', filename });
   });

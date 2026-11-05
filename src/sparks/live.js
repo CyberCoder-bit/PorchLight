@@ -12,7 +12,7 @@
 // senior's main language is not English, its name is sent too, so each
 // starter also comes in that language.
 
-import { interestLabel, methodLabel } from '../vocab.js';
+import { interestLabelEn as interestLabel, methodLabelEn as methodLabel } from '../vocab.js'; // [v2 i18n] the prompt stays English
 import { formatLocal } from '../tz.js';
 import { COMMUNITY } from '../community.js';
 import { englishName } from '../translate/phrases.js'; // [v2 translate] sparks in the senior's language

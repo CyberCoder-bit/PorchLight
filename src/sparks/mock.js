@@ -13,7 +13,7 @@
 // so the same code works for any Indiana town.
 
 import { OPENERS, INTEREST_SPARKS, GENERAL_SPARKS, INDIANA_TOUCHES, VOLUNTEER_TIPS } from './templates.js';
-import { interestLabel } from '../vocab.js';
+import { interestLabelEn as interestLabel } from '../vocab.js'; // [v2 i18n] saved text stays English
 import { localParts } from '../tz.js';
 import { COMMUNITY } from '../community.js';
 
