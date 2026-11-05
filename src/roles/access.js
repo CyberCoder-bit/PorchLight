@@ -13,6 +13,9 @@
 // request) there is no form body yet, so body-based tests pass and the real
 // request is checked again when it arrives.
 
+import { SITE_RULES } from '../views/site/access.js'; // [v2] public website rows
+import { TRANSLATE_RULES } from '../translate/access.js'; // [v2] messages and translate rows
+
 const SIGNED_IN = ['volunteer', 'family', 'senior'];
 
 // ----- ownership tests: ({ viewer, params, body, store }) => boolean -----
@@ -61,6 +64,10 @@ export const ACCESS_RULES = Object.freeze([
 
   // ----- family member of S, and senior S -----
   { method: 'GET', path: '/seniors/:id', roles: ['family', 'senior'], own: isSelf, note: 'call notes hidden' },
+
+  // ----- [v2] rows owned by other modules -----
+  ...SITE_RULES,
+  ...TRANSLATE_RULES,
 ]);
 
 // '/seniors/:id' -> { regex, keys }. Same matching as the router (src/http.js),

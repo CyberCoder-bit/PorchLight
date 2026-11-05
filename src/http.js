@@ -10,6 +10,9 @@
 //   - cookies                     req.cookies
 //   - response helpers            res.html(), res.redirect(), res.json(), res.setCookie()
 
+import { withLang } from './i18n/index.js';
+import { languageFromRequest } from './i18n/negotiate.js';
+
 export const MAX_BODY_BYTES = 100 * 1024; // forms are tiny; reject anything larger
 
 export class Router {
@@ -137,6 +140,10 @@ function createResponse() {
       headers.set('Location', safeLocation(location));
       sent = true;
     },
+    // Any other response header, e.g. X-Robots-Tag on /admin pages.
+    header(name, value) {
+      headers.set(name, value);
+    },
     setCookie(name, value, maxAgeSeconds = 60 * 60 * 24 * 365) {
       headers.append('Set-Cookie', `${name}=${encodeURIComponent(value)}; Path=/; Max-Age=${maxAgeSeconds}; SameSite=Lax`);
     },
@@ -149,39 +156,49 @@ function createResponse() {
 
 // Builds the app's request handler: (Request) => Promise<Response>.
 export function createHandler({ router, renderError }) {
-  return async (request) => {
-    const url = new URL(request.url);
-    const res = createResponse();
-    // HEAD (used by link checkers and uptime monitors) runs the GET route;
-    // toResponse() then drops the body.
-    const head = request.method === 'HEAD';
-    const req = {
-      method: request.method,
-      path: url.pathname,
-      query: Object.fromEntries(url.searchParams),
+  // [v2 i18n] Each request runs in its own language (see src/i18n/index.js).
+  return (request) => {
+    const lang = languageFromRequest({
       cookies: parseCookies(request.headers.get('cookie') || ''),
-      body: {},
-      params: {},
-    };
-
-    try {
-      const found = router.match(head ? 'GET' : req.method, url.pathname);
-      if (!found) {
-        renderError(req, res, 404, 'We could not find that page.');
-        return res.toResponse({ head });
-      }
-      req.params = found.params;
-      if (req.method === 'POST') req.body = parseForm(await readBody(request));
-      await found.handler(req, res);
-    } catch (err) {
-      const status = err.status || 500;
-      if (status >= 500) console.error(err);
-      if (!res.headersSent) {
-        renderError(req, res, status, status === 500 ? 'Something went wrong on our side.' : err.message);
-      }
-    }
-    return res.toResponse({ head });
+      acceptLanguage: request.headers.get('accept-language') || '',
+    });
+    return withLang(lang, () => handleRequest(request, { router, renderError }));
   };
+}
+
+async function handleRequest(request, { router, renderError }) {
+  const url = new URL(request.url);
+  const res = createResponse();
+  // HEAD (used by link checkers and uptime monitors) runs the GET route;
+  // toResponse() then drops the body.
+  const head = request.method === 'HEAD';
+  const req = {
+    method: request.method,
+    path: url.pathname,
+    query: Object.fromEntries(url.searchParams),
+    cookies: parseCookies(request.headers.get('cookie') || ''),
+    headers: request.headers, // [v2] e.g. accept-language, and the client IP header (see src/auth)
+    body: {},
+    params: {},
+  };
+
+  try {
+    const found = router.match(head ? 'GET' : req.method, url.pathname);
+    if (!found) {
+      renderError(req, res, 404, 'We could not find that page.');
+      return res.toResponse({ head });
+    }
+    req.params = found.params;
+    if (req.method === 'POST') req.body = parseForm(await readBody(request));
+    await found.handler(req, res);
+  } catch (err) {
+    const status = err.status || 500;
+    if (status >= 500) console.error(err);
+    if (!res.headersSent) {
+      renderError(req, res, status, status === 500 ? 'Something went wrong on our side.' : err.message);
+    }
+  }
+  return res.toResponse({ head });
 }
 
 // Throw this from a handler to show a friendly error page.

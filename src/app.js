@@ -21,6 +21,7 @@ import { dashboardPage } from './views/pages/dashboard.js';
 import { registerFeatures } from './features/index.js';
 import { registerIndiana } from './indiana/index.js';
 import { registerDesignPages } from './views/pages/extra.js';
+import { registerSite } from './views/site/index.js'; // [v2] public website
 import { checkTown, townFromQuery, rowsInTown } from './towns/index.js'; // [towns]
 import { townFilter } from './towns/views.js'; // [towns]
 import { registerRoles, withoutPrivateNotes, seniorsVisibleTo, callsVisibleTo, seesEverything, isFamilyOrSenior, viewerFromCookie } from './roles/index.js'; // [roles]
@@ -205,8 +206,12 @@ export function createApp({ store, sparks, now = () => new Date() }) {
   // The header's AI badge shows what is really happening: "Offline" if LIVE is
   // set up but the last request fell back (see currentModeInfo in src/sparks).
   const shownSparks = () => (sparks.currentModeInfo ? { ...sparks, modeInfo: sparks.currentModeInfo() } : sparks);
-  const render = (req, res, { title, active, body, status = 200, wide = false, flash }) =>
-    res.html(String(layout({ title, active, body, req, ctx: { sparks: shownSparks() }, flash: flash ?? flashFrom(req), wide })), status);
+  // [v2] Every /admin page is kept out of search engines (meta tag and header).
+  const render = (req, res, { title, active, body, status = 200, wide = false, flash }) => {
+    const noindex = /^\/admin(\/|$)/.test(req.path);
+    if (noindex) res.header('X-Robots-Tag', 'noindex, nofollow');
+    res.html(String(layout({ title, active, body, req, ctx: { sparks: shownSparks() }, flash: flash ?? flashFrom(req), wide, noindex })), status);
+  };
 
   const renderError = (req, res, status, message) => {
     // [roles] Pages that never reached a route (404, 413) still show the signed-in person's own header.
@@ -246,8 +251,9 @@ export function createApp({ store, sparks, now = () => new Date() }) {
   // Capacity is left out: the pair already counts toward it.
   const misfitOf = (senior, volunteer) => (senior && volunteer ? scorePair(senior, volunteer, 0).problems : []);
 
-  // ----- home -----
-  router.get('/', (req, res) => {
+  // ----- coordinator home -----
+  // [v2] Moved from / to /admin. The public website owns / (src/views/site/).
+  const coordinatorHome = (req, res) => {
     const summary = dashboardSummary(store, now());
     const stats = {
       seniors: store.seniors.length,
@@ -259,7 +265,8 @@ export function createApp({ store, sparks, now = () => new Date() }) {
     };
     const attention = summary.filter(needsAttention); // the same list as /attention
     render(req, res, { title: 'Home', active: 'home', body: homePage({ stats, attention }) });
-  });
+  };
+  router.get('/admin', coordinatorHome);
 
   router.get('/about-ai', (req, res) => {
     render(req, res, {
@@ -740,10 +747,12 @@ export function createApp({ store, sparks, now = () => new Date() }) {
     httpError, str, toArray, safeBack,
     flashMessages: FLASH, // add keys: ctx.flashMessages.my_key = 'Text'
     warnMessages: WARN,
+    coordinatorHome, // [v2] temporary: the placeholder / uses it until the public home exists
   };
   registerFeatures(router, ctx);
   registerIndiana(router, ctx);
   registerDesignPages(router, ctx);
+  registerSite(router, ctx); // [v2] public website: /, /how-it-works, ...
   registerRoles(router, ctx); // [roles] must be last: adds /sign-in and checks every route on the server
 
   return createHandler({ router, renderError });

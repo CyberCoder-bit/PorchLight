@@ -270,12 +270,19 @@ export function buildSeedData(now = new Date(), { riskThresholdDays = 7 } = {}) 
   });
 
   return {
-    meta: { schemaVersion: 1, seededAt: now.toISOString(), note: 'All people in this demo data are fictional.' },
+    meta: { schemaVersion: 2, seededAt: now.toISOString(), note: 'All people in this demo data are fictional.' },
     settings: { riskThresholdDays },
     seniors,
     volunteers,
     matches,
     contacts,
     sparkSets: [],
+    // [v2] filled in by the accounts and translate modules (see src/store-core.js)
+    users: [],
+    sessions: [],
+    familyLinks: [],
+    messages: [],
+    translations: {},
+    usage: {},
   };
 }

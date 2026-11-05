@@ -5,6 +5,8 @@ import { html, raw } from './html.js';
 import { banner } from './components.js';
 import { COMMUNITY } from '../community.js';
 import { navFor, viewerLine } from '../roles/views.js'; // [roles]
+import { currentLang, dirFor } from '../i18n/index.js'; // [v2 i18n]
+import { languagePicker } from '../i18n/picker.js'; // [v2 i18n]
 
 // Main navigation. `key` matches the `active` value a page passes to render(),
 // which marks that link with aria-current="page".
@@ -231,7 +233,8 @@ function siteMenu(links) {
       </nav>`;
 }
 
-export function layout({ title, active, body, req, ctx, flash, wide = false }) {
+// `noindex`: pages search engines must not list (every /admin page; see render() in app.js).
+export function layout({ title, active, body, req, ctx, flash, wide = false, noindex = false }) {
   const prefs = readPrefs(req.cookies);
   // color-scheme tells the browser how to draw native controls (date pickers,
   // scrollbars) to match the theme.
@@ -240,10 +243,11 @@ export function layout({ title, active, body, req, ctx, flash, wide = false }) {
   const links = navList(nav, active);
   const signedIn = viewerLine(req.viewer); // [roles] "Signed in as ... · Sign out", or the demo-mode line
   return html`<!DOCTYPE html>
-<html lang="en" class="${htmlClass(prefs)}">
+<html lang="${currentLang()}" dir="${dirFor()}" class="${htmlClass(prefs)}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  ${noindex ? html`<meta name="robots" content="noindex, nofollow">` : ''}
   <title>${title} · PorchLight</title>
   <meta name="description" content="PorchLight helps older adults in Indiana communities stay connected with volunteer companions. Demo data starts in ${COMMUNITY.town}, ${COMMUNITY.county}.">
   <meta name="theme-color" content="${prefs.contrast === 'high' ? '#000000' : '#1d2433'}">
@@ -267,6 +271,7 @@ export function layout({ title, active, body, req, ctx, flash, wide = false }) {
       </a>
       <div class="header-tools">
         ${modeBadge(ctx.sparks.modeInfo)}
+        ${languagePicker(req)}
         ${accessibilityMenu(prefs, prefsReturnPath(req), hasTypedFields(req, body))}
       </div>
       ${siteMenu(links)}

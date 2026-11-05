@@ -1,0 +1,79 @@
+// Translations for the interface (v2).
+//
+//   t('auth.signIn.title')                 -> "Sign in" (or the same words in the reader's language)
+//   t('core.greeting', { name: 'Hal' })     -> "Hello, Hal"   ({name} is filled in)
+//
+// The language belongs to the REQUEST, not to the process: createHandler()
+// (src/http.js) runs every request inside withLang(), using AsyncLocalStorage,
+// so any view can call t() without being handed the language. Code that runs
+// later in the same request (the sign-in guard, once it knows the person) can
+// switch it with setCurrentLang(). AsyncLocalStorage is built into Node and
+// into Cloudflare Workers (nodejs_compat), so nothing new is installed.
+//
+// Catalogs are plain files written ahead of time and committed. The interface
+// is never translated at runtime. English is split into one file per owner
+// (./en/*.js) so separate features never edit the same file. Other languages are one
+// file each (./<code>.js) and are registered in ./languages.js.
+//
+// Rules for catalog text:
+//   - Plain text only. t() returns a string, and the html`` template escapes it.
+//     Put links and <strong> in the view, around separate keys.
+//   - Variables look like {name}. Missing variables are left as they are.
+//   - Keys are "namespace.area.thing", e.g. "auth.signUp.emailLabel".
+
+import { AsyncLocalStorage } from 'node:async_hooks';
+import core from './en/core.js';
+import auth from './en/auth.js';
+import site from './en/site.js';
+import translate from './en/translate.js';
+import lang from './en/lang.js';
+import { UI_LANGUAGES, CATALOGS } from './languages.js';
+
+export const DEFAULT_LANG = 'en';
+
+// English is the full set of keys. Every other catalog must have the same keys
+// (test/i18n/catalogs.test.js fails on any missing one).
+export const EN = Object.freeze({ ...core, ...auth, ...site, ...translate, ...lang });
+
+const storage = new AsyncLocalStorage();
+
+export const isUiLanguage = (code) => UI_LANGUAGES.some((l) => l.code === code);
+
+// Run fn() with `lang` as the language for everything it calls, including
+// code after an await.
+export function withLang(lang, fn) {
+  return storage.run({ lang: isUiLanguage(lang) ? lang : DEFAULT_LANG }, fn);
+}
+
+export function currentLang() {
+  return storage.getStore()?.lang || DEFAULT_LANG;
+}
+
+// Change the language for the rest of this request (e.g. once the signed-in
+// person's profile language is known). Unknown codes are ignored.
+export function setCurrentLang(lang) {
+  const store = storage.getStore();
+  if (store && isUiLanguage(lang)) store.lang = lang;
+}
+
+export function dirFor(lang = currentLang()) {
+  return UI_LANGUAGES.find((l) => l.code === lang)?.dir || 'ltr';
+}
+
+const fill = (text, vars) =>
+  vars ? text.replace(/\{(\w+)\}/g, (whole, name) => (vars[name] === undefined || vars[name] === null ? whole : String(vars[name]))) : text;
+
+// The reader's language, then English, then the key itself (so a missing key
+// shows up as "auth.signIn.title" on screen and in tests, never as "undefined").
+export function t(key, vars) {
+  const lang = currentLang();
+  const catalog = lang === DEFAULT_LANG ? EN : CATALOGS[lang];
+  const text = catalog?.[key] ?? EN[key] ?? key;
+  return fill(text, vars);
+}
+
+// Same as t(), but in a language you name (e.g. a message shown to the other
+// person in their language).
+export function tIn(lang, key, vars) {
+  return withLang(lang, () => t(key, vars));
+}

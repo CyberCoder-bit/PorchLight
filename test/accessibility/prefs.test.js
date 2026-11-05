@@ -48,7 +48,7 @@ const post = (p, data) =>
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams(data).toString(),
   });
-const htmlClass = (body) => body.match(/<html lang="en" class="([^"]*)">/)[1];
+const htmlClass = (body) => body.match(/<html lang="en" dir="ltr" class="([^"]*)">/)[1];
 const menuOf = (body) => body.slice(body.indexOf('<details class="a11y-menu">'), body.indexOf('</details>') + 10);
 const SITE = 'http://porchlight.test/some/page';
 const staysOnSite = (location) => new URL(location, SITE).host === 'porchlight.test';
