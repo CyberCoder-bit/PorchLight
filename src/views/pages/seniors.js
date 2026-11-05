@@ -8,7 +8,8 @@ import {
 import { placeText, townLabel } from '../../towns/index.js'; // [towns]
 import { townSelectField } from '../../towns/views.js'; // [towns]
 import { languageFieldset, formatLanguages } from '../../i18n/fields.js'; // [v2 i18n]
-import { t } from '../../i18n/index.js'; // [v2 i18n]
+import { t } from '../../i18n/index.js'; // [v2 i18n, translate]
+import { bilingualSpark } from '../../translate/views.js'; // [v2 translate] sparks in both languages
 import { noPhone } from '../../roles/viewer.js'; // phone numbers are never displayed, even if typed into a name field
 
 export function seniorsListPage({ rows, townFilter = '', townName = null }) { // [towns] townFilter, townName
@@ -41,7 +42,7 @@ export function seniorsListPage({ rows, townFilter = '', townName = null }) { //
           <p><a href="/seniors/new">Add a senior</a></p>`)}`;
 }
 
-function sparkPanel({ senior, sparkSet, sparkMode, hideNotice = false }) {
+function sparkPanel({ senior, volunteer = null, sparkSet, sparkMode, hideNotice = false }) {
   const name = senior.preferredName || senior.name.split(' ')[0];
   const nextVariant = sparkSet ? (sparkSet.variant || 0) + 1 : 0;
   return html`
@@ -53,7 +54,7 @@ function sparkPanel({ senior, sparkSet, sparkMode, hideNotice = false }) {
           ${sparkSet.notice && !hideNotice ? banner({ kind: 'status', text: sparkSet.notice }) : ''}
           <ol class="sparks">
             ${sparkSet.sparks.map(
-              (s) => html`<li><p class="spark-text">${s.text}</p><p class="spark-basis">Based on: ${s.basedOn}</p></li>`
+              (s) => html`<li><p class="spark-text">${s.text}</p>${bilingualSpark(s, { senior, volunteer, sparkSet })}<p class="spark-basis">Based on: ${s.basedOn}</p></li>`
             )}
           </ol>
           ${sparkSet.tip ? html`<p class="tip"><strong>Volunteer tip:</strong> ${sparkSet.tip}</p>` : ''}
@@ -86,6 +87,7 @@ export function seniorProfilePage({ senior, assessment, volunteer, match, upcomi
       ${volunteer
         ? html`<p class="big">Your companion is <strong>${volunteer.name}</strong>.</p>`
         : html`<p class="big">We're finding a companion for you.</p>`}
+      ${volunteer && match ? html`<p><a class="button button-secondary" href="/messages/${match.id}">${t('translate.thread.title', { name: volunteer.name.split(' ')[0] })}</a></p>` : ''}
       ${assessment.nextScheduled
         ? html`<p class="big">Your next ${methodLabel(assessment.nextScheduled.type).toLowerCase()}: <strong>${formatDateTime(assessment.nextScheduled.scheduledFor)}</strong>.</p>`
         : html`<p class="big">No call is scheduled yet.</p>`}
@@ -93,7 +95,7 @@ export function seniorProfilePage({ senior, assessment, volunteer, match, upcomi
 
     <div class="two-col">
       <div>
-        ${hideSparks ? '' : sparkPanel({ senior, sparkSet, sparkMode, hideNotice })}
+        ${hideSparks ? '' : sparkPanel({ senior, volunteer, sparkSet, sparkMode, hideNotice })}
 
         <section class="panel" aria-labelledby="contacts-heading">
           <h2 id="contacts-heading">Calls and visits</h2>

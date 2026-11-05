@@ -9,6 +9,7 @@ import { generateMockSparks, pickTip, seasonOf } from './mock.js';
 import { generateLiveSparks, loadSdk } from './live.js';
 import { lastCompletedContact, calendarDaysBetween } from '../risk.js';
 import { localDateKey } from '../tz.js';
+import { languagesOf } from '../i18n/fields.js'; // [v2 translate]
 
 export async function resolveSparkMode(config) {
   const sdkInstalled = Boolean(await loadSdk());
@@ -44,6 +45,7 @@ export function buildSparkInput(senior, contacts, now = new Date()) {
     lastContactType: last ? last.type : null,
     season: seasonOf(now),
     now,
+    seniorLanguage: languagesOf(senior)[0]?.code || 'en', // [v2 translate] LIVE sparks also come in this language
   };
 }
 
@@ -51,6 +53,8 @@ export function createSparkService(config, modeInfo) {
   return {
     modeInfo,
     model: config.claudeModel,
+    // [v2 translate] The same Claude settings, for translating messages (src/translate). A method, so the key is never serialized.
+    liveOptions: () => ({ apiKey: config.anthropicApiKey, model: config.claudeModel, baseURL: config.anthropicBaseUrl, perAccount: config.translateDailyPerAccount, total: config.translateDailyTotal }),
     // In LIVE mode: { reason, at } when the most recent request fell back to
     // MOCK, or null after a LIVE success. Lets the header and /about-ai say
     // what is really happening instead of "Live" while every call falls back.

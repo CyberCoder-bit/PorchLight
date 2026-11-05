@@ -15,6 +15,7 @@
 
 import { scorePair } from './matching.js';
 import { localParts, fromLocal } from './tz.js';
+import { buildDemoMessages } from './translate/demo.js'; // [v2] demo messages in two languages
 
 // `daysOffset` calendar days from today, at hour:minute local time.
 // Counting on the calendar (not in 24-hour steps) keeps the story the same
@@ -281,7 +282,7 @@ export function buildSeedData(now = new Date(), { riskThresholdDays = 7 } = {}) 
     users: [],
     sessions: [],
     familyLinks: [],
-    messages: [],
+    messages: buildDemoMessages(now, matches),
     translations: {},
     usage: {},
   };

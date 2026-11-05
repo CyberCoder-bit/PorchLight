@@ -257,3 +257,48 @@ export const VOLUNTEER_TIPS = [
   "If they bring up something hard, listen first. You don't have to fix it.",
   'If you notice a health or safety concern, tell your coordinator after the call.',
 ];
+
+// ----- [v2 translate] i18n keys for every template above -----
+// The English text stays here, so MOCK output is unchanged. Each template also
+// gets a key, translate.spark.*, which src/i18n/en/translate.js adds to the
+// English catalog (sparkCatalog). Other languages translate those keys, and the
+// senior's profile shows a spark in the senior's language with tIn().
+//   translate.spark.opener.<gap>.<n>         OPENERS
+//   translate.spark.interest.<id>.<when>.<n> INTEREST_SPARKS
+//   translate.spark.general.<when>.<n>       GENERAL_SPARKS
+//   translate.spark.indiana.<n>              INDIANA_TOUCHES
+//   translate.spark.tip.<n>                  VOLUNTEER_TIPS
+//   translate.spark.gap.<id>                 the {gap} words ("about a week") from gapPhrase() in mock.js
+export const GAP_PHRASE_KEYS = Object.freeze({
+  'a few days': 'translate.spark.gap.fewDays',
+  'about a week': 'translate.spark.gap.aboutWeek',
+  'over a week': 'translate.spark.gap.overWeek',
+  'about two weeks': 'translate.spark.gap.twoWeeks',
+  'a few weeks': 'translate.spark.gap.fewWeeks',
+  'over a month': 'translate.spark.gap.overMonth',
+});
+
+function buildSparkKeys() {
+  const entries = [];
+  for (const [gap, list] of Object.entries(OPENERS)) list.forEach((text, i) => entries.push([`translate.spark.opener.${gap}.${i}`, text]));
+  for (const [id, byWhen] of Object.entries(INTEREST_SPARKS)) {
+    for (const [when, list] of Object.entries(byWhen)) list.forEach((text, i) => entries.push([`translate.spark.interest.${id}.${when}.${i}`, text]));
+  }
+  for (const [when, list] of Object.entries(GENERAL_SPARKS)) list.forEach((text, i) => entries.push([`translate.spark.general.${when}.${i}`, text]));
+  INDIANA_TOUCHES.forEach((touch, i) => entries.push([`translate.spark.indiana.${i}`, touch.text]));
+  VOLUNTEER_TIPS.forEach((text, i) => entries.push([`translate.spark.tip.${i}`, text]));
+  for (const [text, key] of Object.entries(GAP_PHRASE_KEYS)) entries.push([key, text]);
+  return entries;
+}
+
+const SPARK_KEYS = buildSparkKeys();
+
+// { 'translate.spark.opener.first.0': "Hi {name}! ...", ... } for the English catalog.
+export function sparkCatalog() {
+  return Object.fromEntries(SPARK_KEYS);
+}
+
+// [key, English template] pairs for the spark texts (not the tips or the gap words).
+export const SPARK_TEMPLATE_KEYS = Object.freeze(
+  SPARK_KEYS.filter(([key]) => !key.startsWith('translate.spark.tip.') && !key.startsWith('translate.spark.gap.'))
+);

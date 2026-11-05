@@ -10,7 +10,7 @@ import { misfitNote } from './seniors.js';
 import { townLabel } from '../../towns/index.js'; // [towns]
 import { townSelectField } from '../../towns/views.js'; // [towns]
 import { languageFieldset, formatLanguages } from '../../i18n/fields.js'; // [v2 i18n]
-import { t } from '../../i18n/index.js'; // [v2 i18n]
+import { t } from '../../i18n/index.js'; // [v2 i18n, translate]
 
 export function volunteersListPage({ rows, townFilter = '', townName = null }) { // [towns] townFilter, townName
   return html`
@@ -69,6 +69,7 @@ export function volunteerProfilePage({ volunteer, assigned }) {
               <p class="actions">
                 <a class="button button-secondary" href="/seniors/${senior.id}#sparks">Get conversation sparks<span class="visually-hidden"> for ${senior.name}</span></a>
                 <a class="button button-secondary" href="/contacts?matchId=${match.id}">Schedule or log a call<span class="visually-hidden"> with ${senior.name}</span></a>
+                <a class="button button-secondary" href="/messages/${match.id}">${t('translate.messages.title')}<span class="visually-hidden"> (${senior.name})</span></a>
               </p>
             </li>`
           )}</ul>`
