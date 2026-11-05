@@ -17,7 +17,9 @@ const COMMON = new Set([
   'porchlight', 'porchlight1', 'porchlight123', 'indiana123', 'carmel1234',
 ]);
 
-export const normalizeEmail = (v) => (typeof v === 'string' ? v.trim().toLowerCase() : '');
+// NFKC turns look-alikes such as a fullwidth "ｈ" into the plain letter, so
+// they can't make a second account that reads the same (V2-B-08).
+export const normalizeEmail = (v) => (typeof v === 'string' ? v.normalize('NFKC').trim().toLowerCase() : '');
 
 // Something@something.something, with no spaces. The real test is the email
 // arriving, which a real launch would send.
@@ -26,12 +28,15 @@ const EMAIL = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/;
 export function checkEmail(email, errors, field = 'email') {
   if (!email) errors[field] = t('auth.errors.emailMissing');
   else if (email.length > MAX_EMAIL) errors[field] = t('auth.errors.emailLong', { max: MAX_EMAIL });
-  else if (!EMAIL.test(email)) errors[field] = t('auth.errors.emailFormat');
+  else if (!EMAIL.test(email) || !/^[\x21-\x7e]+$/.test(email)) errors[field] = t('auth.errors.emailFormat'); // plain letters only: no invisible characters
 }
 
 export function checkPassword(password, email, errors, field = 'password') {
   if (!password) errors[field] = t('auth.errors.passwordMissing', { min: MIN_PASSWORD });
-  else if ([...password].length < MIN_PASSWORD) errors[field] = t('auth.errors.passwordShort', { min: MIN_PASSWORD });
+  // Spaces and invisible characters don't count toward the length (V2-B-07).
+  else if ([...password.replace(/[\s\p{Cf}\p{Z}\p{M}\u115F\u1160\u3164\uFFA0\u2800]/gu, '')].length < MIN_PASSWORD) {
+    errors[field] = t('auth.errors.passwordShort', { min: MIN_PASSWORD });
+  }
   else if (password.length > MAX_PASSWORD) errors[field] = t('auth.errors.passwordLong', { max: MAX_PASSWORD });
   else if (email && password.trim().toLowerCase() === email) errors[field] = t('auth.errors.passwordIsEmail');
   else if (COMMON.has(password.trim().toLowerCase())) errors[field] = t('auth.errors.passwordCommon');

@@ -94,7 +94,10 @@ function flashFrom(req) {
 // Characters as people count them: an emoji is 1, not 2 (UTF-16) units.
 // Characters as people count them: "👍🏽" and "e + accent" are one each (grapheme clusters).
 const GRAPHEMES = new Intl.Segmenter('en', { granularity: 'grapheme' });
-const chars = (s) => { let n = 0; for (const _ of GRAPHEMES.segment(s)) n++; return n; };
+// A "character" may not hide thousands of combining marks (V2-B-09): every 4
+// UTF-16 units count as at least one, which leaves real text (an emoji with a
+// skin tone is 4 units) alone.
+const chars = (s) => { let n = 0; for (const _ of GRAPHEMES.segment(s)) n++; return Math.max(n, Math.ceil(s.length / 4)); };
 // True if the text has nothing you can see: spaces, zero-width characters, lone accents,
 // or "blank" letters such as the Hangul fillers and the Braille blank.
 const BLANK_LOOKING = /[\s\p{Cf}\p{Z}\p{M}\u115F\u1160\u3164\uFFA0\u2800]/gu;
@@ -360,6 +363,10 @@ export function createApp({ store, sparks, now = () => new Date() }) {
     // companion's first name.
     const kind = req.viewer?.kind;
     const shownSenior = kind === 'volunteer' ? seniorForVolunteer(senior) : senior;
+    // [v2] A volunteer sees notes on their own calls only, never an earlier
+    // companion's (after a rematch, V2-B-02).
+    const ownNotesOnly = (list) =>
+      kind === 'volunteer' ? list.map((c) => (c.volunteerId === req.viewer.id ? c : { ...c, notes: '', missedNote: null })) : list;
     const companion = match ? store.volunteer(match.volunteerId) : null;
     render(req, res, {
       title: shownSenior.name,
@@ -370,8 +377,8 @@ export function createApp({ store, sparks, now = () => new Date() }) {
         assessment: assess(senior),
         volunteer: isFamilyOrSenior(req.viewer) ? volunteerFirstNameOnly(companion) : companion,
         match,
-        upcoming,
-        recent: withoutPrivateNotes(req.viewer, recent), // [roles] family and seniors never see call notes
+        upcoming: ownNotesOnly(upcoming),
+        recent: ownNotesOnly(withoutPrivateNotes(req.viewer, recent)), // [roles] family and seniors never see call notes
         sparkSet: store.latestSparkSet(senior.id),
         sparkMode: sparks.modeInfo,
         misfit: match && !isFamilyOrSenior(req.viewer) ? misfitOf(senior, store.volunteer(match.volunteerId)) : [], // [roles] a coordinator warning

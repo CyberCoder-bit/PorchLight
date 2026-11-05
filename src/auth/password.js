@@ -72,12 +72,15 @@ export async function verifyPassword(password, record) {
   return sameBytes(actual, expected);
 }
 
-// A made-up record (a random salt made at start-up). Checking a password
-// against it costs the same as a real check, and the answer is always "no".
-const DUMMY_SALT = crypto.getRandomValues(new Uint8Array(SALT_BYTES));
+// A made-up record (a random salt, made the first time it's needed: Cloudflare
+// Workers refuse to start if a module makes random values while it loads,
+// V2-B-01). Checking a password against it costs the same as a real check,
+// and the answer is always "no".
+let dummySalt = null;
 const DUMMY_HASH = new Uint8Array(HASH_BITS / 8);
 export async function wasteTime(password) {
-  const actual = await derive(typeof password === 'string' ? password : '', DUMMY_SALT, ITERATIONS);
+  dummySalt ??= crypto.getRandomValues(new Uint8Array(SALT_BYTES));
+  const actual = await derive(typeof password === 'string' ? password : '', dummySalt, ITERATIONS);
   sameBytes(actual, DUMMY_HASH);
   return false;
 }

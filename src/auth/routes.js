@@ -106,10 +106,13 @@ export function registerAuth(router, ctx) {
     const values = { email, next: str(req.body.next) };
     const key = `${email}|${clientIp(req)}`;
     if (limits.signIn.blocked(key)) return tooMany(req, res, 'signIn');
+    // Count the try BEFORE the slow password check (an await), so many tries
+    // arriving at once can't all slip under the limit (V2-B-03). A right
+    // password clears the count.
+    limits.signIn.hit(key);
     const user = store.userByEmail(email);
     const ok = user ? await verifyPassword(password, user.password) : await wasteTime(password);
     if (!ok || !viewerFromUser(user, store)) {
-      limits.signIn.hit(key);
       return showSignIn(req, res, { values, errors: { email: t('auth.errors.wrongPassword') } });
     }
     limits.signIn.clear(key);
@@ -200,6 +203,7 @@ export function registerAuth(router, ctx) {
       if (!extra.consent) errors.consent = t('auth.errors.consentMissing');
     }
     if (Object.keys(errors).length) return showSenior(req, res, { values: { ...values, ...extra }, errors, helper });
+    limits.signUp.hit(ip); // counted before any await, so sign-ups arriving at once can't all slip under the limit (V2-B-03)
 
     const nowIso = ctx.now().toISOString();
     const senior = {
@@ -221,7 +225,6 @@ export function registerAuth(router, ctx) {
       store.familyLinks.push({ id: store.newId('fl'), userId: familyUser.id, seniorId: senior.id, relationship: extra.relationship, status: 'pending', createdAt: nowIso, decidedAt: null });
       signInAs = familyUser;
     }
-    limits.signUp.hit(ip);
     store.save();
     const viewer = await startSession(req, res, signInAs);
     res.redirect(`${viewer.home}?msg=signed_up`);
@@ -246,12 +249,12 @@ export function registerAuth(router, ctx) {
     if (Object.keys(errors).length) {
       return showVolunteer(req, res, { values: { ...values, email, languages: langs.languages, translateHelp: langs.translateHelp }, errors });
     }
+    limits.signUp.hit(ip); // before any await (V2-B-03)
     // Pending until a coordinator approves: no matches, and no seniors to see.
     const volunteer = { id: store.newId('v'), ...values, languages: langs.languages, translateHelp: langs.translateHelp, status: 'pending', createdAt: ctx.now().toISOString() };
     const user = await newUser({ email, name: values.name, role: 'volunteer', password, volunteerId: volunteer.id });
     store.volunteers.push(volunteer);
     store.users.push(user);
-    limits.signUp.hit(ip);
     store.save();
     const viewer = await startSession(req, res, user);
     res.redirect(`${viewer.home}?msg=signed_up`);
@@ -283,11 +286,11 @@ export function registerAuth(router, ctx) {
     if (isInvisible(values.relationship)) errors.relationship = t('auth.errors.relationshipMissing');
     else if (chars(values.relationship) > 80) errors.relationship = t('auth.errors.relationshipLong');
     if (Object.keys(errors).length) return showFamily(req, res, { values, errors });
+    limits.signUp.hit(ip); // before any await (V2-B-03)
 
     const user = await newUser({ email, name: values.name, role: 'family', password });
     store.users.push(user);
     store.familyLinks.push({ id: store.newId('fl'), userId: user.id, seniorId: senior.id, relationship: values.relationship, status: 'pending', createdAt: ctx.now().toISOString(), decidedAt: null });
-    limits.signUp.hit(ip);
     store.save();
     const viewer = await startSession(req, res, user);
     res.redirect(`${viewer.home}?msg=signed_up`);

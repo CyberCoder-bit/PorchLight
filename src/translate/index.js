@@ -23,7 +23,9 @@ export { buildDemoMessages } from './demo.js';
 
 // Characters as people count them: "👍🏽" and "e + accent" are one each (same as app.js).
 const GRAPHEMES = new Intl.Segmenter('en', { granularity: 'grapheme' });
-export const chars = (s) => { let n = 0; for (const _ of GRAPHEMES.segment(s)) n++; return n; };
+// Every 4 UTF-16 units count as at least one character, so one "character"
+// can't hide thousands of combining marks (V2-B-09).
+export const chars = (s) => { let n = 0; for (const _ of GRAPHEMES.segment(s)) n++; return Math.max(n, Math.ceil(s.length / 4)); };
 // Nothing you can see: spaces, zero-width characters, lone accents, blank letters (same as app.js).
 const BLANK_LOOKING = /[\s\p{Cf}\p{Z}\p{M}ᅟᅠㅤﾠ⠀]/gu;
 const isInvisible = (s) => !s.replace(BLANK_LOOKING, '');
