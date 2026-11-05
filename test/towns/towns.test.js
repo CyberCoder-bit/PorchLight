@@ -283,7 +283,7 @@ test('seed: everyone has a town, Rosa is in Westfield, and the demo story is unc
   const gene = db.seniors.find((s) => s.id === 's-eugene');
   const { eligible, ineligible } = rankVolunteers(gene, db.volunteers, db.matches);
   assert.equal(eligible[0].volunteer.id, 'v-sam');
-  assert.equal(eligible[0].score, 21);
+  assert.equal(eligible[0].score, 25); // [v2] 21, plus 4 for a shared language (English)
   assert.deepEqual(ineligible.map((r) => [r.volunteer.id, r.problems]), [
     ['v-ethan', ['At capacity (already has 1 of 1 senior)']],
     ['v-linda', ['No overlapping availability']],

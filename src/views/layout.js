@@ -271,8 +271,8 @@ export function layout({ title, active, body, req, ctx, flash, wide = false, noi
       </a>
       <div class="header-tools">
         ${modeBadge(ctx.sparks.modeInfo)}
-        ${languagePicker(req)}
         ${accessibilityMenu(prefs, prefsReturnPath(req), hasTypedFields(req, body))}
+        ${languagePicker(req)}
       </div>
       ${siteMenu(links)}
     </div>

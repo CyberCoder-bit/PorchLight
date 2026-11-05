@@ -27,7 +27,7 @@ import auth from './en/auth.js';
 import site from './en/site.js';
 import translate from './en/translate.js';
 import lang from './en/lang.js';
-import { UI_LANGUAGES, CATALOGS } from './languages.js';
+import { CATALOGS, canonicalCode, uiLanguage } from './languages.js';
 
 export const DEFAULT_LANG = 'en';
 
@@ -37,12 +37,13 @@ export const EN = Object.freeze({ ...core, ...auth, ...site, ...translate, ...la
 
 const storage = new AsyncLocalStorage();
 
-export const isUiLanguage = (code) => UI_LANGUAGES.some((l) => l.code === code);
+// Shipped interface languages only. Case and '_' don't matter ('ES', 'zh_hans').
+export const isUiLanguage = (code) => canonicalCode(code) !== null;
 
 // Run fn() with `lang` as the language for everything it calls, including
 // code after an await.
 export function withLang(lang, fn) {
-  return storage.run({ lang: isUiLanguage(lang) ? lang : DEFAULT_LANG }, fn);
+  return storage.run({ lang: canonicalCode(lang) || DEFAULT_LANG }, fn);
 }
 
 export function currentLang() {
@@ -53,11 +54,24 @@ export function currentLang() {
 // person's profile language is known). Unknown codes are ignored.
 export function setCurrentLang(lang) {
   const store = storage.getStore();
-  if (store && isUiLanguage(lang)) store.lang = lang;
+  const code = canonicalCode(lang);
+  if (store && code) store.lang = code;
 }
 
+// Right-to-left is a fact about the language, so this answers for planned
+// languages too (dirFor('ar') is 'rtl' before the Arabic catalog ships).
 export function dirFor(lang = currentLang()) {
-  return UI_LANGUAGES.find((l) => l.code === lang)?.dir || 'ltr';
+  return uiLanguage(lang)?.dir || 'ltr';
+}
+
+// ----- pseudo-locale, for tests only -----
+// With markers on, every t() string comes back as "⟦text⟧", so a test can
+// find text on a page that skipped t() (see test/i18n/pseudo.js). It is a
+// switch in this module, not a language: no cookie, header, or profile can
+// reach it, and it is never in UI_LANGUAGES.
+let pseudoMarkers = false;
+export function setPseudoMarkersForTests(on) {
+  pseudoMarkers = Boolean(on);
 }
 
 const fill = (text, vars) =>
@@ -69,7 +83,7 @@ export function t(key, vars) {
   const lang = currentLang();
   const catalog = lang === DEFAULT_LANG ? EN : CATALOGS[lang];
   const text = catalog?.[key] ?? EN[key] ?? key;
-  return fill(text, vars);
+  return pseudoMarkers ? `⟦${fill(text, vars)}⟧` : fill(text, vars);
 }
 
 // Same as t(), but in a language you name (e.g. a message shown to the other

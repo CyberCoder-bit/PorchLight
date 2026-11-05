@@ -262,6 +262,106 @@ part2_narrative.md):
 an older relative living alone has talked to anyone that week. We also spoke with [role], who told us
 [finding]." Use only your real numbers and real findings.]
 
+## 6. Languages: which ones PorchLight speaks (v2)
+
+PorchLight v2 lets people use the app in their own language and pairs a senior with a companion
+who speaks a language they share. This section shows where the language list came from. All
+numbers were checked on **November 4, 2026**. "LEP" below means people who told the Census they
+speak English less than "very well". They are the people most likely to need the app in another
+language.
+
+### What the Census says about Indiana
+
+Source: U.S. Census Bureau, American Community Survey (ACS) 2024 1-year estimates, table
+B16001 ("Language Spoken at Home by Ability to Speak English for the Population 5 Years and
+Over") and the shorter table C16001, for Indiana [L1] [L2]. We read the numbers through Census
+Reporter's copy of the same tables, because the Census data API now asks for a key [L3]. Each
+figure has a margin of error, shown as ±.
+
+- Indiana has 6,520,741 people age 5 and over. 5,788,880 of them speak only English at home.
+- Spanish is far ahead of every other language: 381,198 speakers, 161,812 of them LEP (±8,349).
+
+The next languages, ranked by the number of LEP speakers (table B16001):
+
+| Language (Census group) | Speakers | LEP | LEP margin |
+|---|---:|---:|---:|
+| Chinese (incl. Mandarin, Cantonese) | 25,119 | 13,715 | ±3,265 |
+| "Other languages of Asia" (the group that holds Burmese and Chin) | 23,308 | 12,558 | ±2,855 |
+| Yiddish, Pennsylvania Dutch, or other West Germanic | 37,403 | 11,746 | ±3,506 |
+| Haitian | 16,124 | 11,004 | ±4,019 |
+| German | 40,333 | 8,057 | ±2,459 |
+| Yoruba, Twi, Igbo, or other languages of Western Africa | 24,763 | 6,255 | ±2,770 |
+| Punjabi | 12,173 | 4,609 | ±1,911 |
+| Korean | 9,203 | 4,458 | ±1,313 |
+| Arabic | 13,224 | 4,402 | ±1,795 |
+| Vietnamese | 6,847 | 4,228 | ±1,421 |
+| French (incl. Cajun) | 10,588 | 3,674 | ±1,542 |
+| Tagalog (incl. Filipino) | 10,949 | 3,104 | ±1,266 |
+| Hindi | 12,943 | 3,086 | ±1,578 |
+
+Other figures from B16001: Telugu 7,561 speakers (±2,652) and Japanese 7,448 (±2,995).
+
+For older adults, table B16007 (same survey) counts 1,218,401 Hoosiers age 65 and over. 1,154,667
+of them speak only English. 27,810 speak Spanish, 21,651 speak "other Indo-European languages",
+10,487 speak "Asian and Pacific Island languages", and 3,786 speak other languages [L4]. That
+table only has these four broad groups, so it can't rank single languages for seniors.
+
+### What the Census can't show: Burmese and Chin in Indianapolis
+
+The ACS doesn't list Burmese or any Chin language by name. They are inside "Other languages of
+Asia" (23,308 speakers in Indiana). Local sources fill the gap:
+
+- The *Encyclopedia of Indianapolis* says "Indiana is home to the greatest number of Burmese
+  refugees in the United States", that "by 2020, Exodus had placed almost 20,000 Burmese in
+  Indianapolis", that "the Chin make up 75 percent" of them, and that "most are in Perry Township
+  and Southport" [L5].
+- *Indianapolis Monthly* (December 12, 2020) says "almost 20,000 Chin live on the south side" [L6].
+- *Chinland Guardian* (January 30, 2013) reported that the Burmese American Community Institute
+  (BACI), "founded in 2011", opened a center at the Perry Township Government Center, and that
+  Indianapolis was then "home to approximately 9,000 Chin refugees" [L7].
+
+These counts come from refugee placements and reporting, not from the Census, and we couldn't
+confirm a current total. We also couldn't confirm how many of these Hoosiers speak Hakha Chin
+in particular, as opposed to other Chin languages such as Falam, Tedim, or Zomi.
+
+### Pennsylvania Dutch (the Amish)
+
+The Census puts Pennsylvania Dutch in one group with Yiddish and other West Germanic languages
+(37,403 speakers in Indiana). The Young Center for Anabaptist and Pietist Studies estimates
+29,180 Amish in the Elkhart/LaGrange Counties settlement and 10,855 in the Adams County
+settlement in 2024 [L8]. We couldn't confirm how many of them speak Pennsylvania Dutch at home.
+
+### The 8 interface languages we chose
+
+English and Spanish had to be on the list, and so did one right-to-left language. Our first draft
+list was English, Spanish, Arabic, Burmese, Simplified Chinese, Vietnamese, French, and German. The
+data agreed with seven of them and changed one.
+
+| Code | Language | Why |
+|---|---|---|
+| `en` | English | Most Hoosiers speak it. It's the default. |
+| `es` | Español (Spanish) | The largest by far: 161,812 LEP speakers. |
+| `zh-Hans` | 中文（简体）(Simplified Chinese) | Largest LEP group after Spanish: 13,715. |
+| `my` | မြန်မာ (Burmese) | Census group 12,558 LEP, and about 20,000 Burmese refugees in Indianapolis [L5]. Burmese is Myanmar's official language. We couldn't confirm how many Chin Hoosiers read it. |
+| `ht` | Kreyòl ayisyen (Haitian Creole) | 11,004 LEP, ahead of French (3,674). This replaces French from the draft. |
+| `de` | Deutsch (German) | 40,333 speakers and 8,057 LEP, plus the West Germanic group above. |
+| `ar` | العربية (Arabic) | Our right-to-left language. 4,402 LEP (±1,795). |
+| `vi` | Tiếng Việt (Vietnamese) | 4,228 LEP (±1,421). |
+
+Vietnamese, Korean (4,458), Punjabi (4,609), and French (3,674) are close together, and their
+margins of error overlap, so the data can't tell them apart. We kept Vietnamese from the draft
+list. Korean, Punjabi, French, Hindi, Telugu, Tagalog, and the others are on the spoken-language
+list, so they still count for matching.
+
+Hakha Chin is on the spoken-language list only. Google Translate added
+Hakha Chin in June 2024 [L9]. Machine translation for it is new, and we have no Chin speaker to
+check a translated interface. We won't ship a Hakha Chin interface we can't check. A senior can
+still list Hakha Chin as a language they speak, so they can be paired with a companion who speaks
+it. Pennsylvania Dutch is spoken-only for the same reason.
+
+Every interface language other than English is machine-translated. Each catalog file says so at
+the top and needs a native speaker to check it before real use.
+
 ---
 
 ## Sources
@@ -316,8 +416,33 @@ All checked November 3, 2026.
 - **[S20]** State of Indiana, "Indiana Time Zone Information" (12 counties on Central time; daylight
   saving time rules). https://faqs.in.gov/hc/en-us/articles/115005225448-Indiana-Time-Zone-Information
 
+### Languages (section 6), checked November 4, 2026
+
+- **[L1]** U.S. Census Bureau, American Community Survey 2024 1-year estimates, table B16001,
+  "Language Spoken at Home by Ability to Speak English for the Population 5 Years and Over",
+  Indiana. https://data.census.gov/table/ACSDT1Y2024.B16001?g=040XX00US18
+- **[L2]** U.S. Census Bureau, ACS 2024 1-year, table C16001, "Language Spoken at Home for the
+  Population 5 Years and Over", Indiana. https://data.census.gov/table/ACSDT1Y2024.C16001?g=040XX00US18
+- **[L3]** Census Reporter, the same tables (release "ACS 2024 1-year"), which is where we read the
+  numbers. https://censusreporter.org/data/table/?table=B16001&geo_ids=04000US18 (API:
+  https://api.censusreporter.org/1.0/data/show/latest?table_ids=B16001,C16001&geo_ids=04000US18)
+- **[L4]** U.S. Census Bureau, ACS 2024 1-year, table B16007, "Age by Language Spoken at Home for the
+  Population 5 Years and Over", Indiana. https://censusreporter.org/data/table/?table=B16007&geo_ids=04000US18
+- **[L5]** Martinez-Legrand, N., and Verderame, J. A. "Burmese." *Encyclopedia of Indianapolis*,
+  2021 (revised July 2021). https://indyencyclopedia.org/burmese/
+- **[L6]** Salaz, S., and Raymer, S. "Welcome to Chindianapolis." *Indianapolis Monthly*, December 12,
+  2020. https://www.indianapolismonthly.com/arts-and-culture/welcome-to-chindianapolis/
+- **[L7]** "BACI celebrates opening of new center in Indianapolis." *Chinland Guardian*, January 30,
+  2013. https://www.chinlandguardian.com/?p=3687
+- **[L8]** Young Center for Anabaptist and Pietist Studies, Elizabethtown College, "Twelve Largest
+  Settlements, 2024." https://groups.etown.edu/amishstudies/twelve-largest-settlements-2024/
+- **[L9]** Google Translate Help, "What's new in Google Translate: More than 100 new languages" (Hakha
+  Chin is on the list, June 2024). https://support.google.com/translate/answer/15139004
+
 ### Checked and left out
 
+- **A Census count for Burmese or Chin.** The ACS puts both inside "Other languages of Asia", so the
+  Burmese and Chin numbers in section 6 come from local sources, not the Census.
 - **U.S. Census QuickFacts and the Census data API.** QuickFacts blocked automated access, and the
   API now requires a key, so we couldn't confirm Hamilton County's 65+ living-alone figure there. We
   used STATS Indiana for population counts, and the State of Aging report for living alone.

@@ -24,6 +24,8 @@ import { registerDesignPages } from './views/pages/extra.js';
 import { registerSite } from './views/site/index.js'; // [v2] public website
 import { checkTown, townFromQuery, rowsInTown } from './towns/index.js'; // [towns]
 import { townFilter } from './towns/views.js'; // [towns]
+import { registerI18n } from './i18n/routes.js'; // [v2 i18n] POST /prefs/language
+import { readLanguages } from './i18n/fields.js'; // [v2 i18n] spoken languages on profiles
 import { registerRoles, withoutPrivateNotes, seniorsVisibleTo, callsVisibleTo, seesEverything, isFamilyOrSenior, viewerFromCookie } from './roles/index.js'; // [roles]
 
 // Short messages shown after a form is submitted (?msg=...).
@@ -91,6 +93,16 @@ const isInvisible = (s) => !s.replace(BLANK_LOOKING, '');
 // Whole numbers typed as plain digits only: "80", not "0x50", "8e1", or "80.0".
 const wholeNumber = (s) => (/^\d{1,4}$/.test(s) ? Number(s) : NaN);
 
+// [v2 i18n] Spoken languages and translate help (src/i18n/fields.js). A form
+// without the language fields (an older page) keeps what is saved.
+function addLanguages(body, values, errors) {
+  const spoken = readLanguages(body);
+  if (!spoken.present) return;
+  values.languages = spoken.languages;
+  values.translateHelp = spoken.translateHelp;
+  Object.assign(errors, spoken.errors);
+}
+
 function validateSenior(body) {
   const errors = {};
   const values = {
@@ -123,6 +135,7 @@ function validateSenior(body) {
   if (chars(values.caregiver.name) > 80) errors.caregiverName = 'Name must be 80 characters or fewer.';
   if (chars(values.caregiver.relationship) > 80) errors.caregiverRelationship = 'Relationship must be 80 characters or fewer.';
   checkTown(body, values, errors); // [towns] only towns on this deployment's list
+  addLanguages(body, values, errors); // [v2 i18n]
   return { values, errors };
 }
 
@@ -146,6 +159,7 @@ function validateVolunteer(body) {
     errors.maxSeniors = 'Choose between 1 and 5 seniors.';
   }
   checkTown(body, values, errors); // [towns] only towns on this deployment's list
+  addLanguages(body, values, errors); // [v2 i18n]
   return { values, errors };
 }
 
@@ -753,6 +767,7 @@ export function createApp({ store, sparks, now = () => new Date() }) {
   registerIndiana(router, ctx);
   registerDesignPages(router, ctx);
   registerSite(router, ctx); // [v2] public website: /, /how-it-works, ...
+  registerI18n(router, ctx); // [v2 i18n] POST /prefs/language
   registerRoles(router, ctx); // [roles] must be last: adds /sign-in and checks every route on the server
 
   return createHandler({ router, renderError });

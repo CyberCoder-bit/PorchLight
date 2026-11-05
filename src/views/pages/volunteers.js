@@ -9,6 +9,8 @@ import { COMMUNITY } from '../../community.js';
 import { misfitNote } from './seniors.js';
 import { townLabel } from '../../towns/index.js'; // [towns]
 import { townSelectField } from '../../towns/views.js'; // [towns]
+import { languageFieldset, formatLanguages } from '../../i18n/fields.js'; // [v2 i18n]
+import { t } from '../../i18n/index.js'; // [v2 i18n]
 
 export function volunteersListPage({ rows, townFilter = '', townName = null }) { // [towns] townFilter, townName
   return html`
@@ -81,6 +83,8 @@ export function volunteerProfilePage({ volunteer, assigned }) {
       ${slotList(volunteer.availability)}
       <h3>Ways to connect</h3>
       ${chips(volunteer.contactMethods, methodLabel)}
+      <h3>${t('lang.profile.languages')}</h3>
+      <p>${formatLanguages(volunteer)}${volunteer.translateHelp ? ` · ${t('lang.profile.translateHelp')}` : ''}</p>
     </section>`;
 }
 
@@ -100,6 +104,7 @@ export function volunteerFormPage({ volunteer = {}, errors = {}, isNew }) {
       ${interestCheckboxes(volunteer.interests || [], errors.interests)}
       ${availabilityFieldset(volunteer.availability || [], errors.availability)}
       ${methodCheckboxes(volunteer.contactMethods || [], errors.contactMethods)}
+      ${languageFieldset({ values: volunteer, errors, legend: t('lang.fields.legendYou') })}
       ${selectField({ name: 'maxSeniors', label: 'How many seniors can you stay in touch with?', options: capacity, value: volunteer.maxSeniors || 1, error: errors.maxSeniors })}
       <div class="form-actions">
         <button type="submit" class="button">${isNew ? 'Add volunteer' : 'Save changes'}</button>
