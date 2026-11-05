@@ -14,7 +14,7 @@ export function volunteersListPage({ rows, townFilter = '', townName = null }) {
   return html`
     <div class="page-head">
       <h1>Volunteers</h1>
-      <a class="button" href="/volunteers/new">Add a volunteer</a>
+      <a class="button" href="/admin/volunteers/new">Add a volunteer</a>
     </div>
     <p class="lead">PorchLight companions: students, retirees, and neighbors who call or visit a senior every week.</p>
     ${townFilter}
@@ -35,15 +35,15 @@ export function volunteersListPage({ rows, townFilter = '', townName = null }) {
       )}
     </ul>`
       : townName // [towns]
-        ? emptyState(html`<p><strong>No volunteers in ${townName}.</strong> <a href="/volunteers">Show all towns</a></p>`)
+        ? emptyState(html`<p><strong>No volunteers in ${townName}.</strong> <a href="/admin/volunteers">Show all towns</a></p>`)
         : emptyState(html`<p><strong>No volunteers yet.</strong> Add the first volunteer so seniors can be matched with a companion.</p>
-          <p><a href="/volunteers/new">Add a volunteer</a></p>`)}`;
+          <p><a href="/admin/volunteers/new">Add a volunteer</a></p>`)}`;
 }
 
 export function volunteerProfilePage({ volunteer, assigned }) {
   const first = volunteer.name.split(' ')[0];
   return html`
-    ${backLink('/volunteers', 'all volunteers')}
+    ${backLink('/admin/volunteers', 'all volunteers')}
     <div class="page-head">
       <h1>${volunteer.name}</h1>
       <div class="page-actions">
@@ -70,7 +70,7 @@ export function volunteerProfilePage({ volunteer, assigned }) {
               </p>
             </li>`
           )}</ul>`
-        : emptyState(html`<p><strong>No seniors yet.</strong> A coordinator can pair ${first} with someone on the <a href="/match">Match page</a>.</p>`)}
+        : emptyState(html`<p><strong>No seniors yet.</strong> A coordinator can pair ${first} with someone on the <a href="/admin/match">Match page</a>.</p>`)}
     </section>
 
     <section class="panel" aria-labelledby="vol-about-heading">
@@ -85,11 +85,11 @@ export function volunteerProfilePage({ volunteer, assigned }) {
 }
 
 export function volunteerFormPage({ volunteer = {}, errors = {}, isNew }) {
-  const action = isNew ? '/volunteers' : `/volunteers/${volunteer.id}`;
+  const action = isNew ? '/admin/volunteers' : `/volunteers/${volunteer.id}`;
   const capacity = [1, 2, 3, 4, 5].map((n) => ({ value: n, label: `${n} senior${n === 1 ? '' : 's'}` }));
   const first = (volunteer.name || '').split(' ')[0];
   return html`
-    ${isNew ? backLink('/volunteers', 'all volunteers') : backLink(`/volunteers/${volunteer.id}`, `${first || 'this volunteer'}'s profile`)}
+    ${isNew ? backLink('/admin/volunteers', 'all volunteers') : backLink(`/volunteers/${volunteer.id}`, `${first || 'this volunteer'}'s profile`)}
     <h1>${isNew ? 'Add a volunteer' : `Edit ${volunteer.name}`}</h1>
     <p class="lead">${isNew ? 'Sign up to be a PorchLight companion.' : 'Update this volunteer profile. Changes take effect right away.'}</p>
     ${errorSummary(errors)}
@@ -103,7 +103,7 @@ export function volunteerFormPage({ volunteer = {}, errors = {}, isNew }) {
       ${selectField({ name: 'maxSeniors', label: 'How many seniors can you stay in touch with?', options: capacity, value: volunteer.maxSeniors || 1, error: errors.maxSeniors })}
       <div class="form-actions">
         <button type="submit" class="button">${isNew ? 'Add volunteer' : 'Save changes'}</button>
-        <a class="button button-secondary" href="${isNew ? '/volunteers' : `/volunteers/${volunteer.id}`}">Cancel</a>
+        <a class="button button-secondary" href="${isNew ? '/admin/volunteers' : `/volunteers/${volunteer.id}`}">Cancel</a>
       </div>
     </form>`;
 }

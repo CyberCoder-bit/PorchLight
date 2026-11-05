@@ -78,14 +78,14 @@ export function suggestNextStep(a, { match, volunteer, missed, hadCompanion, thr
           kind: 'new_companion',
           title: 'Find a new companion',
           detail: `${name}'s last match has ended. Choose someone new. Past calls stay in the history.`,
-          href: `/match?seniorId=${id}`,
+          href: `/admin/match?seniorId=${id}`,
           linkText: `Find a new companion for ${name}`,
         }
       : {
           kind: 'first_companion',
           title: 'Find a first companion',
           detail: `${name} hasn't been matched with a volunteer yet.`,
-          href: `/match?seniorId=${id}`,
+          href: `/admin/match?seniorId=${id}`,
           linkText: `Find a companion for ${name}`,
         };
   }

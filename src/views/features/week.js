@@ -51,7 +51,7 @@ export function myWeekPage(week, { busyText = 'Working…' } = {}) {
         <section class="panel" aria-labelledby="none-heading">
           <h2 id="none-heading">No senior yet</h2>
           <p>${firstName(volunteer)} isn't matched with a senior yet. A coordinator can make a match on the Match page.</p>
-          <p class="actions"><a class="button" href="/match">Go to the Match page</a></p>
+          <p class="actions"><a class="button" href="/admin/match">Go to the Match page</a></p>
         </section>`
       : unplanned.length
         ? html`

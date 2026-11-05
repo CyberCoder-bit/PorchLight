@@ -1,11 +1,16 @@
-// WHO MAY OPEN WHAT, when someone uses the demo sign-in.
+// WHO MAY OPEN WHAT (v2, real accounts).
 //
 // One table, checked on the SERVER before every route handler runs (see
-// guardRoutes in ./index.js). Hiding links is only a courtesy on top of this.
+// guard() in ./index.js). Hiding links is only a courtesy on top of this.
 //
-//   - No cookie (demo mode) and the coordinator: every route, as before.
-//   - Everyone else: only the rows below. Anything else gets a friendly
-//     "This page is for coordinators" page with status 403.
+//   - An admin (viewer.kind 'coordinator'): every route.
+//   - Everyone else, by role: only the rows below that list their role.
+//       'public'    signed out
+//       'senior', 'volunteer', 'family'
+//       'pending'   a volunteer not approved yet, or a family member whose
+//                   link to a senior is not approved yet
+//   - Signed out and not allowed: 303 to /sign-in?next=<the page>.
+//   - Signed in and not allowed: the friendly "not for you" page, status 403.
 //
 // Paths use the router's :param syntax; a trailing * matches the rest of the
 // path. `own` is an extra test on the person and the request, e.g. "is this
@@ -16,7 +21,21 @@
 import { SITE_RULES } from '../views/site/access.js'; // [v2] public website rows
 import { TRANSLATE_RULES } from '../translate/access.js'; // [v2] messages and translate rows
 
-const SIGNED_IN = ['volunteer', 'family', 'senior'];
+const MEMBERS = ['senior', 'volunteer', 'family'];
+const SIGNED_IN = [...MEMBERS, 'pending'];
+export const EVERYONE = ['public', ...SIGNED_IN];
+
+// The old coordinator addresses (before /admin). Their handlers send an admin
+// to the new page and everyone else to the sign-in page (see src/app.js).
+export const OLD_ADMIN_PATHS = Object.freeze({
+  '/seniors': '/admin/seniors',
+  '/seniors/new': '/admin/seniors/new',
+  '/volunteers': '/admin/volunteers',
+  '/volunteers/new': '/admin/volunteers/new',
+  '/match': '/admin/match',
+  '/attention': '/admin/attention',
+  '/demo/reset': '/admin/demo/reset',
+});
 
 // ----- ownership tests: ({ viewer, params, body, store }) => boolean -----
 const isSelf = ({ viewer, params }) => params.id === viewer.id;
@@ -35,22 +54,31 @@ const postsToMyPair = ({ viewer, body, store }) => {
 };
 
 export const ACCESS_RULES = Object.freeze([
-  // ----- every signed-in person -----
-  { method: 'GET', path: '/', roles: SIGNED_IN, note: "sends you to your own home page" },
-  { method: 'GET', path: '/sign-in', roles: SIGNED_IN },
-  { method: 'POST', path: '/sign-in', roles: SIGNED_IN },
+  // ----- everyone, signed in or not -----
+  { method: 'GET', path: '/', roles: EVERYONE, note: 'the public website; signed in, it sends you to your own home page' },
+  { method: 'GET', path: '/sign-in', roles: EVERYONE },
+  { method: 'POST', path: '/sign-in', roles: EVERYONE },
+  { method: 'POST', path: '/sign-in/demo', roles: EVERYONE },
+  { method: 'GET', path: '/sign-up', roles: EVERYONE },
+  { method: '*', path: '/sign-up/*', roles: EVERYONE },
+  { method: 'GET', path: '/help', roles: EVERYONE },
+  { method: 'GET', path: '/about-ai', roles: EVERYONE },
+  { method: 'GET', path: '/tour', roles: EVERYONE },
+  { method: 'GET', path: '/healthz', roles: EVERYONE },
+  { method: '*', path: '/prefs', roles: EVERYONE }, // text size and other display settings
+  { method: '*', path: '/prefs/*', roles: EVERYONE },
+  ...Object.keys(OLD_ADMIN_PATHS).map((path) => ({ method: 'GET', path, roles: EVERYONE, note: 'old address: admin to /admin, others to /sign-in' })),
+
+  // ----- every signed-in person, approved or not -----
   { method: 'POST', path: '/sign-out', roles: SIGNED_IN },
-  { method: 'GET', path: '/help', roles: SIGNED_IN },
-  { method: 'GET', path: '/about-ai', roles: SIGNED_IN },
-  { method: 'GET', path: '/tour', roles: SIGNED_IN }, // the judges' tour signs in as family at step 7
-  { method: 'GET', path: '/healthz', roles: SIGNED_IN },
-  { method: '*', path: '/prefs', roles: SIGNED_IN }, // text size and other display settings
-  { method: '*', path: '/prefs/*', roles: SIGNED_IN },
+  { method: 'GET', path: '/home', roles: SIGNED_IN, note: 'your home page, or "waiting for approval"' },
+  { method: 'GET', path: '/account', roles: SIGNED_IN },
+  { method: 'POST', path: '/account', roles: SIGNED_IN },
 
   // ----- volunteer: my pages, my seniors, my calls -----
   { method: 'GET', path: '/volunteers/:id', roles: ['volunteer'], own: isSelf },
   { method: 'GET', path: '/volunteers/:id/week', roles: ['volunteer'], own: isSelf },
-  { method: 'GET', path: '/seniors/:id', roles: ['volunteer'], own: isMySenior },
+  { method: 'GET', path: '/seniors/:id', roles: ['volunteer'], own: isMySenior, note: 'first name, interests, languages, times, sparks' },
   { method: 'POST', path: '/seniors/:id/sparks', roles: ['volunteer'], own: isMySenior },
   { method: 'GET', path: '/contacts', roles: ['volunteer'], note: 'only my pairs and calls' },
   { method: 'POST', path: '/contacts', roles: ['volunteer'], own: postsToMyPair },
@@ -58,7 +86,7 @@ export const ACCESS_RULES = Object.freeze([
   { method: 'POST', path: '/contacts/:id/missed', roles: ['volunteer'], own: isMyCall },
   { method: 'GET', path: '/contacts/:id/calendar.ics', roles: ['volunteer'], own: isMyCall },
 
-  // ----- family member of senior S (viewer.id is S) -----
+  // ----- family member of senior S (viewer.id is S, link approved) -----
   { method: 'GET', path: '/dashboard', roles: ['family'], note: 'only S' },
   { method: 'GET', path: '/seniors/:id/summary', roles: ['family'], own: isSelf },
 
@@ -103,14 +131,22 @@ function paramsFor(rule, pathname) {
   return params;
 }
 
+// Which rows apply: 'admin', 'public', 'pending', or the person's kind.
+export function roleOf(viewer) {
+  if (!viewer) return 'public';
+  if (viewer.kind === 'coordinator') return 'admin';
+  return viewer.pending ? 'pending' : viewer.kind;
+}
+
 // May `viewer` make this request? `body` is the parsed form for a real POST,
 // or null when checking a link or form on a page.
 export function can(viewer, method, pathname, { store, body = null } = {}) {
-  if (!viewer || viewer.kind === 'coordinator') return true;
+  const role = roleOf(viewer);
+  if (role === 'admin') return true;
   const verb = method === 'HEAD' ? 'GET' : method; // HEAD asks for the same page as GET
   return COMPILED.some((rule) => {
     if (rule.method !== '*' && rule.method !== verb) return false;
-    if (!rule.roles.includes(viewer.kind)) return false;
+    if (!rule.roles.includes(role)) return false;
     const params = paramsFor(rule, pathname);
     if (!params) return false;
     return rule.own ? rule.own({ viewer, params, body, store }) : true;

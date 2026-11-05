@@ -24,7 +24,15 @@ import { registerDesignPages } from './views/pages/extra.js';
 import { registerSite } from './views/site/index.js'; // [v2] public website
 import { checkTown, townFromQuery, rowsInTown } from './towns/index.js'; // [towns]
 import { townFilter } from './towns/views.js'; // [towns]
-import { registerRoles, withoutPrivateNotes, seniorsVisibleTo, callsVisibleTo, seesEverything, isFamilyOrSenior, viewerFromCookie } from './roles/index.js'; // [roles]
+import {
+  registerRoles, withoutPrivateNotes, seniorsVisibleTo, callsVisibleTo, seesEverything, isFamilyOrSenior, viewerForRequest,
+  OLD_ADMIN_PATHS, seniorForVolunteer, volunteerFirstNameOnly,
+} from './roles/index.js'; // [roles]
+import { createSession, sessionCookie } from './auth/session.js'; // [v2 accounts]
+import { SEED_ADMIN_EMAIL } from './auth/routes.js'; // [v2 accounts]
+
+// [v2 accounts] Only approved volunteers can be matched.
+const isActiveVolunteer = (v) => (v.status || 'active') === 'active';
 
 // Short messages shown after a form is submitted (?msg=...).
 const FLASH = {
@@ -213,9 +221,9 @@ export function createApp({ store, sparks, now = () => new Date() }) {
     res.html(String(layout({ title, active, body, req, ctx: { sparks: shownSparks() }, flash: flash ?? flashFrom(req), wide, noindex })), status);
   };
 
-  const renderError = (req, res, status, message) => {
+  const renderError = async (req, res, status, message) => {
     // [roles] Pages that never reached a route (404, 413) still show the signed-in person's own header.
-    if (req.viewer === undefined) req.viewer = req.cookies.viewer ? viewerFromCookie(req.cookies.viewer, store) : null;
+    if (req.viewer === undefined) req.viewer = await viewerForRequest(req, res, store);
     return renderErrorPage(req, res, status, message);
   };
   const renderErrorPage = (req, res, status, message) =>
@@ -263,10 +271,21 @@ export function createApp({ store, sparks, now = () => new Date() }) {
       ).length,
       flagged: summary.filter(needsAttention).length,
     };
-    const attention = summary.filter(needsAttention); // the same list as /attention
+    const attention = summary.filter(needsAttention); // the same list as /admin/attention
     render(req, res, { title: 'Home', active: 'home', body: homePage({ stats, attention }) });
   };
   router.get('/admin', coordinatorHome);
+
+  // [v2] The old coordinator addresses: an admin goes to the new page (with
+  // the same ?query), everyone else to the sign-in page.
+  for (const [oldPath, newPath] of Object.entries(OLD_ADMIN_PATHS)) {
+    router.get(oldPath, (req, res) => {
+      const query = new URLSearchParams(req.query).toString();
+      const target = `${newPath}${query ? `?${query}` : ''}`;
+      if (seesEverything(req.viewer)) return res.redirect(target);
+      res.redirect(req.viewer ? '/sign-in' : `/sign-in?next=${encodeURIComponent(target)}`);
+    });
+  }
 
   router.get('/about-ai', (req, res) => {
     render(req, res, {
@@ -278,7 +297,7 @@ export function createApp({ store, sparks, now = () => new Date() }) {
   router.get('/healthz', (req, res) => res.json({ ok: true, sparkMode: sparks.modeInfo.effective }));
 
   // ----- seniors -----
-  router.get('/seniors', (req, res) => {
+  router.get('/admin/seniors', (req, res) => {
     const town = townFromQuery(req.query); // [towns]
     const all = [...store.seniors]; // [towns]
     const rows = rowsInTown(all, town) // [towns]
@@ -287,15 +306,15 @@ export function createApp({ store, sparks, now = () => new Date() }) {
         const m = store.activeMatchForSenior(senior.id);
         return { senior, assessment: assess(senior), volunteer: m ? store.volunteer(m.volunteerId) : null };
       });
-    const filter = townFilter({ action: '/seniors', town, asked: req.query.town, shown: rows.length, total: all.length }); // [towns]
+    const filter = townFilter({ action: '/admin/seniors', town, asked: req.query.town, shown: rows.length, total: all.length }); // [towns]
     render(req, res, { title: 'Seniors', active: 'seniors', body: seniorsListPage({ rows, townFilter: filter, townName: town }) }); // [towns]
   });
 
-  router.get('/seniors/new', (req, res) => {
+  router.get('/admin/seniors/new', (req, res) => {
     render(req, res, { title: 'Add a senior', active: 'seniors', body: seniorFormPage({ isNew: true }) });
   });
 
-  router.post('/seniors', (req, res) => {
+  router.post('/admin/seniors', (req, res) => {
     const { values, errors } = validateSenior(req.body);
     if (Object.keys(errors).length) {
       return render(req, res, {
@@ -321,14 +340,20 @@ export function createApp({ store, sparks, now = () => new Date() }) {
       .filter((c) => c.status === 'completed' || c.status === 'missed')
       .sort((a, b) => new Date(b.completedAt || b.scheduledFor) - new Date(a.completedAt || a.scheduledFor))
       .slice(0, 5);
+    // [v2] A volunteer gets only what they need about their senior (first
+    // name, interests, languages, times); family and the senior get only the
+    // companion's first name.
+    const kind = req.viewer?.kind;
+    const shownSenior = kind === 'volunteer' ? seniorForVolunteer(senior) : senior;
+    const companion = match ? store.volunteer(match.volunteerId) : null;
     render(req, res, {
-      title: senior.name,
+      title: shownSenior.name,
       active: 'seniors',
       wide: true,
       body: seniorProfilePage({
-        senior,
+        senior: shownSenior,
         assessment: assess(senior),
-        volunteer: match ? store.volunteer(match.volunteerId) : null,
+        volunteer: isFamilyOrSenior(req.viewer) ? volunteerFirstNameOnly(companion) : companion,
         match,
         upcoming,
         recent: withoutPrivateNotes(req.viewer, recent), // [roles] family and seniors never see call notes
@@ -395,7 +420,7 @@ export function createApp({ store, sparks, now = () => new Date() }) {
   });
 
   // ----- volunteers -----
-  router.get('/volunteers', (req, res) => {
+  router.get('/admin/volunteers', (req, res) => {
     const town = townFromQuery(req.query); // [towns]
     const rows = rowsInTown([...store.volunteers], town) // [towns]
       .sort((a, b) => a.name.localeCompare(b.name))
@@ -403,15 +428,15 @@ export function createApp({ store, sparks, now = () => new Date() }) {
         volunteer,
         seniors: store.activeMatchesForVolunteer(volunteer.id).map((m) => store.senior(m.seniorId)).filter(Boolean),
       }));
-    const filter = townFilter({ action: '/volunteers', town, asked: req.query.town, shown: rows.length, total: store.volunteers.length, noun: ['volunteer', 'volunteers'], label: 'Show volunteers in' }); // [towns]
+    const filter = townFilter({ action: '/admin/volunteers', town, asked: req.query.town, shown: rows.length, total: store.volunteers.length, noun: ['volunteer', 'volunteers'], label: 'Show volunteers in' }); // [towns]
     render(req, res, { title: 'Volunteers', active: 'volunteers', body: volunteersListPage({ rows, townFilter: filter, townName: town }) }); // [towns]
   });
 
-  router.get('/volunteers/new', (req, res) => {
+  router.get('/admin/volunteers/new', (req, res) => {
     render(req, res, { title: 'Add a volunteer', active: 'volunteers', body: volunteerFormPage({ isNew: true }) });
   });
 
-  router.post('/volunteers', (req, res) => {
+  router.post('/admin/volunteers', (req, res) => {
     const { values, errors } = validateVolunteer(req.body);
     if (Object.keys(errors).length) {
       return render(req, res, {
@@ -466,11 +491,11 @@ export function createApp({ store, sparks, now = () => new Date() }) {
   });
 
   // ----- matching -----
-  router.get('/match', (req, res) => {
+  router.get('/admin/match', (req, res) => {
     if (req.query.seniorId) {
       const senior = seniorOr404(req.query.seniorId);
       const currentMatch = store.activeMatchForSenior(senior.id);
-      const ranking = rankVolunteers(senior, store.volunteers, store.matches);
+      const ranking = rankVolunteers(senior, store.volunteers.filter(isActiveVolunteer), store.matches); // [v2] pending volunteers can't be matched
       return render(req, res, {
         title: `Match ${senior.name}`, active: 'match',
         body: matchSeniorPage({
@@ -489,10 +514,11 @@ export function createApp({ store, sparks, now = () => new Date() }) {
     render(req, res, { title: 'Match', active: 'match', body: matchIndexPage({ unmatched, matched }) });
   });
 
-  router.post('/matches', (req, res) => {
+  router.post('/admin/matches', (req, res) => {
     const senior = seniorOr404(str(req.body.seniorId));
     const volunteer = volunteerOr404(str(req.body.volunteerId));
     if (store.activeMatchForSenior(senior.id)) throw httpError(409, `${senior.name} already has a companion. End that match first.`);
+    if (!isActiveVolunteer(volunteer)) throw httpError(409, `${volunteer.name} is not approved yet, so they can't be matched.`); // [v2]
     // Re-check the rules on the server. Never trust that the form was up to date.
     const result = rankVolunteers(senior, [volunteer], store.matches);
     if (!result.eligible.length) {
@@ -511,7 +537,7 @@ export function createApp({ store, sparks, now = () => new Date() }) {
     res.redirect(`/seniors/${senior.id}?msg=matched`);
   });
 
-  router.post('/matches/:id/end', (req, res) => {
+  router.post('/admin/matches/:id/end', (req, res) => {
     const match = store.matches.find((m) => m.id === req.params.id && m.active);
     if (!match) throw httpError(404, 'We could not find that match.');
     const nowDate = now();
@@ -528,7 +554,7 @@ export function createApp({ store, sparks, now = () => new Date() }) {
       }
     }
     store.save();
-    res.redirect(`/match?seniorId=${match.seniorId}&msg=match_ended`);
+    res.redirect(`/admin/match?seniorId=${match.seniorId}&msg=match_ended`);
   });
 
   // ----- calls & visits -----
@@ -691,18 +717,20 @@ export function createApp({ store, sparks, now = () => new Date() }) {
       flash: Object.keys(errors).length ? false : undefined,
       body: dashboardPage({
         summary, // [towns] [roles]
-        townFilter: seesEverything(req.viewer) ? townFilter({ action: '/dashboard', town, asked: req.query.town, shown: summary.length, total: everyone.length }) : '', // [towns]
+        townFilter: seesEverything(req.viewer) ? townFilter({ action: '/admin/dashboard', town, asked: req.query.town, shown: summary.length, total: everyone.length }) : '', // [towns]
         townName: town, // [towns]
         threshold: store.settings.riskThresholdDays,
-        volunteersById: new Map(store.volunteers.map((v) => [v.id, v])),
+        // [v2] family members see only the companion's first name
+        volunteersById: new Map(store.volunteers.map((v) => [v.id, seesEverything(req.viewer) ? v : volunteerFirstNameOnly(v)])),
         errors,
         thresholdInput,
       }),
     });
   };
-  router.get('/dashboard', (req, res) => dashboardView(req, res));
+  router.get('/dashboard', (req, res) => dashboardView(req, res)); // a family member's own senior (an admin sees all)
+  router.get('/admin/dashboard', (req, res) => dashboardView(req, res));
 
-  router.post('/settings', (req, res) => {
+  router.post('/admin/settings', (req, res) => {
     const raw = str(req.body.riskThresholdDays);
     const n = wholeNumber(raw);
     if (!Number.isInteger(n) || n < 1 || n > 60) {
@@ -714,7 +742,7 @@ export function createApp({ store, sparks, now = () => new Date() }) {
     }
     store.settings.riskThresholdDays = n;
     store.save();
-    res.redirect('/dashboard?msg=threshold');
+    res.redirect('/admin/dashboard?msg=threshold');
   });
 
   // ----- preferences & demo tools -----
@@ -730,13 +758,17 @@ export function createApp({ store, sparks, now = () => new Date() }) {
     });
   }
 
-  router.get('/demo/reset', (req, res) => {
+  router.get('/admin/demo/reset', (req, res) => {
     render(req, res, { title: 'Reset demo data', body: resetConfirmPage() });
   });
 
-  router.post('/demo/reset', (req, res) => {
+  // [v2] A reset re-seeds everything, which wipes sign-ups and sessions. The
+  // admin who pressed it stays signed in, with a new session for the seed admin.
+  router.post('/admin/demo/reset', async (req, res) => {
     store.reset(now());
-    res.redirect('/dashboard?msg=reset');
+    const admin = store.userByEmail(SEED_ADMIN_EMAIL);
+    if (admin) sessionCookie(res, req, await createSession(store, admin.id));
+    res.redirect('/admin/dashboard?msg=reset');
   });
 
   // ----- add-on modules -----
@@ -745,6 +777,7 @@ export function createApp({ store, sparks, now = () => new Date() }) {
   const ctx = {
     store, sparks, now, render, assess, seniorOr404, volunteerOr404, withPeople,
     httpError, str, toArray, safeBack,
+    validateSenior, validateVolunteer, chars, isInvisible, // [v2 accounts] sign-up reuses the same checks
     flashMessages: FLASH, // add keys: ctx.flashMessages.my_key = 'Text'
     warnMessages: WARN,
     coordinatorHome, // [v2] temporary: the placeholder / uses it until the public home exists

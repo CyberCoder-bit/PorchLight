@@ -21,19 +21,19 @@ export function registerFeatures(router, ctx) {
   const { store, now, render } = ctx;
 
   // ----- Needs attention (coordinator queue) -----
-  router.get('/attention', (req, res) => {
+  router.get('/admin/attention', (req, res) => {
     const queue = buildAttentionQueue(store, now());
     // [towns] ?town=Westfield shows only that town's seniors; unknown towns are ignored.
     const town = townFromQuery(req.query);
     const items = rowsInTown(queue.items, town, (i) => i.senior);
     const filtered = { ...queue, items, comingUp: rowsInTown(queue.comingUp, town, (a) => a.senior), townName: town };
-    filtered.townFilter = townFilter({ action: '/attention', town, asked: req.query.town, shown: items.length, total: queue.items.length, noun: ['senior on the list', 'seniors on the list'] });
+    filtered.townFilter = townFilter({ action: '/admin/attention', town, asked: req.query.town, shown: items.length, total: queue.items.length, noun: ['senior on the list', 'seniors on the list'] });
     render(req, res, { title: 'Needs attention', active: 'attention', body: attentionPage(filtered) });
   });
 
   // Confirm page for ending a match. The button posts to the existing
-  // POST /matches/:id/end, which keeps all history and redirects to
-  // /match?seniorId=...&msg=match_ended.
+  // POST /admin/matches/:id/end, which keeps all history and redirects to
+  // /admin/match?seniorId=...&msg=match_ended.
   router.get('/attention/:seniorId/rematch', (req, res) => {
     const senior = ctx.seniorOr404(req.params.seniorId);
     const match = store.activeMatchForSenior(senior.id);

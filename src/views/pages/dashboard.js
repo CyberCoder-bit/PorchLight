@@ -37,7 +37,7 @@ export function dashboardPage({ summary, threshold, volunteersById, errors = {},
       <div class="tile tile-due_soon"><p class="tile-value">${counts.due_soon}</p><p class="tile-label"><span aria-hidden="true">${STATUS_INFO.due_soon.icon}</span> ${seniorWord(counts.due_soon)} to check in with soon</p></div>
       <div class="tile tile-ok"><p class="tile-value">${counts.ok}</p><p class="tile-label"><span aria-hidden="true">${STATUS_INFO.ok.icon}</span> ${seniorWord(counts.ok)} connected</p></div>
     </section>
-    <p class="status-line"><strong>Right now${townName ? ` in ${townName}` : ''}, ${attentionSentence(flagged)}</strong>${flagged.length ? html` <a href="/attention">See what to do next</a>` : ''}</p>
+    <p class="status-line"><strong>Right now${townName ? ` in ${townName}` : ''}, ${attentionSentence(flagged)}</strong>${flagged.length ? html` <a href="/admin/attention">See what to do next</a>` : ''}</p>
 
     <h2 class="section-heading">Seniors, most urgent first</h2>
     ${summary.length
@@ -45,13 +45,13 @@ export function dashboardPage({ summary, threshold, volunteersById, errors = {},
       ${summary.map((r) => seniorCard(r, volunteersById))}
     </ul>`
       : townName // [towns]
-        ? emptyState(html`<p><strong>No seniors in ${townName}.</strong> <a href="/dashboard">Show all towns</a></p>`)
+        ? emptyState(html`<p><strong>No seniors in ${townName}.</strong> <a href="/admin/dashboard">Show all towns</a></p>`)
         : emptyState(html`<p><strong>No seniors yet.</strong> Add the first senior, then match them with a companion.</p>
-          <p><a class="button" href="/seniors/new">Add a senior</a></p>`)}
+          <p><a class="button" href="/admin/seniors/new">Add a senior</a></p>`)}
 
     <section class="panel threshold-panel" aria-labelledby="threshold-heading">
       <h2 id="threshold-heading">When to raise a flag</h2>
-      <form method="post" action="/settings" class="threshold-form" novalidate>
+      <form method="post" action="/admin/settings" class="threshold-form" novalidate>
         <div class="field${errors.riskThresholdDays ? ' has-error' : ''}">
           <label for="field-riskThresholdDays">Flag a senior after this many days without a call or visit</label>
           ${errors.riskThresholdDays ? html`<p class="field-error" id="error-riskThresholdDays"><span aria-hidden="true">⚠ </span>${errors.riskThresholdDays}</p>` : ''}
@@ -107,7 +107,7 @@ function seniorCard(r, volunteersById) {
       ${weeklyChart(r.weekly, { idPrefix: `chart-${senior.id}`, name: first })}
       <p class="actions">
         ${r.status === 'needs_match'
-          ? html`<a class="button" href="/match?seniorId=${senior.id}">Find a companion for ${first}</a>`
+          ? html`<a class="button" href="/admin/match?seniorId=${senior.id}">Find a companion for ${first}</a>`
           : html`<a class="button button-secondary" href="/seniors/${senior.id}">View ${first}'s profile</a>`}
         <a class="button button-secondary" href="/seniors/${senior.id}/summary">Weekly summary<span class="visually-hidden"> for ${first}</span></a>
       </p>

@@ -27,7 +27,7 @@ export function homePage({ stats, attention }) {
       <p class="hero-fact">Why it matters: by 2040, about one in five Hoosiers will be 65 or older (<a href="https://www.incontext.indiana.edu/2024/nov-dec/article1.asp">Indiana Business Research Center</a>), and being cut off from other people carries a health risk the U.S. Surgeon General compares to smoking up to 15 cigarettes a day (<a href="https://www.hhs.gov/sites/default/files/surgeon-general-social-connection-advisory.pdf">2023 advisory</a>).</p>
       <p class="button-row">
         <a class="button" href="/tour">Take the 2-minute demo tour <span aria-hidden="true">→</span></a>
-        <a class="button button-secondary" href="/dashboard">Open the Family Dashboard</a>
+        <a class="button button-secondary" href="/admin/dashboard">Open the Family Dashboard</a>
       </p>
     </section>
 
@@ -76,15 +76,15 @@ export function homePage({ stats, attention }) {
           )}
         </ul>
         <p class="button-row">
-          <a class="button button-secondary print-url" href="/attention">Open the Needs attention list</a>
-          <a class="button button-secondary" href="/dashboard">Open the Family Dashboard</a>
+          <a class="button button-secondary print-url" href="/admin/attention">Open the Needs attention list</a>
+          <a class="button button-secondary" href="/admin/dashboard">Open the Family Dashboard</a>
         </p>
       </section>`
       : html`
       <section class="panel" aria-labelledby="attention-heading">
         <h2 id="attention-heading">Needs attention today</h2>
         ${emptyState(html`<p><strong>Nobody needs attention right now.</strong> Every senior has a companion, recent calls or visits, and no missed calls lately.</p>
-          <p><a href="/dashboard">See how everyone is doing on the Family Dashboard</a></p>`)}
+          <p><a href="/admin/dashboard">See how everyone is doing on the Family Dashboard</a></p>`)}
       </section>`}
 
     <h2 class="section-heading">Who are you?</h2>
@@ -97,17 +97,17 @@ export function homePage({ stats, attention }) {
       <li class="card role-card">
         <h3 class="card-title">I'm a volunteer</h3>
         <p>See your seniors and your week, get things to talk about, and write down your calls.</p>
-        <p><a class="button button-secondary" href="/volunteers">Go to volunteers</a></p>
+        <p><a class="button button-secondary" href="/admin/volunteers">Go to volunteers</a></p>
       </li>
       <li class="card role-card">
         <h3 class="card-title">I'm family or a caregiver</h3>
         <p>See how often your loved one is getting calls and visits.</p>
-        <p><a class="button button-secondary" href="/dashboard">Open the dashboard</a></p>
+        <p><a class="button button-secondary" href="/admin/dashboard">Open the dashboard</a></p>
       </li>
       <li class="card role-card">
         <h3 class="card-title">I'm a coordinator</h3>
         <p>See who needs help today, and pair new seniors with the volunteer who fits best.</p>
-        <p><a class="button button-secondary" href="/match">Match seniors</a></p>
+        <p><a class="button button-secondary" href="/admin/match">Match seniors</a></p>
       </li>
     </ul>`;
 }
@@ -151,7 +151,7 @@ export function resetConfirmPage() {
     <h1>Reset demo data?</h1>
     <p class="lead">This puts back the original made-up seniors, volunteers, matches, and calls, with dates moved so the story starts today. Use it before recording or judging a demo.</p>
     ${banner({ kind: 'warning', text: 'This erases every change made since the last reset. It cannot be undone.' })}
-    <form method="post" action="/demo/reset" class="button-row">
+    <form method="post" action="/admin/demo/reset" class="button-row">
       <button type="submit" class="button button-danger">Yes, reset the demo data</button>
       <a class="button button-secondary" href="/">No, go back home</a>
     </form>`;
@@ -174,7 +174,7 @@ export function errorPage({ status, message }) {
     <p>${spec.help}</p>
     <p class="button-row">
       <a class="button" href="/">Go to the home page</a>
-      <a class="button button-secondary" href="/attention">Open Needs attention</a>
+      <a class="button button-secondary" href="/admin/attention">Open Needs attention</a>
       <a class="button button-secondary" href="/contacts">Open Calls &amp; Visits</a>
       <a class="button button-secondary" href="/tour">Open the demo tour</a>
     </p>`;

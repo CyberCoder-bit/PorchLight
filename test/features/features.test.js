@@ -15,12 +15,16 @@ import { createSparkService } from '../../src/sparks/index.js';
 import { buildConfig, ROOT_DIR } from '../../src/config.js';
 import { localParts, fromLocal } from '../../src/tz.js';
 import { toDateInput, escapeHtml } from '../../src/views/html.js';
+import { fetchAs } from '../helpers/server.js'; // [v2 accounts] signed in as the coordinator
 
 process.env.TZ = 'America/Indiana/Indianapolis'; // test dates use the app's Carmel clock (src/tz.js)
 
 let server;
 let base;
 let store;
+// [v2 accounts] Every request is signed in as the coordinator (admin) unless it
+// carries its own session cookie. Signed out, a visitor sees only the public site.
+const fetch = fetchAs(() => store);
 let tmpDir;
 
 before(async () => {
@@ -83,7 +87,7 @@ const card = (html, seniorId) => {
 // ---------- Needs attention ----------
 
 test('queue lists Hal then Eugene for the seed, with reasons and one next step each', async () => {
-  const html = await page('/attention');
+  const html = await page('/admin/attention');
   assert.match(html, /<title>Needs attention · PorchLight<\/title>/);
   assert.deepEqual(queueOrder(html), ['s-harold', 's-eugene']);
   assert.match(html, /Most urgent first:<\/strong> Isolation risk, then Needs a companion/);
@@ -103,7 +107,7 @@ test('queue lists Hal then Eugene for the seed, with reasons and one next step e
   const gene = card(html, 's-eugene');
   assert.match(gene, /Waiting for a first companion; joined 3 days ago\./);
   assert.match(gene, /Suggested next step: Find a first companion/);
-  assert.match(gene, /<a class="button" href="\/match\?seniorId=s-eugene">/);
+  assert.match(gene, /<a class="button" href="\/admin\/match\?seniorId=s-eugene">/);
 
   // Dorothy (Connected) and Rosa (Check in soon) are not queue cards.
   assert.doesNotMatch(html, /id="senior-s-dorothy"/);
@@ -115,7 +119,7 @@ test('once Hal\'s unmarked visit is logged, the next step is to schedule another
   const visit = store.contacts.find((c) => c.seniorId === 's-harold' && c.status === 'scheduled');
   const res = await post(`/contacts/${visit.id}/complete`, { back: '/volunteers/v-ethan/week' });
   assert.equal(res.status, 303);
-  const hal = card(await page('/attention'), 's-harold');
+  const hal = card(await page('/admin/attention'), 's-harold');
   assert.match(hal, /Contact dropping/, 'still on the list: 4 check-ins in 4 weeks, down from 8');
   assert.match(hal, /Suggested next step: Schedule a visit/);
   assert.match(hal, /<a class="button" href="\/contacts\?seniorId=s-harold">/);
@@ -126,14 +130,14 @@ test('missed-call reasons show their labels (and notes) in the queue', async () 
   missed.missedReason = 'volunteer_conflict';
   missed.missedNote = 'Practice ran late';
   store.save();
-  const hal = card(await page('/attention'), 's-harold');
+  const hal = card(await page('/admin/attention'), 's-harold');
   assert.match(hal, /Reason: Volunteer had a conflict\./);
   assert.match(hal, /Practice ran late/);
 
   // Two cancellations by the same companion in two weeks -> suggest a re-match.
   store.contacts.push({ ...missed, id: 'c-test-missed-2', scheduledFor: new Date(Date.now() - 2 * 86400000).toISOString() });
   store.save();
-  const again = card(await page('/attention'), 's-harold');
+  const again = card(await page('/admin/attention'), 's-harold');
   assert.match(again, /Suggested next step: Find a new companion/);
   assert.match(again, /Ethan has had to cancel 2 times/);
   assert.match(again, /<a class="button" href="\/attention\/s-harold\/rematch">/);
@@ -143,7 +147,7 @@ test('a senior who missed the call points to the family, then to local help afte
   const missed = store.contacts.find((c) => c.seniorId === 's-harold' && c.status === 'missed');
   missed.missedReason = 'no_answer';
   store.save();
-  let hal = card(await page('/attention'), 's-harold');
+  let hal = card(await page('/admin/attention'), 's-harold');
   assert.match(hal, /Suggested next step: Let the family know/);
   assert.match(hal, /Ask Mike Whitaker to check in/);
   assert.match(hal, /<a class="button" href="\/seniors\/s-harold\/summary">/);
@@ -151,7 +155,7 @@ test('a senior who missed the call points to the family, then to local help afte
   // 14+ days without contact (2x the 7-day setting) and no answer -> local help.
   store.settings.riskThresholdDays = 6;
   store.save();
-  hal = card(await page('/attention'), 's-harold');
+  hal = card(await page('/admin/attention'), 's-harold');
   assert.match(hal, /Suggested next step: Get local help/);
   // The community's own Area Agency on Aging comes first (CICOA for Carmel).
   assert.match(hal, /CICOA Aging &amp; In-Home Solutions/);
@@ -162,7 +166,7 @@ test('a senior who missed the call points to the family, then to local help afte
 test('empty queue says everyone has had a recent check-in', async () => {
   store.data.seniors = store.seniors.filter((s) => s.id === 's-dorothy');
   store.save();
-  const html = await page('/attention');
+  const html = await page('/admin/attention');
   assert.deepEqual(queueOrder(html), []);
   assert.match(html, /Everyone has had a recent check-in\./);
 });
@@ -174,12 +178,12 @@ test('re-match flow for Hal: confirm, end the match (history kept), choose again
   assert.match(confirm, /Find a new companion for Harold Whitaker\?/);
   assert.match(confirm, /Current companion: Ethan Brooks/);
   assert.match(confirm, /Nothing is deleted\./);
-  assert.match(confirm, /<form method="post" action="\/matches\/m-harold-ethan\/end"/);
-  assert.match(confirm, /href="\/attention">Keep Ethan/);
+  assert.match(confirm, /<form method="post" action="\/admin\/matches\/m-harold-ethan\/end"/);
+  assert.match(confirm, /href="\/admin\/attention">Keep Ethan/);
 
-  let res = await post('/matches/m-harold-ethan/end');
+  let res = await post('/admin/matches/m-harold-ethan/end');
   assert.equal(res.status, 303);
-  assert.equal(res.headers.get('location'), '/match?seniorId=s-harold&msg=match_ended');
+  assert.equal(res.headers.get('location'), '/admin/match?seniorId=s-harold&msg=match_ended');
   const matchPage = await page(res.headers.get('location'));
   assert.match(matchPage, /Match ended\. You can now choose a new companion\./);
   assert.match(matchPage, /Find a companion for Harold Whitaker/);
@@ -190,23 +194,23 @@ test('re-match flow for Hal: confirm, end the match (history kept), choose again
   assert.equal(store.contactsForSenior('s-harold').length, historyBefore, 'history is kept');
 
   // The queue now says Hal needs a NEW companion.
-  let hal = card(await page('/attention'), 's-harold');
+  let hal = card(await page('/admin/attention'), 's-harold');
   assert.match(hal, /Needs a companion/);
   assert.match(hal, /No companion right now; last check-in was 12 days ago/);
   assert.match(hal, /Suggested next step: Find a new companion/);
-  assert.match(hal, /<a class="button" href="\/match\?seniorId=s-harold">/);
+  assert.match(hal, /<a class="button" href="\/admin\/match\?seniorId=s-harold">/);
   // The confirm page no longer offers to end anything.
   assert.match(await page('/attention/s-harold/rematch'), /Harold Whitaker has no companion right now/);
 
   // Ethan is the only volunteer who offers visits in Hal's free time.
-  res = await post('/matches', { seniorId: 's-harold', volunteerId: 'v-ethan' });
+  res = await post('/admin/matches', { seniorId: 's-harold', volunteerId: 'v-ethan' });
   assert.equal(res.status, 303);
   const match = store.activeMatchForSenior('s-harold');
   res = await post('/contacts', { matchId: match.id, action: 'log', type: 'visit', date: localDay(-1), time: '14:00', durationMinutes: '45' });
   assert.equal(res.status, 303);
 
   // Status improves: no longer "Isolation risk" or "Needs a companion".
-  hal = card(await page('/attention'), 's-harold');
+  hal = card(await page('/admin/attention'), 's-harold');
   assert.match(hal, /dash-ok/);
   assert.match(hal, /Connected/);
   assert.doesNotMatch(hal, /Isolation risk/);
@@ -214,7 +218,7 @@ test('re-match flow for Hal: confirm, end the match (history kept), choose again
 });
 
 test('attention pages escape names and return 404 for unknown seniors', async () => {
-  const res = await post('/seniors', {
+  const res = await post('/admin/seniors', {
     name: '<script>alert(1)</script>',
     interests: 'gardening',
     availability: 'sat-morning',
@@ -222,7 +226,7 @@ test('attention pages escape names and return 404 for unknown seniors', async ()
   });
   assert.equal(res.status, 303);
   const id = res.headers.get('location').split('/')[2].split('?')[0];
-  for (const p of ['/attention', `/attention/${id}/rematch`]) {
+  for (const p of ['/admin/attention', `/attention/${id}/rematch`]) {
     const html = await page(p);
     assert.doesNotMatch(html, /<script>alert/, p);
     assert.match(html, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/, p);
@@ -255,7 +259,7 @@ test('My week shows the next 7 days in Carmel time, with saved sparks inline and
   addCall({ scheduledFor: localAt(10, 15).toISOString() }); // outside the 7-day window
   let html = await page('/volunteers/v-maya/week');
   assert.match(html, /<title>My week: Maya Patel · PorchLight<\/title>/);
-  assert.match(html, /<a href="\/volunteers" aria-current="page">/);
+  assert.match(html, /<a href="\/admin\/volunteers" aria-current="page">/);
   assert.match(html, /Times are Carmel, Indiana time \((EST|EDT)\)\./);
   const call = dorothyCall();
   assert.match(html, new RegExp(`id="call-${call.id}"`));
@@ -324,7 +328,7 @@ test('My week: log and missed actions redirect back to the week', async () => {
   assert.equal(saved.missedNote, 'At the doctor');
 
   // The reason now shows in the coordinator queue, with a family next step.
-  const dorothy = card(await page('/attention'), 's-dorothy');
+  const dorothy = card(await page('/admin/attention'), 's-dorothy');
   assert.match(dorothy, /Reason: Senior was unavailable\./);
   assert.match(dorothy, /Suggested next step: Let the family know/);
 
@@ -341,7 +345,7 @@ test('My week empty states, and 404 for an unknown volunteer', async () => {
 
   const sam = await page('/volunteers/v-sam/week');
   assert.match(sam, /Nothing scheduled in the next 7 days\./);
-  assert.match(sam, /<a class="button" href="\/match">/);
+  assert.match(sam, /<a class="button" href="\/admin\/match">/);
 
   assert.equal((await get('/volunteers/nobody/week')).status, 404);
 });
@@ -446,10 +450,10 @@ test('calendar file: 404 for an unknown call, 409 for one already marked', async
 
 test('a senior named <script> is escaped on every feature page', async () => {
   const name = '<script>alert(1)</script>';
-  let res = await post('/seniors', { name, interests: 'gardening', availability: 'sat-morning', contactMethod: 'phone' });
+  let res = await post('/admin/seniors', { name, interests: 'gardening', availability: 'sat-morning', contactMethod: 'phone' });
   assert.equal(res.status, 303);
   const id = res.headers.get('location').split('/')[2].split('?')[0];
-  res = await post('/matches', { seniorId: id, volunteerId: 'v-maya' });
+  res = await post('/admin/matches', { seniorId: id, volunteerId: 'v-maya' });
   assert.equal(res.status, 303);
   const match = store.activeMatchForSenior(id);
   res = await post('/contacts', { matchId: match.id, action: 'schedule', type: 'phone', date: localDay(1), time: '10:00' });
@@ -459,7 +463,7 @@ test('a senior named <script> is escaped on every feature page', async () => {
   addCall({ seniorId: id, status: 'missed', missedReason: 'other', missedNote: '<img src=x onerror=alert(2)>', scheduledFor: localAt(-1, 10).toISOString() });
   await post(`/seniors/${id}/sparks`, { variant: '0' });
 
-  for (const p of ['/attention', `/attention/${id}/rematch`, '/volunteers/v-maya/week', `/seniors/${id}/summary`]) {
+  for (const p of ['/admin/attention', `/attention/${id}/rematch`, '/volunteers/v-maya/week', `/seniors/${id}/summary`]) {
     const html = await page(p);
     assert.doesNotMatch(html, /<script>alert/, p);
     assert.doesNotMatch(html, /<img src=x/, p);

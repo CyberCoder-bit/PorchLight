@@ -13,16 +13,21 @@ import { createApp } from '../../src/app.js';
 import { createNodeServer } from '../../src/node-server.js';
 import { createSparkService } from '../../src/sparks/index.js';
 import { buildConfig, ROOT_DIR } from '../../src/config.js';
+import { fetchAs, sessionCookieFor } from '../helpers/server.js'; // [v2 accounts] signed in as the coordinator
 
 process.env.TZ = 'America/Indiana/Indianapolis'; // match test/app.test.js
 
 let server;
 let base;
 let tmpDir;
+let store;
+// [v2 accounts] Every request is signed in as the coordinator (admin) unless it
+// carries its own session cookie. Signed out, a visitor sees only the public site.
+const fetch = fetchAs(() => store);
 
 before(async () => {
   tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'porchlight-a11y-test-'));
-  const store = new Store(path.join(tmpDir, 'db.json'));
+  store = new Store(path.join(tmpDir, 'db.json'));
   store.open();
   const sparks = createSparkService(buildConfig({}), { effective: 'mock', reason: 'test', warning: null });
   server = createNodeServer({ handle: createApp({ store, sparks }), publicDir: path.join(ROOT_DIR, 'public') });
@@ -120,8 +125,8 @@ test('the redirect never leaves the site, for every preference route', async () 
     }
   }
   // An ordinary path with a query string is kept as it is.
-  const res = await post('/prefs/theme', { theme: 'dark', back: '/match?seniorId=s-eugene' });
-  assert.equal(res.headers.get('location'), '/match?seniorId=s-eugene');
+  const res = await post('/prefs/theme', { theme: 'dark', back: '/admin/match?seniorId=s-eugene' });
+  assert.equal(res.headers.get('location'), '/admin/match?seniorId=s-eugene');
 });
 
 test('the old POST /prefs/text-size route still works as before', async () => {
@@ -171,13 +176,13 @@ test('the Accessibility menu is a labeled, keyboard-ready disclosure with three 
 test('after a form error, the menu returns to a page that loads, and warns about typed text (B-10)', async () => {
   const backOf = (body) => body.match(/<form class="text-size"[\s\S]*?name="back" value="([^"]*)"/)[1].replace(/&amp;/g, '&');
   const cases = [
-    ['/settings', { riskThresholdDays: '0' }, '/dashboard'],
-    ['/seniors', { name: '' }, '/seniors/new'],
+    ['/admin/settings', { riskThresholdDays: '0' }, '/admin/dashboard'],
+    ['/admin/seniors', { name: '' }, '/admin/seniors/new'],
     ['/seniors/s-harold', { name: '' }, '/seniors/s-harold/edit'],
-    ['/volunteers', { name: '' }, '/volunteers/new'],
+    ['/admin/volunteers', { name: '' }, '/admin/volunteers/new'],
     ['/volunteers/v-ethan', { name: '' }, '/volunteers/v-ethan/edit'],
     ['/contacts', { matchId: 'm-dorothy-maya', action: 'schedule', type: 'phone', date: '', time: '' }, '/contacts?matchId=m-dorothy-maya'],
-    ['/matches', { seniorId: 's-harold', volunteerId: 'v-ethan' }, '/match?seniorId=s-harold'], // already matched: 409
+    ['/admin/matches', { seniorId: 's-harold', volunteerId: 'v-ethan' }, '/admin/match?seniorId=s-harold'], // already matched: 409
   ];
   for (const [route, data, expected] of cases) {
     const res = await post(route, data);
@@ -188,7 +193,7 @@ test('after a form error, the menu returns to a page that loads, and warns about
     assert.match(menuOf(body), /class="a11y-warning"[\s\S]*Heads up:/, `${route} warns that typed text will be cleared`);
   }
   // On an ordinary page, only seniorId/matchId survive in the return path (no ?msg= repeat).
-  assert.equal(backOf(await page('/match?seniorId=s-eugene&msg=match_ended')), '/match?seniorId=s-eugene');
+  assert.equal(backOf(await page('/admin/match?seniorId=s-eugene&msg=match_ended')), '/admin/match?seniorId=s-eugene');
   assert.equal(backOf(await page('/contacts?matchId=m-dorothy-maya&msg=scheduled')), '/contacts?matchId=m-dorothy-maya');
   // Pages with nothing to type in don't show the warning.
   assert.doesNotMatch(menuOf(await page('/help')), /a11y-warning/);
@@ -196,18 +201,18 @@ test('after a form error, the menu returns to a page that loads, and warns about
 
 test('a change keeps the page\'s own query (town filter, prefilled form) but not one-time messages', async () => {
   const backOf = (body) => body.match(/<form class="text-size"[\s\S]*?name="back" value="([^"]*)"/)[1].replace(/&amp;/g, '&');
-  assert.equal(backOf(await page('/seniors?town=Carmel')), '/seniors?town=Carmel');
-  assert.equal(backOf(await page('/volunteers?town=Fishers&msg=volunteer_saved')), '/volunteers?town=Fishers');
+  assert.equal(backOf(await page('/admin/seniors?town=Carmel')), '/admin/seniors?town=Carmel');
+  assert.equal(backOf(await page('/admin/volunteers?town=Fishers&msg=volunteer_saved')), '/admin/volunteers?town=Fishers');
   assert.equal(backOf(await page('/contacts?seniorId=s-harold&warn=outside_hours')), '/contacts?seniorId=s-harold');
   // Odd characters in the query are encoded, so the path still passes safeBack().
-  const odd = backOf(await page('/seniors?town=New%20Carmel%20%22x%22&a%20b=c'));
-  assert.equal(odd, '/seniors?town=New%20Carmel%20%22x%22&a%20b=c');
+  const odd = backOf(await page('/admin/seniors?town=New%20Carmel%20%22x%22&a%20b=c'));
+  assert.equal(odd, '/admin/seniors?town=New%20Carmel%20%22x%22&a%20b=c');
   const res = await post('/prefs/theme', { theme: 'dark', back: odd });
   assert.equal(res.headers.get('location'), odd);
 });
 
 test('the menu works while signed in (demo sign-in roles)', async () => {
-  const viewer = `viewer=${encodeURIComponent('family:s-harold')}`;
+  const viewer = await sessionCookieFor(store, 'family:s-harold'); // [v2 accounts] a real session
   const res = await fetch(base + '/prefs/text-size', {
     method: 'POST',
     redirect: 'manual',

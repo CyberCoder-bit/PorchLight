@@ -13,7 +13,7 @@ export function seniorsListPage({ rows, townFilter = '', townName = null }) { //
   return html`
     <div class="page-head">
       <h1>Seniors</h1>
-      <a class="button" href="/seniors/new">Add a senior</a>
+      <a class="button" href="/admin/seniors/new">Add a senior</a>
     </div>
     <p class="lead">Everyone in PorchLight, with their companion and how recently someone called or visited.</p>
     ${townFilter}
@@ -28,15 +28,15 @@ export function seniorsListPage({ rows, townFilter = '', townName = null }) { //
     <p><a href="/seniors/${senior.id}/summary">Weekly summary for family</a></p>
           <p>${volunteer
             ? html`Companion: <a href="/volunteers/${volunteer.id}">${volunteer.name}</a>`
-            : html`No companion yet. <a href="/match?seniorId=${senior.id}">Find a companion</a>`}</p>
+            : html`No companion yet. <a href="/admin/match?seniorId=${senior.id}">Find a companion</a>`}</p>
           <p class="muted">${assessment.lastContact ? `Last call or visit: ${daysAgoText(assessment.daysSince)}` : 'No calls or visits yet'}</p>
         </li>`
       )}
     </ul>`
       : townName // [towns]
-        ? emptyState(html`<p><strong>No seniors in ${townName}.</strong> <a href="/seniors">Show all towns</a></p>`)
+        ? emptyState(html`<p><strong>No seniors in ${townName}.</strong> <a href="/admin/seniors">Show all towns</a></p>`)
         : emptyState(html`<p><strong>No seniors yet.</strong> Add the first person who would like a companion.</p>
-          <p><a href="/seniors/new">Add a senior</a></p>`)}`;
+          <p><a href="/admin/seniors/new">Add a senior</a></p>`)}`;
 }
 
 function sparkPanel({ senior, sparkSet, sparkMode, hideNotice = false }) {
@@ -71,7 +71,7 @@ function sparkPanel({ senior, sparkSet, sparkMode, hideNotice = false }) {
 export function seniorProfilePage({ senior, assessment, volunteer, match, upcoming, recent, sparkSet, sparkMode, misfit = [], hideNotice = false, hideSparks = false, seniorView = false }) {
   const name = senior.preferredName || senior.name.split(' ')[0];
   return html`
-    ${backLink('/seniors', 'all seniors')}
+    ${backLink('/admin/seniors', 'all seniors')}
     <div class="page-head">
       <h1>${senior.name}${senior.preferredName && senior.preferredName !== senior.name.split(' ')[0] ? html` <span class="aka">(“${senior.preferredName}”)</span>` : ''}</h1>
       <a class="button button-secondary" href="/seniors/${senior.id}/edit">Edit profile</a>
@@ -97,7 +97,7 @@ export function seniorProfilePage({ senior, assessment, volunteer, match, upcomi
           <h2 id="contacts-heading">Calls and visits</h2>
           ${match
             ? html`<p><a class="button button-secondary" href="/contacts?matchId=${match.id}">Schedule or log a call</a></p>`
-            : html`<p><a class="button" href="/match?seniorId=${senior.id}">Find a companion for ${name}</a></p>`}
+            : html`<p><a class="button" href="/admin/match?seniorId=${senior.id}">Find a companion for ${name}</a></p>`}
           <h3>Coming up</h3>
           ${upcoming.length
             ? html`<ul class="plain-list">${upcoming.map((c) => html`<li>${methodLabel(c.type)}: ${formatDateTime(c.scheduledFor)} <a href="/contacts/${c.id}/calendar.ics" download>Add to calendar<span class="visually-hidden">: ${methodLabel(c.type)} on ${formatDateTime(c.scheduledFor)}</span></a></li>`)}</ul>`
@@ -149,10 +149,10 @@ export function misfitNote({ senior, volunteer, misfit }) {
 }
 
 export function seniorFormPage({ senior = {}, errors = {}, isNew }) {
-  const action = isNew ? '/seniors' : `/seniors/${senior.id}`;
+  const action = isNew ? '/admin/seniors' : `/seniors/${senior.id}`;
   const first = (senior.preferredName || senior.name || '').split(' ')[0];
   return html`
-    ${isNew ? backLink('/seniors', 'all seniors') : backLink(`/seniors/${senior.id}`, `${first || 'this senior'}'s profile`)}
+    ${isNew ? backLink('/admin/seniors', 'all seniors') : backLink(`/seniors/${senior.id}`, `${first || 'this senior'}'s profile`)}
     <h1>${isNew ? 'Add a senior' : `Edit ${senior.name}`}</h1>
     <p class="lead">${isNew ? 'Tell us a little about the person who would like a companion.' : 'Update this profile. Changes take effect right away.'}</p>
     ${errorSummary(errors)}
@@ -173,7 +173,7 @@ export function seniorFormPage({ senior = {}, errors = {}, isNew }) {
       </fieldset>
       <div class="form-actions">
         <button type="submit" class="button">${isNew ? 'Add senior' : 'Save changes'}</button>
-        <a class="button button-secondary" href="${isNew ? '/seniors' : `/seniors/${senior.id}`}">Cancel</a>
+        <a class="button button-secondary" href="${isNew ? '/admin/seniors' : `/seniors/${senior.id}`}">Cancel</a>
       </div>
     </form>`;
 }

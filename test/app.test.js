@@ -11,12 +11,16 @@ import { createApp } from '../src/app.js';
 import { createNodeServer } from '../src/node-server.js';
 import { createSparkService } from '../src/sparks/index.js';
 import { buildConfig, ROOT_DIR } from '../src/config.js';
+import { fetchAs } from './helpers/server.js'; // [v2 accounts] signed in as the coordinator
 
 process.env.TZ = 'America/Indiana/Indianapolis'; // test dates use the app's Carmel clock (src/tz.js)
 
 let server;
 let base;
 let store;
+// [v2 accounts] Every request is signed in as the coordinator (admin) unless it
+// carries its own session cookie. Signed out, a visitor sees only the public site.
+const fetch = fetchAs(() => store);
 let tmpDir;
 
 before(async () => {
@@ -58,15 +62,15 @@ const localDate = (offsetDays) => {
 test('first run creates the data file with demo data', () => {
   assert.ok(fs.existsSync(store.filePath));
   const saved = JSON.parse(fs.readFileSync(store.filePath, 'utf8'));
-  assert.equal(saved.seniors.length, 4);
-  assert.equal(saved.volunteers.length, 4);
+  assert.equal(saved.seniors.length, 12); // [v2 accounts] the story's 4, plus 8 who are all Connected
+  assert.equal(saved.volunteers.length, 10);
 });
 
 test('every page loads', async () => {
   const pages = [
-    '/', '/seniors', '/seniors/new', '/seniors/s-dorothy', '/seniors/s-dorothy/edit',
-    '/volunteers', '/volunteers/new', '/volunteers/v-maya', '/volunteers/v-maya/edit',
-    '/match', '/match?seniorId=s-eugene', '/contacts', '/dashboard', '/about-ai', '/demo/reset',
+    '/', '/admin/seniors', '/admin/seniors/new', '/seniors/s-dorothy', '/seniors/s-dorothy/edit',
+    '/admin/volunteers', '/admin/volunteers/new', '/volunteers/v-maya', '/volunteers/v-maya/edit',
+    '/admin/match', '/admin/match?seniorId=s-eugene', '/contacts', '/dashboard', '/about-ai', '/admin/demo/reset',
   ];
   for (const p of pages) {
     const res = await get(p);
@@ -88,19 +92,20 @@ test('static files are served, and path traversal is blocked', async () => {
 test('dashboard shows the seeded isolation-risk story', async () => {
   const html = await (await get('/dashboard')).text();
   const order = [...html.matchAll(/class="card dash-card dash-(\w+)"/g)].map((m) => m[1]);
-  assert.deepEqual(order, ['at_risk', 'needs_match', 'due_soon', 'ok']);
+  assert.deepEqual(order.slice(0, 4), ['at_risk', 'needs_match', 'due_soon', 'ok']);
+  assert.ok(order.slice(3).every((s) => s === 'ok'), 'everyone after Rosa is Connected'); // [v2 accounts] more Connected seniors
   assert.match(html, /Contact dropping/);
 });
 
 test('full loop: match Eugene, schedule, complete, sparks, dashboard updates', async () => {
   // Matching page ranks Sam first
-  const matchPage = await (await get('/match?seniorId=s-eugene')).text();
+  const matchPage = await (await get('/admin/match?seniorId=s-eugene')).text();
   assert.ok(matchPage.indexOf('Sam Rivera') < matchPage.indexOf('Maya Patel'));
   assert.match(matchPage, /At capacity/);
   assert.match(matchPage, /No overlapping availability/);
 
   // Confirm the match (Post/Redirect/Get)
-  let res = await post('/matches', { seniorId: 's-eugene', volunteerId: 'v-sam' });
+  let res = await post('/admin/matches', { seniorId: 's-eugene', volunteerId: 'v-sam' });
   assert.equal(res.status, 303);
   assert.equal(res.headers.get('location'), '/seniors/s-eugene?msg=matched');
   const match = store.activeMatchForSenior('s-eugene');
@@ -112,7 +117,7 @@ test('full loop: match Eugene, schedule, complete, sparks, dashboard updates', a
   assert.match(pending, /Newly matched! Schedule the first call soon\./);
 
   // Can't double-match
-  res = await post('/matches', { seniorId: 's-eugene', volunteerId: 'v-maya' });
+  res = await post('/admin/matches', { seniorId: 's-eugene', volunteerId: 'v-maya' });
   assert.equal(res.status, 409);
 
   // Schedule a call for tomorrow afternoon
@@ -158,7 +163,7 @@ test('full loop: match Eugene, schedule, complete, sparks, dashboard updates', a
 });
 
 test('form validation shows an error summary and keeps what was typed', async () => {
-  const res = await post('/seniors', { name: '', age: '12', aboutMe: 'Hello' });
+  const res = await post('/admin/seniors', { name: '', age: '12', aboutMe: 'Hello' });
   assert.equal(res.status, 200); // the form is shown again (not a redirect)
   const html = await res.text();
   assert.match(html, /id="error-summary"/);
@@ -173,23 +178,23 @@ test('form validation shows an error summary and keeps what was typed', async ()
 });
 
 test('user input is escaped (no XSS)', async () => {
-  const res = await post('/seniors', {
+  const res = await post('/admin/seniors', {
     name: '<img src=x onerror=alert(1)>',
     interests: 'gardening',
     availability: 'mon-morning',
     contactMethod: 'phone',
   });
   assert.equal(res.status, 303);
-  const html = await (await get('/seniors')).text();
+  const html = await (await get('/admin/seniors')).text();
   assert.doesNotMatch(html, /<img src=x/);
   assert.match(html, /&lt;img src=x onerror=alert\(1\)&gt;/);
 });
 
 test('changing the alert threshold updates the flags', async () => {
-  const invalid = await post('/settings', { riskThresholdDays: '0' });
+  const invalid = await post('/admin/settings', { riskThresholdDays: '0' });
   assert.equal(invalid.status, 200);
   assert.match(await invalid.text(), /whole number of days from 1 to 60/);
-  const res = await post('/settings', { riskThresholdDays: '4' });
+  const res = await post('/admin/settings', { riskThresholdDays: '4' });
   assert.equal(res.status, 303);
   assert.equal(store.settings.riskThresholdDays, 4);
   const html = await (await get('/dashboard')).text();
@@ -261,9 +266,9 @@ test('text-size preference is stored in a cookie and rejects off-site redirects'
 });
 
 test('demo reset restores the original data', async () => {
-  const res = await post('/demo/reset', {});
+  const res = await post('/admin/demo/reset', {});
   assert.equal(res.status, 303);
-  assert.equal(store.seniors.length, 4);
+  assert.equal(store.seniors.length, 12);
   assert.equal(store.activeMatchForSenior('s-eugene'), null);
   assert.equal(store.settings.riskThresholdDays, 7);
 });

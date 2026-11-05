@@ -12,14 +12,19 @@ import { createApp } from '../../src/app.js';
 import { createNodeServer } from '../../src/node-server.js';
 import { createSparkService } from '../../src/sparks/index.js';
 import { buildConfig, ROOT_DIR } from '../../src/config.js';
+import { fetchAs } from '../helpers/server.js'; // [v2 accounts] signed in as the coordinator
 
 let server;
 let base;
 let tmpDir;
+let store;
+// [v2 accounts] Every request is signed in as the coordinator (admin) unless it
+// carries its own session cookie. Signed out, a visitor sees only the public site.
+const fetch = fetchAs(() => store);
 
 before(async () => {
   tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'porchlight-links-'));
-  const store = new Store(path.join(tmpDir, 'db.json'));
+  store = new Store(path.join(tmpDir, 'db.json'));
   store.open();
   const sparks = createSparkService(buildConfig({}), { effective: 'mock', reason: 'test', warning: null });
   server = createNodeServer({ handle: createApp({ store, sparks }), publicDir: path.join(ROOT_DIR, 'public') });
@@ -52,7 +57,7 @@ function internalLinks(htmlText) {
 
 test('every internal link works, starting from fresh demo data', async () => {
   const seen = new Map(); // path -> status
-  const queue = ['/', '/tour', '/dashboard', '/attention', '/help'];
+  const queue = ['/', '/tour', '/dashboard', '/admin/attention', '/help'];
   const problems = [];
   while (queue.length && seen.size < 400) {
     const p = queue.shift();

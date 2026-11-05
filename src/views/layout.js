@@ -10,14 +10,17 @@ import { languagePicker } from '../i18n/picker.js'; // [v2 i18n]
 
 // Main navigation. `key` matches the `active` value a page passes to render(),
 // which marks that link with aria-current="page".
+// [v2] This is the coordinator's (admin's) nav. Other people get their own
+// pages from navFor() (src/roles/views.js); signed out, there is no app nav.
 const NAV = [
-  { href: '/', label: 'Home', key: 'home' },
-  { href: '/seniors', label: 'Seniors', key: 'seniors' },
-  { href: '/volunteers', label: 'Volunteers', key: 'volunteers' },
-  { href: '/match', label: 'Match', key: 'match' },
+  { href: '/admin', label: 'Home', key: 'home' },
+  { href: '/admin/seniors', label: 'Seniors', key: 'seniors' },
+  { href: '/admin/volunteers', label: 'Volunteers', key: 'volunteers' },
+  { href: '/admin/match', label: 'Match', key: 'match' },
   { href: '/contacts', label: 'Calls & Visits', key: 'contacts' },
-  { href: '/dashboard', label: 'Family Dashboard', key: 'dashboard' },
-  { href: '/attention', label: 'Needs attention', key: 'attention' },
+  { href: '/admin/dashboard', label: 'Family Dashboard', key: 'dashboard' },
+  { href: '/admin/attention', label: 'Needs attention', key: 'attention' },
+  { href: '/admin/approvals', label: 'Approvals', key: 'approvals' },
   { href: '/help', label: 'Get help', key: 'help' },
 ];
 
@@ -28,7 +31,7 @@ function nextStep(req) {
   const seniorId = (req.path.match(/^\/seniors\/([^/]+)$/) || [])[1];
   if (msg === 'reset' && req.path !== '/tour') return { href: '/tour', label: 'Continue the 2-minute demo tour' };
   if (msg === 'matched' && seniorId) return { href: `/contacts?seniorId=${encodeURIComponent(seniorId)}`, label: 'Schedule the first call' };
-  if (msg === 'senior_added' && seniorId) return { href: `/match?seniorId=${encodeURIComponent(seniorId)}`, label: 'Find a companion' };
+  if (msg === 'senior_added' && seniorId) return { href: `/admin/match?seniorId=${encodeURIComponent(seniorId)}`, label: 'Find a companion' };
   if ((msg === 'completed' || msg === 'logged') && req.path !== '/dashboard') return { href: '/dashboard', label: 'See the Family Dashboard' };
   return null;
 }
@@ -93,15 +96,15 @@ export function htmlClass({ textSize, contrast, theme }) {
 // The POST /prefs/* routes still run the result through safeBack().
 const DROP_QUERY = new Set(['msg', 'warn']);
 const POST_RESULT_PAGES = [
-  [/^\/seniors$/, () => '/seniors/new'],
+  [/^\/admin\/seniors$/, () => '/admin/seniors/new'], // [v2 accounts] coordinator pages moved under /admin
   [/^\/seniors\/([^/]+)$/, ([, id]) => `/seniors/${id}/edit`],
   [/^\/seniors\/([^/]+)\/sparks$/, ([, id]) => `/seniors/${id}`],
-  [/^\/volunteers$/, () => '/volunteers/new'],
+  [/^\/admin\/volunteers$/, () => '/admin/volunteers/new'],
   [/^\/volunteers\/([^/]+)$/, ([, id]) => `/volunteers/${id}/edit`],
-  [/^\/matches(?:\/[^/]+\/end)?$/, (m, body) => withQuery('/match', { seniorId: body.seniorId })],
+  [/^\/admin\/matches(?:\/[^/]+\/end)?$/, (m, body) => withQuery('/admin/match', { seniorId: body.seniorId })],
   [/^\/contacts(?:\/[^/]+\/(?:complete|missed))?$/, (m, body) => withQuery('/contacts', { matchId: body.matchId })],
-  [/^\/settings$/, () => '/dashboard'],
-  [/^\/demo\/reset$/, () => '/dashboard'],
+  [/^\/admin\/settings$/, () => '/admin/dashboard'],
+  [/^\/admin\/demo\/reset$/, () => '/admin/dashboard'],
 ];
 
 function withQuery(path, params) {
@@ -287,11 +290,11 @@ export function layout({ title, active, body, req, ctx, flash, wide = false, noi
   </main>
   <footer class="site-footer">
     <p class="footer-note">Built for Indiana communities. Demo data is fictional.</p>
-    <p>A prototype for the Nextech CSforGood 2026 competition. The sign-in is a demo with no passwords. Signed out, you can see every screen: senior, volunteer, family, and coordinator.</p>
+    <p>A prototype for the Nextech CSforGood 2026 competition. Try a demo account on the sign-in page to see what a senior, a volunteer, or a family member sees.</p>
     <ul class="footer-links">
       <li><a href="/tour">2-minute demo tour</a></li>
       <li><a href="/about-ai">How the AI works</a></li>
-      <li><a href="/demo/reset">Reset demo data</a></li>
+      <li><a href="/admin/demo/reset">Reset demo data</a></li>
     </ul>
   </footer>
 </body>
