@@ -55,8 +55,10 @@ const htmlTag = (body) => body.match(/<html [^>]*>/)[0];
 
 // ----- the interface languages -----
 
-test('interface languages: English and Spanish ship; the planned list has 8, with Arabic right to left', () => {
-  assert.deepEqual(UI_LANGUAGES.map((l) => l.code), ['en', 'es']);
+test('interface languages: every shipped one is planned and has a catalog; the planned list has 8, with Arabic right to left', () => {
+  const planned = PLANNED_UI_LANGUAGES.map((l) => l.code);
+  assert.deepEqual(UI_LANGUAGES.map((l) => l.code), planned.filter((c) => c === 'en' || CATALOGS[c]));
+  assert.ok(UI_LANGUAGES.some((l) => l.code === 'es'), 'Spanish ships');
   assert.deepEqual(PLANNED_UI_LANGUAGES.map((l) => l.code), ['en', 'es', 'zh-Hans', 'my', 'ht', 'de', 'ar', 'vi']);
   for (const l of UI_LANGUAGES) assert.ok(l.code === 'en' || CATALOGS[l.code], `${l.code} ships with a catalog`);
   for (const l of PLANNED_UI_LANGUAGES) {
@@ -72,7 +74,7 @@ test('codes match whatever the case: ES, zh-hans, zh_Hans', () => {
   assert.equal(canonicalCode(' es '), 'es');
   assert.equal(canonicalCode('zh-hans', PLANNED_UI_LANGUAGES), 'zh-Hans');
   assert.equal(canonicalCode('ZH_HANS', PLANNED_UI_LANGUAGES), 'zh-Hans');
-  assert.equal(canonicalCode('zh-hans'), null, 'not shipped yet');
+  assert.equal(canonicalCode('xx-not-planned'), null, 'not a UI language');
   assert.equal(canonicalCode('x'.repeat(500)), null);
   assert.ok(isUiLanguage('Es'));
   withLang('ES', () => assert.equal(currentLang(), 'es'));

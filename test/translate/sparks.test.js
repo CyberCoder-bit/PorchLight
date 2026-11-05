@@ -41,8 +41,11 @@ test('MOCK: a stored spark is traced back to its template and re-written with tI
     assert.ok(found, `opener not found: ${sparks[0].text}`);
     assert.equal(tIn('en', found.key, { name: vars.name, town: vars.town, gap: found.gap }), sparks[0].text);
     assert.equal(sparkTextIn(sparks[0], 'en', vars), sparks[0].text);
-    // No Spanish catalog yet: no Spanish version, never English posing as Spanish.
-    assert.equal(sparkTextIn(sparks[0], 'es', vars), null);
+    // A language with no catalog gives no version, never English posing as it.
+    assert.equal(sparkTextIn(sparks[0], 'cnh', vars), null);
+    // Spanish has a catalog: a real Spanish version that differs from the English.
+    const es = sparkTextIn(sparks[0], 'es', vars);
+    assert.ok(es && es !== sparks[0].text, 'Spanish spark');
   }
 });
 
@@ -55,13 +58,14 @@ test('both languages only when the senior and the volunteer speak different main
   assert.deepEqual(sparkLanguages(ar, null), []);
 });
 
-test('the senior page shows the second language with each spark (MOCK, no catalog yet)', async () => {
+test('the senior page shows the second language with each spark (MOCK)', async () => {
   const app = makeApp();
   app.store.senior('s-rosa').languages = [{ code: 'es', level: 'native' }, { code: 'en', level: 'fluent' }];
   const res = await app.post('/seniors/s-rosa/sparks', { variant: '0' });
   assert.equal(res.status, 303);
   const page = await app.get('/seniors/s-rosa');
-  assert.equal((page.text.match(/Not ready in Español \(Spanish\) yet\./g) || []).length, 3);
+  assert.doesNotMatch(page.text, /Not ready in Español/);
+  assert.ok((page.text.match(/lang="es"/g) || []).length >= 3, 'each spark has a Spanish version');
   // Same language: nothing extra.
   await app.post('/seniors/s-dorothy/sparks', { variant: '0' });
   assert.doesNotMatch((await app.get('/seniors/s-dorothy')).text, /Not ready in/);
