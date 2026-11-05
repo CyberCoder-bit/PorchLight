@@ -14,7 +14,7 @@ import { startApp, sessionCookieFor, sessionFrom, encode } from '../helpers/serv
 import { Store } from '../../src/store.js';
 import { createApp } from '../../src/app.js';
 import { createNodeServer } from '../../src/node-server.js';
-import { createSparkService } from '../../src/sparks/index.js';
+import { createSparkService, resolveSparkMode } from '../../src/sparks/index.js';
 import { buildConfig, ROOT_DIR } from '../../src/config.js';
 
 // ---------- helpers ----------
@@ -293,5 +293,60 @@ test('V2-B-10: a form on another site cannot sign this browser in to an account 
     }
   } finally {
     app.close();
+  }
+});
+
+// ---------- Round 2 (on b5b6353) ----------
+
+test('V2-B-11: a refused cross-site POST gets the 403 error page, not a blank 200', async () => {
+  const app = await startApp();
+  try {
+    for (const origin of ['https://evil.example', 'null']) {
+      const res = await fetch(app.base + '/sign-in/demo', { method: 'POST', redirect: 'manual', headers: { 'content-type': 'application/x-www-form-urlencoded', origin }, body: 'as=volunteer' });
+      const body = await res.text();
+      assert.equal(sessionFrom(res), null, 'no session for a cross-site form');
+      assert.equal(res.status, 403, `Origin ${origin}: status ${res.status}`);
+      assert.ok(body.includes('<!DOCTYPE html>'), `Origin ${origin}: the page is blank (${body.length} bytes)`);
+    }
+  } finally {
+    app.close();
+  }
+});
+
+test('V2-B-12: the sign-in limit holds when each try comes from a new IPv6 address in the same /64', async () => {
+  const { store, cleanup } = tempStore();
+  try {
+    const handle = createApp({ store, sparks: createSparkService(buildConfig({}), { effective: 'mock', reason: 'test', warning: null }) });
+    let checked = 0;
+    for (let i = 1; i <= 30; i++) {
+      // One home connection gets a whole /64: 2^64 addresses. On Workers this is CF-Connecting-IP.
+      const res = await handle(new Request('http://porchlight.test/sign-in', {
+        method: 'POST',
+        headers: { 'content-type': 'application/x-www-form-urlencoded', 'cf-connecting-ip': `2001:db8:1:2::${i.toString(16)}` },
+        body: encode({ email: 'hal@porchlight.example', password: `wrong-guess-${i}` }),
+      }));
+      await res.arrayBuffer();
+      if (res.status !== 429) checked++;
+    }
+    assert.ok(checked <= 10, `${checked} of 30 passwords were checked for one account from one /64`);
+  } finally {
+    cleanup();
+  }
+});
+
+test('V2-B-13: the header AI badge has no English tooltip in other languages', async () => {
+  const { store, cleanup } = tempStore();
+  try {
+    // The mode as `npm start` resolves it with no key: "Offline templates (no ANTHROPIC_API_KEY is set)".
+    const config = buildConfig({});
+    const handle = createApp({ store, sparks: createSparkService(config, await resolveSparkMode(config)) });
+    for (const lang of ['de', 'ar', 'my']) {
+      const res = await handle(new Request('http://porchlight.test/sign-in', { headers: { cookie: `lang=${lang}` } }));
+      const badge = /<a class="mode-badge[^>]*>/.exec(await res.text())?.[0] || '';
+      assert.ok(badge, 'the header has the AI badge');
+      assert.ok(!/Offline templates|ANTHROPIC_API_KEY/.test(badge), `${lang}: ${badge}`);
+    }
+  } finally {
+    cleanup();
   }
 });
