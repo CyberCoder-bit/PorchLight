@@ -107,8 +107,8 @@ The language menu at the top of every page switches between the 8 interface lang
 
 Measured on November 4, 2026, on the `v2` branch:
 
-- **Automated tests:** `npm test` ran 316 tests on the final `v2` code, with the Anthropic SDK
-  installed. All 316 passed. Without `npm install`, the LIVE-mode tests are skipped and the rest
+- **Automated tests:** `npm test` ran 318 tests on the final `v2` code, with the Anthropic SDK
+  installed. All 318 passed. Without `npm install`, the LIVE-mode tests are skipped and the rest
   pass. All 7 translations have every one of the 1,451 English interface strings; a test checks that.
 - **Accessibility:** in v2, Google Lighthouse accessibility scored 100 on `/`, `/for-families`, and
   `/safety`. It also scored 100 on `/sign-up/senior` (mobile), `/admin` (desktop), and Samira's page
@@ -694,7 +694,7 @@ TZ=America/Chicago npm test       # same results on a Central-time computer
 TZ=America/Los_Angeles npm test   # same results in any other time zone
 ```
 
-On November 4, 2026, `npm test` ran 316 tests, and all of them passed. Without `npm install`, the
+On November 4, 2026, `npm test` ran 318 tests, and all of them passed. Without `npm install`, the
 LIVE-mode tests are skipped; after `npm install`, they
 run against a local fake Claude server. They cover:
 - matching rules and ranking, including language must-haves, the +4 for a shared language, and
