@@ -12,14 +12,6 @@ Prototype for the Nextech CSforGood 2026 competition (grades 9-12). Carmel High 
 
 ## For judges: start here
 
-> **Important: run the `v2` branch.** This README describes PorchLight v2 (accounts, 8 languages,
-> translated messages, the public website). It is on the `v2` branch. Until the team merges `v2` into
-> `main`, pushes it, and deploys it (step 1 in [docs/TEAM-TODO.md](docs/TEAM-TODO.md)), `main` and
-> the live site are still v1, which has a demo sign-in with no passwords and English only. Clone with
-> `git clone -b v2 ...` instead of the plain command below. If `/sign-in` has no password box, you're
-> on v1.
-> [TEAM: delete this box after you merge `v2` into `main`, push, deploy, and check a fresh clone.]
-
 **What it is.** PorchLight helps a volunteer program keep older adults from slipping into isolation.
 It matches each senior with a volunteer companion who shares a language, gives the volunteer three
 conversation starters before every call, translates messages between a senior and a volunteer, and
