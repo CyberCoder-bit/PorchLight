@@ -1,6 +1,6 @@
 # PorchLight architecture
 
-PorchLight is one small server that renders HTML pages, stores data in one JSON document, and (optionally) calls the Claude API. The same code runs in two places: on a laptop with Node.js (`npm start`, data in `data/db.json`), or on the internet with Cloudflare Workers (`npm run deploy`, data in a Durable Object). These diagrams render automatically on GitHub. You can also paste them into [mermaid.live](https://mermaid.live).
+PorchLight is one small server that renders HTML pages, stores data in one JSON document, and (optionally) calls the Gemini API. The same code runs in two places: on a laptop with Node.js (`npm start`, data in `data/db.json`), or on the internet with Cloudflare Workers (`npm run deploy`, data in a Durable Object). These diagrams render automatically on GitHub. You can also paste them into [mermaid.live](https://mermaid.live).
 
 ## 1. Components and data flow
 
@@ -20,7 +20,7 @@ flowchart TB
     GUARD["Access table<br/>src/roles/access.js<br/>checked before every request"]
     I18N["Interface languages<br/>src/i18n/<br/>t(), 8 languages, picker, spoken languages"]
     SITE["Public website<br/>src/views/site/"]
-    TRANS["Messages and translation<br/>src/translate/<br/>MOCK ready-made or LIVE Claude, cache, daily limits"]
+    TRANS["Messages and translation<br/>src/translate/<br/>MOCK ready-made or LIVE Gemini, cache, daily limits"]
     ROUTER["Router and form validation<br/>src/http.js, src/app.js"]
     subgraph Engines["Logic: plain functions, covered by tests"]
       direction LR
@@ -38,7 +38,7 @@ flowchart TB
   end
 
   DB[("data/db.json locally, or Durable Object storage on Cloudflare<br/>users, sessions, family links, seniors, volunteers,<br/>matches, calls and visits, sparks, messages,<br/>translation cache, daily usage, settings")]
-  CLAUDE["Claude API, optional<br/>claude-sonnet-5-5"]
+  GEMINI["Gemini API (Google), optional<br/>free tier; tries the next model when one is busy"]
 
   People -->|"HTTP: page views and form posts"| AUTH
   AUTH -->|"who is asking"| GUARD
@@ -47,14 +47,14 @@ flowchart TB
   I18N --> VIEWS
   I18N --> SITE
   ROUTER --> TRANS
-  TRANS <-->|"LIVE only: the text a person chose to translate<br/>and two language names"| CLAUDE
+  TRANS <-->|"LIVE only: the text a person chose to translate<br/>and two language names"| GEMINI
   PREFS --> VIEWS
   ROUTER --> Engines
   Engines --> VIEWS
   VIEWS -->|"finished HTML page"| People
   ROUTER <-->|"read and save"| STORE
   STORE <-->|"atomic write"| DB
-  SPARK <-->|"LIVE_MODE only: first name, interests,<br/>days since contact; 3 starters back as JSON,<br/>also in the senior's language"| CLAUDE
+  SPARK <-->|"LIVE_MODE only: first name, interests,<br/>days since contact; 3 starters back as JSON,<br/>also in the senior's language"| GEMINI
   COMM --> TZ
   TZ --> ROUTER
   TZ --> Engines
@@ -80,7 +80,7 @@ the time-zone design covers all 92 of Indiana's counties with two deployments. T
 complete yet: it has 66 towns in 52 counties, and adding a town is one line in `src/towns/index.js`.
 The Accessibility
 choices are cookies that the page layout reads, so every page is drawn in the chosen text size,
-contrast, and theme without JavaScript. The router asks the right engine for an answer (who matches, who is at risk, what to say on the next call), saves changes through the store, and sends back a finished HTML page. The only data that ever leaves the server is the optional, privacy-limited calls to Claude: one for
+contrast, and theme without JavaScript. The router asks the right engine for an answer (who matches, who is at risk, what to say on the next call), saves changes through the store, and sends back a finished HTML page. The only data that ever leaves the server is the optional, privacy-limited calls to Gemini: one for
 sparks, and one for translating a message that a person chose to translate, after a notice.
 
 ## 2. The PorchLight loop
@@ -103,16 +103,16 @@ sequenceDiagram
   participant App as app.js (router)
   participant Svc as Spark service
   participant Live as live.js
-  participant API as Claude API
+  participant API as Gemini API
   participant Mock as mock.js
   participant DB as db.json
 
   V->>App: POST /seniors/:id/sparks
   App->>Svc: interests, days since last contact, season
-  alt LIVE_MODE (API key set and SDK installed)
+  alt LIVE_MODE (GEMINI_API_KEY set)
     Svc->>Live: generateLiveSparks()
-    Live->>API: messages.create with JSON schema, effort low
-    alt Claude answers
+    Live->>API: generateContent with JSON schema, low thinking<br/>(next model if one is busy)
+    alt Gemini answers
       API-->>Live: 3 starters as JSON
       Live-->>Svc: sparks, model name
     else timeout, bad key, refusal, or bad output

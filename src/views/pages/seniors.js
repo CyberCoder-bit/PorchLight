@@ -60,7 +60,7 @@ function sparkPanel({ senior, volunteer = null, sparkSet, sparkMode, hideNotice 
           ${sparkSet.tip ? html`<p class="tip"><strong>${tx('core.senior.sparks.tip')}</strong> ${sparkSet.tip}</p>` : ''}
           <p class="muted">${tx('core.senior.sparks.footer', { source: sparkSourceLabel(sparkSet), date: formatDateTime(sparkSet.createdAt) })}</p>`
         : emptyState(html`<p><strong>${tx('core.senior.sparks.noneTitle', { name })}</strong> ${tx('core.senior.sparks.noneText')}</p>`)}
-      <form method="post" action="/seniors/${senior.id}/sparks" class="inline-form" data-busy-text="${t(sparkMode.effective === 'live' ? 'core.senior.sparks.askingClaude' : 'core.senior.sparks.working')}">
+      <form method="post" action="/seniors/${senior.id}/sparks" class="inline-form" data-busy-text="${t(sparkMode.effective === 'live' ? 'core.senior.sparks.askingAi' : 'core.senior.sparks.working')}">
         <input type="hidden" name="variant" value="${nextVariant}">
         <button type="submit" class="button">${t(sparkSet ? 'core.senior.sparks.different' : 'core.senior.sparks.get')}</button>
       </form>

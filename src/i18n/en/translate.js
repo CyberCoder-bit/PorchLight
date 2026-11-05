@@ -13,7 +13,7 @@ export default {
   // ----- shown with every translation, and before anything is sent -----
   'translate.disclaimer': "Machine translation, may contain mistakes. Don't use it for medical or money decisions.",
   'translate.notice.word': 'Before you write',
-  'translate.notice.sent': 'The text you write here will be sent to an AI service (Claude) to be translated. Your name and your profile are not sent.',
+  'translate.notice.sent': 'The text you write here will be sent to an AI service (Gemini) to be translated. Your name and your profile are not sent.',
   'translate.notice.liveOn': 'AI translation is on.',
   'translate.notice.liveOff': 'AI translation is off right now. Only the sample messages and the phrase card can be translated, and nothing you write leaves PorchLight.',
   'translate.unavailable.needsAi': 'Translation needs AI mode.',

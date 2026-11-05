@@ -1,9 +1,9 @@
-// LIVE translation: Claude, through the official Anthropic SDK (v2).
+// LIVE translation: Gemini, through the Gemini API (src/gemini.js) (v2).
 //
-// Same pattern as the conversation sparks (src/sparks/live.js): the SDK is
-// loaded only when used, the reply is structured output (JSON that must
-// match TRANSLATION_SCHEMA), and any failure throws a LiveSparkError with a
-// short reason so the caller can fall back to MOCK.
+// Same pattern as the conversation sparks (src/sparks/live.js): the reply is
+// structured output (JSON that must match TRANSLATION_SCHEMA), and any
+// failure throws a LiveSparkError with a short reason so the caller can fall
+// back to MOCK.
 //
 // PRIVACY: the request holds ONLY the text the person chose to translate
 // and the names of the two languages. No names, no profile, no call notes,
@@ -14,7 +14,8 @@
 // those tags inside the text is broken up), and the reply can only be one
 // JSON string, which the page escapes like any other user text.
 
-import { loadSdk, redactContactDetails, LiveSparkError, describeError } from '../sparks/live.js';
+import { redactContactDetails } from '../sparks/live.js';
+import { generateJson, LiveSparkError } from '../gemini.js';
 
 export const TRANSLATE_TIMEOUT_MS = 10000;
 
@@ -42,40 +43,21 @@ export function buildTranslateMessage({ text, fromName, toName }) {
 }
 
 /**
- * Ask Claude for one translation. Resolves to { text, model }.
+ * Ask Gemini for one translation. Resolves to { text, model }.
  * Throws LiveSparkError (with a friendly .reason) on any failure.
  */
-export async function translateLive({ text, fromName, toName }, { apiKey, model, baseURL, timeoutMs = TRANSLATE_TIMEOUT_MS }) {
-  const Anthropic = await loadSdk();
-  if (!Anthropic) throw new LiveSparkError('the @anthropic-ai/sdk package is not installed (run npm install)');
-
-  // One try, ten seconds: a person is waiting for the page.
-  const client = new Anthropic({ apiKey, baseURL, timeout: timeoutMs, maxRetries: 0 });
-  try {
-    const response = await client.messages.create({
-      model,
-      max_tokens: 4000,
-      system: TRANSLATE_SYSTEM_PROMPT,
-      // Translation is a simple task: low effort keeps it fast and cheap.
-      output_config: { effort: 'low', format: { type: 'json_schema', schema: TRANSLATION_SCHEMA } },
-      messages: [{ role: 'user', content: buildTranslateMessage({ text, fromName, toName }) }],
-    });
-
-    if (response.stop_reason === 'refusal') throw new LiveSparkError('Claude declined this request');
-    if (response.stop_reason === 'max_tokens') throw new LiveSparkError('the response was cut off');
-
-    const textBlock = response.content.find((b) => b.type === 'text');
-    if (!textBlock) throw new LiveSparkError('the response had no text');
-    let parsed;
-    try {
-      parsed = JSON.parse(textBlock.text);
-    } catch {
-      throw new LiveSparkError('the response was not valid JSON');
-    }
-    const translation = typeof parsed?.translation === 'string' ? parsed.translation.trim() : '';
-    if (!translation) throw new LiveSparkError('the response had no translation');
-    return { text: translation, model: response.model || model };
-  } catch (err) {
-    throw describeError(Anthropic, err);
-  }
+export async function translateLive({ text, fromName, toName }, { apiKey, models, baseURL, timeoutMs = TRANSLATE_TIMEOUT_MS }) {
+  // Ten seconds in all: a person is waiting for the page.
+  const { json, model } = await generateJson({
+    apiKey,
+    models,
+    baseURL,
+    timeoutMs,
+    system: TRANSLATE_SYSTEM_PROMPT,
+    user: buildTranslateMessage({ text, fromName, toName }),
+    schema: TRANSLATION_SCHEMA,
+  });
+  const translation = typeof json?.translation === 'string' ? json.translation.trim() : '';
+  if (!translation) throw new LiveSparkError('the response had no translation');
+  return { text: translation, model };
 }

@@ -40,7 +40,7 @@ export default {
   'core.a11y.themeWord.light': 'Light',
   'core.a11y.themeWord.dark': 'Dark',
   'core.a11y.themeWord.auto': 'Match my device',
-  'core.mode.liveLong': 'AI: Live (Claude)',
+  'core.mode.liveLong': 'AI: Live (Gemini)',
   'core.mode.liveShort': 'AI: Live',
   'core.mode.offlineLong': 'AI: Offline mode',
   'core.mode.offlineShort': 'AI: Offline',
@@ -253,7 +253,7 @@ export default {
   'core.week.title': 'My week: {name}',
   'core.week.back': 'Back to {name}',
   'core.week.working': 'Working…',
-  'core.week.askingClaude': 'Asking Claude…',
+  'core.week.askingAi': 'Asking Gemini…',
   'core.week.today': 'Today, {date}',
   'core.week.tomorrow': 'Tomorrow, {date}',
   // {zone} is the time zone's short name, e.g. EST.

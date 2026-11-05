@@ -3,7 +3,7 @@
   "name": "porchlight",
   "main": "src/worker.js",
   "compatibility_date": "2025-11-01",
-  // The Anthropic SDK (LIVE mode) uses a few Node built-ins.
+  // src/i18n/index.js uses AsyncLocalStorage (node:async_hooks).
   "compatibility_flags": ["nodejs_compat"],
   "assets": { "directory": "./public" },
   "durable_objects": {

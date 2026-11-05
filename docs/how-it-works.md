@@ -72,8 +72,8 @@ local touches from the community profile.
 
 | | Offline (default) | LIVE |
 |---|---|---|
-| Needs a key? | No | Yes: `ANTHROPIC_API_KEY` |
-| How | A hand-written template bank, picked by a seeded random generator | Claude writes them |
+| Needs a key? | No | Yes: `GEMINI_API_KEY` (free) |
+| How | A hand-written template bank, picked by a seeded random generator | Gemini writes them |
 | Repeatable? | Yes; **Show different sparks** moves to the next set | No |
 | If it fails | n/a | Falls back to offline sparks and says why |
 
@@ -92,7 +92,7 @@ A matched pair can write to each other, and each message shows in the reader's l
 |---|---|---|
 | Translated | The ready-made demo messages and the phrase card | Any message a person writes |
 | Sent to the AI | Nothing | Only the text and the two language names |
-| Before sending | The form says nothing leaves PorchLight | The form says the text will be sent to Claude |
+| Before sending | The form says nothing leaves PorchLight | The form says the text will be sent to Gemini |
 | Limits | None | 30 per account and 300 in total per day, cached |
 
 Every translated message is labeled as a machine translation that may contain mistakes.
@@ -134,7 +134,7 @@ Every translated message is labeled as a machine translation that may contain mi
 | Pages | Server-rendered HTML and plain CSS, with the Atkinson Hyperlegible Next font |
 | Data | One JSON document: a file locally, a Durable Object on Cloudflare |
 | Chart | Inline SVG drawn on the server |
-| AI (optional) | Claude through the official `@anthropic-ai/sdk`, for sparks and translation only |
+| AI (optional) | Gemini, Google's AI model, through the Gemini API (plain `fetch`, no package), for sparks and translation only |
 | Tests | Node's built-in test runner |
 
 - **No required dependencies,** so `npm start` works on a locked-down school network.
@@ -150,7 +150,8 @@ Every translated message is labeled as a machine translation that may contain mi
 - The demo accounts are open on purpose; a real launch would remove them.
 - No email is sent (no password reset or email alerts); notifications are on-screen only.
 - Translations are machine-made and haven't been checked by native speakers.
-- LIVE translation hasn't been tried with a real API key, only a local fake server.
+- The free Gemini tier is sometimes busy. PorchLight then tries the next model, and if none
+  answers in time, it uses the offline ideas and says so.
 - One time zone per deployment, and the town list covers 52 of 92 counties so far. A few towns
   (Zionsville, Greenwood, Plainfield, West Lafayette, Mishawaka, Elkhart, Gary, Hammond, Portage,
   Michigan City, Newburgh) haven't been checked against an official page yet.

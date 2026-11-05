@@ -2,6 +2,8 @@
 // `env` is process.env locally, or the Worker's env bindings on Cloudflare.
 // See README.md -> "MOCK_MODE vs LIVE_MODE" for the AI settings.
 
+import { parseModels } from './gemini.js';
+
 export function toInt(value, fallback, min, max) {
   const n = Number.parseInt(value, 10);
   if (!Number.isFinite(n)) return fallback;
@@ -15,9 +17,10 @@ export function buildAppConfig(env = {}) {
     // Default "isolation risk" threshold in days. Families can change it on the dashboard.
     riskThresholdDays: toInt(env.RISK_THRESHOLD_DAYS, 7, 1, 60),
     sparkMode, // 'auto' | 'mock' | 'live'
-    anthropicApiKey: env.ANTHROPIC_API_KEY || '',
-    anthropicBaseUrl: env.ANTHROPIC_BASE_URL || undefined, // only used by tests / proxies
-    claudeModel: env.CLAUDE_MODEL || 'claude-sonnet-5-5',
+    geminiApiKey: env.GEMINI_API_KEY || '',
+    geminiBaseUrl: env.GEMINI_BASE_URL || undefined, // only used by tests / proxies
+    // Tried in order; the next one is used when one is busy (comma-separated).
+    geminiModels: parseModels(env.GEMINI_MODEL),
     // [v2 translate] AI translations per day (Indiana calendar day): per account, and for everyone together.
     translateDailyPerAccount: toInt(env.TRANSLATE_DAILY_PER_ACCOUNT, 30, 0, 10000),
     translateDailyTotal: toInt(env.TRANSLATE_DAILY_TOTAL, 300, 0, 100000),

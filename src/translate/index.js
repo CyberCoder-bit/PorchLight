@@ -10,7 +10,7 @@
 // Who may open what is in ./access.js (checked on the server before these
 // handlers run). The thread routes check it again here.
 // Translation is MOCK by default (demo messages and phrases only) and LIVE
-// (Claude) when the conversation sparks run LIVE. See ./service.js.
+// (Gemini) when the conversation sparks run LIVE. See ./service.js.
 
 import { t, currentLang } from '../i18n/index.js';
 import { noPhone } from '../roles/viewer.js';
@@ -156,7 +156,7 @@ export function registerTranslate(router, ctx) {
       ...(viewer?.userId ? { fromUserId: viewer.userId } : {}),
       text: values.text,
       lang: values.lang,
-      // The writer saw "this will be sent to Claude to translate" only when AI
+      // The writer saw "this will be sent to Gemini to translate" only when AI
       // translation was on. Messages written without that notice never go to the AI (V2-B-04).
       aiOk: service.mode === 'live',
       createdAt: now().toISOString(),

@@ -50,7 +50,7 @@ up.
 | `npm start` | Run the app at http://localhost:3000 |
 | `npm test` | Run the automated tests |
 | `npm run reset` | Reset the demo data |
-| `npm install` | Optional: only for LIVE mode (the Anthropic SDK) or Cloudflare (wrangler) |
+| `npm install` | Optional: only for Cloudflare (wrangler) |
 | `npm run dev` | Run the Cloudflare Workers version at http://localhost:8787 |
 | `npm run deploy` | Deploy to Cloudflare Workers |
 
@@ -65,7 +65,7 @@ npx wrangler login     # one time
 npm run deploy         # prints your URL, like https://porchlight.<your-subdomain>.workers.dev
 ```
 
-- For LIVE mode, run `npx wrangler secret put ANTHROPIC_API_KEY`, then deploy again.
+- For LIVE mode, run `npx wrangler secret put GEMINI_API_KEY`, then deploy again.
 - Run `npm install` and `wrangler` on the same system you deploy from (a `node_modules` folder
   from WSL won't work in Windows PowerShell, and the other way around).
 - Times stay in Indiana time even though Cloudflare runs on UTC: every date goes through
@@ -76,29 +76,32 @@ npm run deploy         # prints your URL, like https://porchlight.<your-subdomai
 ## LIVE mode (optional)
 
 Without a key, PorchLight uses built-in conversation starters and ready-made translations. With a
-Claude API key, Claude writes the starters and translates messages.
+free Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey), Gemini (Google's
+AI model) writes the starters and translates messages. No packages are needed: PorchLight calls
+the Gemini API directly.
 
 ```bash
-npm install
 cp .env.example .env        # then paste your key into .env
 npm start
 ```
 
-Or run `ANTHROPIC_API_KEY=sk-ant-... npm start`. The header badge changes to **AI: Live (Claude)**,
-and `/about-ai` shows the active mode.
+Or run `GEMINI_API_KEY=... npm start`. The header badge changes to **AI: Live (Gemini)**, and
+`/about-ai` shows the active mode.
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | (none) | Your Claude API key |
-| `SPARK_MODE` | `auto` | `auto`: LIVE if a key is set and the SDK is installed. `mock`: always offline. `live`: ask for LIVE and warn if it can't run |
-| `CLAUDE_MODEL` | `claude-sonnet-5-5` | Which Claude model to use |
+| `GEMINI_API_KEY` | (none) | Your Gemini API key |
+| `SPARK_MODE` | `auto` | `auto`: LIVE if a key is set. `mock`: always offline. `live`: ask for LIVE and warn if it can't run |
+| `GEMINI_MODEL` | `gemini-flash-lite-latest,gemini-3-flash-preview,gemini-flash-latest` | Models to try, in order. The free tier is often busy, so when one model is busy or slow, the next one is tried |
 | `RISK_THRESHOLD_DAYS` | `7` | Starting value for the dashboard alert setting |
 | `TRANSLATE_DAILY_PER_ACCOUNT` | `30` | LIVE translations per account per day |
 | `TRANSLATE_DAILY_TOTAL` | `300` | LIVE translations for the whole site per day |
 | `DATA_FILE` | `data/db.json` | Local data file (Node only) |
 | `PORT` | `3000` | Web server port |
 
-If a LIVE request fails, PorchLight falls back to the offline mode and says why.
+If every model fails, PorchLight falls back to the offline mode and says why. On the free tier,
+Google may use what is sent to improve its products, so don't send real people's information
+through a free key.
 
 ## Tests
 
@@ -108,8 +111,8 @@ TZ=UTC npm test                   # same results on a UTC server (like Cloudflar
 TZ=America/Chicago npm test       # same results on a Central-time computer
 ```
 
-All 318 tests pass. Without `npm install`, the LIVE-mode tests are skipped; with it, they run
-against a local fake API server. The tests cover matching, the risk flag, sparks, accounts and
+All 322 tests pass. The LIVE-mode tests run against a local fake Gemini API server, so they need
+no key or internet. The tests cover matching, the risk flag, sparks, accounts and
 access for every role, every language file, translation, both Indiana time zones and
 daylight-saving days, towns, accessibility colors, the public site, a full end-to-end run, and a
 crawler that follows every internal link.

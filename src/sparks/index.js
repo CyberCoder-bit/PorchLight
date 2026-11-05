@@ -1,28 +1,24 @@
 // Conversation Spark service: decides between MOCK_MODE and LIVE_MODE and
 // always returns 3 sparks, even if the live API fails.
 //
-//   SPARK_MODE=auto (default)  LIVE if ANTHROPIC_API_KEY is set AND the SDK is installed, else MOCK
+//   SPARK_MODE=auto (default)  LIVE if GEMINI_API_KEY is set, else MOCK
 //   SPARK_MODE=mock            always offline templates
-//   SPARK_MODE=live            ask for LIVE. If the key or SDK is missing, warn and use MOCK.
+//   SPARK_MODE=live            ask for LIVE. If the key is missing, warn and use MOCK.
 
 import { generateMockSparks, pickTip, seasonOf } from './mock.js';
-import { generateLiveSparks, loadSdk } from './live.js';
+import { generateLiveSparks } from './live.js';
 import { lastCompletedContact, calendarDaysBetween } from '../risk.js';
 import { localDateKey } from '../tz.js';
 import { languagesOf } from '../i18n/fields.js'; // [v2 translate]
 
 export async function resolveSparkMode(config) {
-  const sdkInstalled = Boolean(await loadSdk());
-  const hasKey = Boolean(config.anthropicApiKey);
   if (config.sparkMode === 'mock') {
     return { effective: 'mock', reason: 'SPARK_MODE=mock', warning: null };
   }
-  if (hasKey && sdkInstalled) {
-    return { effective: 'live', reason: `ANTHROPIC_API_KEY found; using ${config.claudeModel}`, warning: null };
+  if (config.geminiApiKey) {
+    return { effective: 'live', reason: `GEMINI_API_KEY found; using ${config.geminiModels.join(', ')}`, warning: null };
   }
-  const missing = !hasKey
-    ? 'no ANTHROPIC_API_KEY is set'
-    : 'the @anthropic-ai/sdk package is not installed (run npm install)';
+  const missing = 'no GEMINI_API_KEY is set';
   return {
     effective: 'mock',
     reason: `Offline templates (${missing})`,
@@ -52,9 +48,9 @@ export function buildSparkInput(senior, contacts, now = new Date()) {
 export function createSparkService(config, modeInfo) {
   return {
     modeInfo,
-    model: config.claudeModel,
-    // [v2 translate] The same Claude settings, for translating messages (src/translate). A method, so the key is never serialized.
-    liveOptions: () => ({ apiKey: config.anthropicApiKey, model: config.claudeModel, baseURL: config.anthropicBaseUrl, perAccount: config.translateDailyPerAccount, total: config.translateDailyTotal }),
+    model: config.geminiModels[0],
+    // [v2 translate] The same Gemini settings, for translating messages (src/translate). A method, so the key is never serialized.
+    liveOptions: () => ({ apiKey: config.geminiApiKey, models: config.geminiModels, model: config.geminiModels[0], baseURL: config.geminiBaseUrl, perAccount: config.translateDailyPerAccount, total: config.translateDailyTotal }),
     // In LIVE mode: { reason, at } when the most recent request fell back to
     // MOCK, or null after a LIVE success. Lets the header and /about-ai say
     // what is really happening instead of "Live" while every call falls back.
@@ -75,9 +71,9 @@ export function createSparkService(config, modeInfo) {
       if (modeInfo.effective === 'live') {
         try {
           const live = await generateLiveSparks(input, {
-            apiKey: config.anthropicApiKey,
-            model: config.claudeModel,
-            baseURL: config.anthropicBaseUrl,
+            apiKey: config.geminiApiKey,
+            models: config.geminiModels,
+            baseURL: config.geminiBaseUrl,
           });
           this.lastFallback = null;
           return {

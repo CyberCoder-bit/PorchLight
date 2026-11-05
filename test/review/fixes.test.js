@@ -14,7 +14,7 @@ import { Store } from '../../src/store.js';
 import { createApp } from '../../src/app.js';
 import { createNodeServer } from '../../src/node-server.js';
 import { createSparkService } from '../../src/sparks/index.js';
-import { loadSdk, redactContactDetails } from '../../src/sparks/live.js';
+import { redactContactDetails } from '../../src/sparks/live.js';
 import { buildConfig, ROOT_DIR } from '../../src/config.js';
 import { fromLocal, localDateKey } from '../../src/tz.js';
 import { nextSlotTime, slotForDate } from '../../src/vocab.js';
@@ -323,32 +323,30 @@ test('phone numbers and emails are removed from "about me" text, and nothing els
 
 // ---------- B-24: the AI badge tells the truth after a LIVE fallback ----------
 
-const skip = (await loadSdk()) ? false : 'run `npm install` to test LIVE mode (needs @anthropic-ai/sdk)';
-
-test('when LIVE falls back, the header and /about-ai say offline, and the profile says it once', { skip }, async () => {
+test('when LIVE falls back, the header and /about-ai say offline, and the profile says it once', async () => {
   const fakeApi = http.createServer((req, res) => {
     req.resume();
     req.on('end', () => {
-      res.writeHead(401, { 'content-type': 'application/json' });
-      res.end(JSON.stringify({ type: 'error', error: { type: 'authentication_error', message: 'invalid x-api-key' } }));
+      res.writeHead(400, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ error: { code: 400, status: 'INVALID_ARGUMENT', message: 'API key not valid. Please pass a valid API key.', details: [{ reason: 'API_KEY_INVALID' }] } }));
     });
   });
   await new Promise((resolve) => fakeApi.listen(0, '127.0.0.1', resolve));
   servers.push(fakeApi);
   const live = await startApp({
     sparks: createSparkService(
-      buildConfig({ ANTHROPIC_API_KEY: 'sk-ant-bad', ANTHROPIC_BASE_URL: `http://127.0.0.1:${fakeApi.address().port}` }),
+      buildConfig({ GEMINI_API_KEY: 'gemini-bad-key', GEMINI_BASE_URL: `http://127.0.0.1:${fakeApi.address().port}` }),
       { effective: 'live', reason: 'test', warning: null }
     ),
   });
-  assert.match(await page('/', live.base), /AI: Live \(Claude\)/);
+  assert.match(await page('/', live.base), /AI: Live \(Gemini\)/);
 
   const res = await post('/seniors/s-harold/sparks', { variant: '0' }, live.base);
   assert.equal(res.headers.get('location'), '/seniors/s-harold?warn=live_fallback#sparks');
   const profile = await page('/seniors/s-harold?warn=live_fallback', live.base);
   assert.equal(profile.match(/Live AI was unavailable/g).length, 1, 'one banner, not two');
   assert.match(profile, /AI: Offline mode/);
-  assert.doesNotMatch(profile, /AI: Live \(Claude\)/);
+  assert.doesNotMatch(profile, /AI: Live \(Gemini\)/);
   const about = await page('/about-ai', live.base);
   assert.match(about, /Right now: Offline ideas \(live AI is set up but was unavailable\)/);
   assert.match(about, /the API key was rejected/);

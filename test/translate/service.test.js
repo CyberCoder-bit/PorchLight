@@ -9,7 +9,7 @@ import { buildTranslateMessage, TRANSLATE_SYSTEM_PROMPT } from '../../src/transl
 import { buildAppConfig } from '../../src/app-config.js';
 import { memoryStore, NOW } from './helpers.js';
 
-const fakeLive = { apiKey: 'sk-ant-test', model: 'claude-sonnet-5-5' };
+const fakeLive = { apiKey: 'gemini-test-key', models: ['gemini-test'], model: 'gemini-test' };
 
 test('MOCK: demo messages come with their translations; other text needs AI mode', async () => {
   const store = memoryStore();

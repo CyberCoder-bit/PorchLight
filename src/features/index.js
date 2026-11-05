@@ -57,7 +57,7 @@ export function registerFeatures(router, ctx) {
   // ----- My week (volunteer) -----
   router.get('/volunteers/:id/week', (req, res) => {
     const volunteer = ctx.volunteerOr404(req.params.id);
-    const busyText = ctx.sparks.modeInfo.effective === 'live' ? t('core.week.askingClaude') : t('core.week.working');
+    const busyText = ctx.sparks.modeInfo.effective === 'live' ? t('core.week.askingAi') : t('core.week.working');
     render(req, res, {
       title: t('core.week.title', { name: volunteer.name }),
       active: 'volunteers',

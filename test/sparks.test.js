@@ -78,8 +78,8 @@ test('mode selection: auto without a key is MOCK; SPARK_MODE=live without a key 
   assert.equal(auto.warning, null);
   const live = await resolveSparkMode(buildConfig({ SPARK_MODE: 'live' }));
   assert.equal(live.effective, 'mock');
-  assert.match(live.warning, /ANTHROPIC_API_KEY/);
-  const forcedMock = await resolveSparkMode(buildConfig({ SPARK_MODE: 'mock', ANTHROPIC_API_KEY: 'sk-test' }));
+  assert.match(live.warning, /GEMINI_API_KEY/);
+  const forcedMock = await resolveSparkMode(buildConfig({ SPARK_MODE: 'mock', GEMINI_API_KEY: 'gemini-test-key' }));
   assert.equal(forcedMock.effective, 'mock');
 });
 

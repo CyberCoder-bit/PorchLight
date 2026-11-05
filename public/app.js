@@ -1,7 +1,7 @@
 // Small progressive enhancements. The site works fully without this file.
 
 document.addEventListener('DOMContentLoaded', () => {
-  // 1. Prevent double-submits and show progress ("Asking Claude…").
+  // 1. Prevent double-submits and show progress ("Asking Gemini…").
   document.querySelectorAll('form').forEach((form) => {
     form.addEventListener('submit', (event) => {
       const button = event.submitter || form.querySelector('button[type="submit"]');

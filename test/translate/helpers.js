@@ -1,4 +1,4 @@
-// Shared setup for the translate tests: an in-memory app, and a fake Claude API.
+// Shared setup for the translate tests: an in-memory app, and a fake Gemini API.
 
 import http from 'node:http';
 import { BaseStore } from '../../src/store-core.js';
@@ -19,7 +19,7 @@ export function memoryStore(now = NOW) {
 // mode 'mock' (default) or 'live' with a fake API at baseUrl.
 export function makeApp({ live = false, baseUrl, env = {}, now = NOW } = {}) {
   const store = memoryStore(now);
-  const config = buildConfig(live ? { ANTHROPIC_API_KEY: 'sk-ant-test', ANTHROPIC_BASE_URL: baseUrl, ...env } : env);
+  const config = buildConfig(live ? { GEMINI_API_KEY: 'gemini-test-key', GEMINI_BASE_URL: baseUrl, ...env } : env);
   const sparks = createSparkService(config, { effective: live ? 'live' : 'mock', reason: 'test', warning: null });
   const handle = createApp({ store, sparks, now: () => now });
   const request = async (method, path, { body, viewer } = {}) => {
@@ -37,8 +37,8 @@ export function makeApp({ live = false, baseUrl, env = {}, now = NOW } = {}) {
   };
 }
 
-// A local stand-in for the Claude API. `reply(body)` returns { status, json }.
-export async function fakeClaude() {
+// A local stand-in for the Gemini API. `reply(body, req)` returns { status, json } (or a promise of it).
+export async function fakeGemini() {
   const received = [];
   const state = { reply: () => ({ status: 500, json: {} }) };
   const server = http.createServer((req, res) => {
@@ -47,9 +47,11 @@ export async function fakeClaude() {
     req.on('end', () => {
       const body = raw ? JSON.parse(raw) : {};
       received.push({ url: req.url, headers: req.headers, body, raw });
-      const { status, json } = state.reply(body);
-      res.writeHead(status, { 'content-type': 'application/json' });
-      res.end(JSON.stringify(json));
+      // A reply may be a promise (one that never settles stands in for a hung model).
+      Promise.resolve(state.reply(body, req)).then(({ status, json }) => {
+        res.writeHead(status, { 'content-type': 'application/json' });
+        res.end(JSON.stringify(json));
+      });
     });
   });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -61,17 +63,21 @@ export async function fakeClaude() {
   };
 }
 
-// A Messages API reply whose text is the JSON { translation }.
-export const translationReply = (translation) => ({
+// A generateContent reply whose text is `value` as JSON.
+export const geminiReply = (value, overrides = {}) => ({
   status: 200,
   json: {
-    id: 'msg_test',
-    type: 'message',
-    role: 'assistant',
-    model: 'claude-sonnet-5-5',
-    content: [{ type: 'text', text: JSON.stringify({ translation }) }],
-    stop_reason: 'end_turn',
-    stop_sequence: null,
-    usage: { input_tokens: 50, output_tokens: 20 },
+    candidates: [{ content: { role: 'model', parts: [{ text: JSON.stringify(value) }] }, finishReason: 'STOP', index: 0 }],
+    usageMetadata: { promptTokenCount: 50, candidatesTokenCount: 20 },
+    modelVersion: 'gemini-test',
+    ...overrides,
   },
 });
+
+// A reply whose text is the JSON { translation }.
+export const translationReply = (translation) => geminiReply({ translation });
+
+// The parts of a generateContent request the tests look at.
+export const systemOf = (body) => body.systemInstruction.parts[0].text;
+export const userOf = (body) => body.contents[0].parts[0].text;
+export const schemaOf = (body) => body.generationConfig.responseJsonSchema;

@@ -5,7 +5,7 @@
 //             'cached'      translated before (store.translations)
 //             'demo'        a demo message, translated ahead of time
 //             'phrase'      a phrase from the phrase card
-//             'live'        Claude translated it just now
+//             'live'        Gemini translated it just now
 //             'unavailable' no translation; `text` is null and `notice` says why
 //     notice: null | 'needsAi' (MOCK mode) | 'limit' (daily limit reached) | 'error' (AI failed)
 //
@@ -29,7 +29,7 @@ export async function cacheKey(from, to, text) {
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-// live: { apiKey, model, baseURL } to use Claude, or null for MOCK only.
+// live: { apiKey, models, model, baseURL } to use Gemini, or null for MOCK only.
 export function createTranslateService({ store, live = null, limits = DEFAULT_LIMITS, now = () => new Date(), translateFn = translateLive } = {}) {
   const perAccount = Number.isInteger(limits?.perAccount) ? limits.perAccount : DEFAULT_LIMITS.perAccount;
   const total = Number.isInteger(limits?.total) ? limits.total : DEFAULT_LIMITS.total;
@@ -96,7 +96,7 @@ export function createTranslateService({ store, live = null, limits = DEFAULT_LI
 
         const result = await translateFn(
           { text: source, fromName: englishName(from), toName: englishName(to) },
-          { apiKey: live.apiKey, model: live.model, baseURL: live.baseURL }
+          { apiKey: live.apiKey, models: live.models, baseURL: live.baseURL }
         );
         remember(key, result.text);
         store.save();

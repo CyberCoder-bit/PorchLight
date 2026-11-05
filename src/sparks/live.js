@@ -1,8 +1,5 @@
-// LIVE_MODE: real conversation sparks from Claude, through the official
-// Anthropic SDK (@anthropic-ai/sdk).
-//
-// The SDK is loaded with a dynamic import() only when LIVE mode is actually
-// used. If someone runs the app without `npm install`, MOCK mode still works.
+// LIVE_MODE: real conversation sparks from Gemini (Google's AI model), through
+// the Gemini API (src/gemini.js). Without GEMINI_API_KEY, MOCK mode is used.
 //
 // PRIVACY: we send only what's needed to write good starters: the senior's
 // preferred first name, interest labels, their "about me" text, days since
@@ -16,6 +13,9 @@ import { interestLabelEn as interestLabel, methodLabelEn as methodLabel } from '
 import { formatLocal } from '../tz.js';
 import { COMMUNITY } from '../community.js';
 import { englishName } from '../translate/phrases.js'; // [v2 translate] sparks in the senior's language
+import { generateJson, LiveSparkError } from '../gemini.js';
+
+export { LiveSparkError };
 
 // The system prompt names the community's town and state (src/community.js).
 // Only the place name changes from town to town; nothing about the senior is
@@ -36,7 +36,7 @@ For each starter, also give a short "based_on" label (under 8 words) naming what
 
 export const SYSTEM_PROMPT = systemPromptFor(COMMUNITY);
 
-// JSON schema for structured outputs: the API guarantees the reply matches it.
+// JSON schema for structured output: the API's reply must match it.
 export const SPARK_SCHEMA = {
   type: 'object',
   properties: {
@@ -90,25 +90,6 @@ export function bilingualInstruction(languageName) {
   return `\n\nThe senior's main language is ${languageName}. Write "text" in English for the volunteer, and put the same starter in ${languageName} in "text_senior_language", so the volunteer can show or read it to the senior. Keep "based_on" in English.`;
 }
 
-export class LiveSparkError extends Error {
-  constructor(reason, cause) {
-    super(reason);
-    this.reason = reason;
-    this.cause = cause;
-  }
-}
-
-let sdkPromise = null;
-// Returns the Anthropic class, or null if the package isn't installed.
-export function loadSdk() {
-  if (!sdkPromise) {
-    sdkPromise = import('@anthropic-ai/sdk')
-      .then((mod) => mod.default || mod.Anthropic || null)
-      .catch(() => null);
-  }
-  return sdkPromise;
-}
-
 // Phone numbers and email addresses that someone typed into "about me" are
 // replaced before the text leaves PorchLight. The rest of the text is kept.
 const EMAIL = /[^\s@<>()[\],;:"]+@[^\s@<>()[\],;:"]+\.[A-Za-z]{2,}/g;
@@ -144,69 +125,30 @@ export function buildUserMessage(input) {
   ].join('\n');
 }
 
-// Turn any failure into a short, human-readable reason for the UI.
-export function describeError(Anthropic, err) {
-  if (err instanceof LiveSparkError) return err;
-  if (Anthropic) {
-    if (err instanceof Anthropic.AuthenticationError) return new LiveSparkError('the API key was rejected', err);
-    if (err instanceof Anthropic.PermissionDeniedError) return new LiveSparkError('the API key lacks permission for this model', err);
-    if (err instanceof Anthropic.NotFoundError) return new LiveSparkError('the model name was not found (check CLAUDE_MODEL)', err);
-    if (err instanceof Anthropic.RateLimitError) return new LiveSparkError('rate limited; try again in a minute', err);
-    if (err instanceof Anthropic.BadRequestError) return new LiveSparkError('the API rejected the request', err);
-    if (err instanceof Anthropic.APIConnectionTimeoutError) return new LiveSparkError('the request timed out', err);
-    if (err instanceof Anthropic.APIConnectionError) return new LiveSparkError('could not reach the Claude API (offline?)', err);
-    if (err instanceof Anthropic.APIError) return new LiveSparkError(`API error ${err.status ?? ''}`.trim(), err);
-  }
-  return new LiveSparkError('unexpected error', err);
-}
-
 /**
- * Ask Claude for 3 sparks. Resolves to { sparks: [{text, basedOn}], model }.
+ * Ask Gemini for 3 sparks. Resolves to { sparks: [{text, basedOn}], model }.
  * Throws LiveSparkError (with a friendly .reason) on any failure; the caller
  * falls back to MOCK sparks so the volunteer is never left empty-handed.
  */
-export async function generateLiveSparks(input, { apiKey, model, baseURL, timeoutMs = 20000 }) {
-  const Anthropic = await loadSdk();
-  if (!Anthropic) throw new LiveSparkError('the @anthropic-ai/sdk package is not installed (run npm install)');
-
-  const client = new Anthropic({ apiKey, baseURL, timeout: timeoutMs, maxRetries: 1 });
+export async function generateLiveSparks(input, { apiKey, models, baseURL, timeoutMs = 15000 }) {
   const second = secondLanguageOf(input); // [v2 translate]
-  try {
-    const response = await client.messages.create({
-      model,
-      max_tokens: 4000,
-      system: second ? SYSTEM_PROMPT + bilingualInstruction(second.name) : SYSTEM_PROMPT,
-      // Short creative writing: low effort keeps it fast and cheap.
-      // Structured outputs guarantee JSON that matches SPARK_SCHEMA.
-      output_config: { effort: 'low', format: { type: 'json_schema', schema: second ? BILINGUAL_SPARK_SCHEMA : SPARK_SCHEMA } },
-      messages: [{ role: 'user', content: buildUserMessage(input) }],
+  const { json, model } = await generateJson({
+    apiKey,
+    models,
+    baseURL,
+    timeoutMs,
+    system: second ? SYSTEM_PROMPT + bilingualInstruction(second.name) : SYSTEM_PROMPT,
+    user: buildUserMessage(input),
+    schema: second ? BILINGUAL_SPARK_SCHEMA : SPARK_SCHEMA,
+  });
+  const sparks = (Array.isArray(json?.sparks) ? json.sparks : [])
+    .filter((s) => s && typeof s.text === 'string' && s.text.trim())
+    .slice(0, 3)
+    .map((s) => {
+      const spark = { text: s.text.trim(), basedOn: String(s.based_on || '').trim() || 'Gemini' };
+      const other = second && typeof s.text_senior_language === 'string' ? s.text_senior_language.trim() : '';
+      return other ? { ...spark, translations: { [second.code]: other } } : spark;
     });
-
-    if (response.stop_reason === 'refusal') throw new LiveSparkError('Claude declined this request');
-    if (response.stop_reason === 'max_tokens') throw new LiveSparkError('the response was cut off');
-
-    // Read blocks by type: the response may also contain thinking blocks.
-    const textBlock = response.content.find((b) => b.type === 'text');
-    if (!textBlock) throw new LiveSparkError('the response had no text');
-
-    let parsed;
-    try {
-      parsed = JSON.parse(textBlock.text);
-    } catch {
-      throw new LiveSparkError('the response was not valid JSON');
-    }
-    const sparks = (parsed.sparks || [])
-      .filter((s) => s && typeof s.text === 'string' && s.text.trim())
-      .slice(0, 3)
-      .map((s) => {
-        const spark = { text: s.text.trim(), basedOn: String(s.based_on || '').trim() || 'Claude' };
-        const other = second && typeof s.text_senior_language === 'string' ? s.text_senior_language.trim() : '';
-        return other ? { ...spark, translations: { [second.code]: other } } : spark;
-      });
-    if (sparks.length < 3) throw new LiveSparkError('the response had fewer than 3 starters');
-
-    return { sparks, model: response.model || model };
-  } catch (err) {
-    throw describeError(Anthropic, err);
-  }
+  if (sparks.length < 3) throw new LiveSparkError('the response had fewer than 3 starters');
+  return { sparks, model };
 }

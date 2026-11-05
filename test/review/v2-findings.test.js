@@ -40,8 +40,8 @@ function burst(base, requests) {
 
 const SENIOR_FORM = { interests: 'gardening', availability: 'mon-morning', contactMethod: 'phone', town: 'Carmel' };
 
-// A stand-in for the Claude API that records every request it gets.
-async function fakeClaude() {
+// A stand-in for the Gemini API that records every request it gets.
+async function fakeGemini() {
   const received = [];
   const server = http.createServer((req, res) => {
     let raw = '';
@@ -50,9 +50,8 @@ async function fakeClaude() {
       received.push(raw);
       res.writeHead(200, { 'content-type': 'application/json' });
       res.end(JSON.stringify({
-        id: 'msg_fake', type: 'message', role: 'assistant', model: 'fake', stop_reason: 'end_turn', stop_sequence: null,
-        usage: { input_tokens: 1, output_tokens: 1 },
-        content: [{ type: 'text', text: JSON.stringify({ translation: 'ترجمة' }) }],
+        candidates: [{ content: { role: 'model', parts: [{ text: JSON.stringify({ translation: 'ترجمة' }) }] }, finishReason: 'STOP', index: 0 }],
+        modelVersion: 'fake',
       }));
     });
   });
@@ -62,7 +61,7 @@ async function fakeClaude() {
 
 // The app on `store`, in MOCK or in LIVE mode (LIVE talks to `baseUrl`).
 async function appOn(store, { live = false, baseUrl } = {}) {
-  const config = buildConfig(live ? { ANTHROPIC_API_KEY: 'sk-ant-test', ANTHROPIC_BASE_URL: baseUrl } : {});
+  const config = buildConfig(live ? { GEMINI_API_KEY: 'gemini-test-key', GEMINI_BASE_URL: baseUrl } : {});
   const sparks = createSparkService(config, { effective: live ? 'live' : 'mock', reason: 'test', warning: null });
   const server = createNodeServer({ handle: createApp({ store, sparks }), publicDir: path.join(ROOT_DIR, 'public') });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -164,7 +163,7 @@ test('V2-B-03b: the sign-up limit holds when 20 senior sign-ups arrive at once',
 
 test('V2-B-04: a message written while AI was off ("nothing you write leaves PorchLight") is never sent to the AI later', async () => {
   const { store, cleanup } = tempStore();
-  const api = await fakeClaude();
+  const api = await fakeGemini();
   const mock = await appOn(store);
   let live;
   try {
@@ -193,7 +192,7 @@ test('V2-B-04: a message written while AI was off ("nothing you write leaves Por
 
 test('V2-B-05: a brand-new senior account with no companion cannot spend the shared AI translation budget', async () => {
   const { store, cleanup } = tempStore();
-  const api = await fakeClaude();
+  const api = await fakeGemini();
   const live = await appOn(store, { live: true, baseUrl: api.baseUrl });
   try {
     // Anyone can make a senior account: no approval, no match.
@@ -336,14 +335,14 @@ test('V2-B-12: the sign-in limit holds when each try comes from a new IPv6 addre
 test('V2-B-13: the header AI badge has no English tooltip in other languages', async () => {
   const { store, cleanup } = tempStore();
   try {
-    // The mode as `npm start` resolves it with no key: "Offline templates (no ANTHROPIC_API_KEY is set)".
+    // The mode as `npm start` resolves it with no key: "Offline templates (no GEMINI_API_KEY is set)".
     const config = buildConfig({});
     const handle = createApp({ store, sparks: createSparkService(config, await resolveSparkMode(config)) });
     for (const lang of ['de', 'ar', 'my']) {
       const res = await handle(new Request('http://porchlight.test/sign-in', { headers: { cookie: `lang=${lang}` } }));
       const badge = /<a class="mode-badge[^>]*>/.exec(await res.text())?.[0] || '';
       assert.ok(badge, 'the header has the AI badge');
-      assert.ok(!/Offline templates|ANTHROPIC_API_KEY/.test(badge), `${lang}: ${badge}`);
+      assert.ok(!/Offline templates|GEMINI_API_KEY/.test(badge), `${lang}: ${badge}`);
     }
   } finally {
     cleanup();
